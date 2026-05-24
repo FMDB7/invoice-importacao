@@ -390,17 +390,26 @@ function getInvFiltradas(){
 
 // ===== DASHBOARD =====
 function renderDashboard(){
-  const kpisMoeda=MOEDAS.map(m=>{
+      const kpisMoeda=MOEDAS.map(m=>{
     const invs=invoices.filter(i=>i.moeda===m);
     const aberto=invs.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
     const pago=invs.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
     const total=invs.reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
     if(!total)return"";
     return`<div class="kpi-moeda" style="background:${MOEDA_BG[m]};border-color:${MOEDA_COR[m]}">
-      <div style="font-size:13px;font-weight:700;color:${MOEDA_COR[m]};margin-bottom:6px">${SIMBOLO[m]} ${m}</div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:#64748b">Total</span><span style="font-weight:700;color:${MOEDA_COR[m]}">${fmtM(total,m)}</span></div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:#64748b">Em Aberto</span><span style="font-weight:600;color:#dc2626">${fmtM(aberto,m)}</span></div>
-      <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#64748b">Pago</span><span style="font-weight:600;color:#16a34a">${fmtM(pago,m)}</span></div>
+      <div style="font-size:14px;font-weight:700;color:${MOEDA_COR[m]};margin-bottom:8px">${SIMBOLO[m]} ${m}</div>
+      <div style="margin-bottom:6px">
+        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Total</div>
+        <div style="font-size:20px;font-weight:800;color:${MOEDA_COR[m]};line-height:1">${fmtM(total,m)}</div>
+      </div>
+      <div style="margin-bottom:6px">
+        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Em Aberto</div>
+        <div style="font-size:17px;font-weight:700;color:#dc2626;line-height:1">${fmtM(aberto,m)}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Pago</div>
+        <div style="font-size:17px;font-weight:700;color:#16a34a;line-height:1">${fmtM(pago,m)}</div>
+      </div>
     </div>`;
   }).join("");
 
@@ -421,10 +430,19 @@ function renderDashboard(){
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
     ${kpisMoeda}
     <div class="kpi-moeda" style="background:#dcfce7;border-color:#16a34a">
-      <div style="font-size:13px;font-weight:700;color:#16a34a;margin-bottom:6px">🇧🇷 REAIS (R$)</div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:#64748b">Total Geral</span><span style="font-weight:700;color:#16a34a">${fmtBRL(totReais)}</span></div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:#64748b">Em Aberto</span><span style="font-weight:600;color:#dc2626">${fmtBRL(totReaisAberto)}</span></div>
-      <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#64748b">Pago</span><span style="font-weight:600;color:#16a34a">${fmtBRL(totReaisPago)}</span></div>
+      <div style="font-size:14px;font-weight:700;color:#16a34a;margin-bottom:8px">🇧🇷 REAIS (R$)</div>
+      <div style="margin-bottom:6px">
+        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Total Geral</div>
+        <div style="font-size:20px;font-weight:800;color:#16a34a;line-height:1">${fmtBRL(totReais)}</div>
+      </div>
+      <div style="margin-bottom:6px">
+        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Em Aberto</div>
+        <div style="font-size:17px;font-weight:700;color:#dc2626;line-height:1">${fmtBRL(totReaisAberto)}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Pago</div>
+        <div style="font-size:17px;font-weight:700;color:#16a34a;line-height:1">${fmtBRL(totReaisPago)}</div>
+      </div>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px">
