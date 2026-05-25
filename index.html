@@ -458,10 +458,19 @@ function renderDashboard(){
         <span style="background:${MOEDA_COR[m]};color:#fff;padding:2px 10px;border-radius:20px;font-size:13px">${m}</span>
         <span style="font-size:11px;color:${MOEDA_COR[m]};opacity:.7">${SIMBOLO[m]}</span>
       </div>
-      <div style="margin-bottom:8px"><div style="font-size:11px;color:#64748b;font-weight:600">TOTAL</div><div style="font-size:20px;font-weight:800;color:${MOEDA_COR[m]}">${fmtM(total,m)}</div></div>
+      <div style="margin-bottom:8px">
+        <div style="font-size:13px;font-weight:800;color:#000;margin-bottom:2px">TOTAL</div>
+        <div style="font-size:20px;font-weight:800;color:${MOEDA_COR[m]}">${fmtM(total,m)}</div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-        <div style="background:#fee2e2;border-radius:6px;padding:6px 8px"><div style="font-size:10px;color:#dc2626;font-weight:600">EM ABERTO</div><div style="font-size:14px;font-weight:700;color:#dc2626">${fmtM(aberto,m)}</div></div>
-        <div style="background:#dcfce7;border-radius:6px;padding:6px 8px"><div style="font-size:10px;color:#16a34a;font-weight:600">PAGO</div><div style="font-size:14px;font-weight:700;color:#16a34a">${fmtM(pago,m)}</div></div>
+        <div style="background:#fee2e2;border-radius:6px;padding:6px 8px">
+          <div style="font-size:12px;font-weight:800;color:#000;margin-bottom:2px">EM ABERTO</div>
+          <div style="font-size:14px;font-weight:700;color:#dc2626">${fmtM(aberto,m)}</div>
+        </div>
+        <div style="background:#dcfce7;border-radius:6px;padding:6px 8px">
+          <div style="font-size:12px;font-weight:800;color:#000;margin-bottom:2px">PAGO</div>
+          <div style="font-size:14px;font-weight:700;color:#16a34a">${fmtM(pago,m)}</div>
+        </div>
       </div>
     </div>`;
   }).join("");
@@ -477,15 +486,29 @@ function renderDashboard(){
     ${kpisMoeda}
     <div style="background:#dcfce7;border-radius:10px;padding:14px 16px;border-left:6px solid #16a34a">
       <div style="font-size:15px;font-weight:800;color:#16a34a;margin-bottom:10px">🇧🇷 REAIS (R$)</div>
-      <div style="margin-bottom:8px"><div style="font-size:11px;color:#64748b;font-weight:600">TOTAL GERAL</div><div style="font-size:20px;font-weight:800;color:#16a34a">${fmtBRL(totR)}</div></div>
+      <div style="margin-bottom:8px">
+        <div style="font-size:13px;font-weight:800;color:#000;margin-bottom:2px">TOTAL GERAL</div>
+        <div style="font-size:20px;font-weight:800;color:#16a34a">${fmtBRL(totR)}</div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-        <div style="background:#fee2e2;border-radius:6px;padding:6px 8px"><div style="font-size:10px;color:#dc2626;font-weight:600">EM ABERTO</div><div style="font-size:14px;font-weight:700;color:#dc2626">${fmtBRL(totRAberto)}</div></div>
-        <div style="background:#dcfce7;border-radius:6px;padding:6px 8px"><div style="font-size:10px;color:#16a34a;font-weight:600">PAGO</div><div style="font-size:14px;font-weight:700;color:#16a34a">${fmtBRL(totRPago)}</div></div>
+        <div style="background:#fee2e2;border-radius:6px;padding:6px 8px">
+          <div style="font-size:12px;font-weight:800;color:#000;margin-bottom:2px">EM ABERTO</div>
+          <div style="font-size:14px;font-weight:700;color:#dc2626">${fmtBRL(totRAberto)}</div>
+        </div>
+        <div style="background:#dcfce7;border-radius:6px;padding:6px 8px">
+          <div style="font-size:12px;font-weight:800;color:#000;margin-bottom:2px">PAGO</div>
+          <div style="font-size:14px;font-weight:700;color:#16a34a">${fmtBRL(totRPago)}</div>
+        </div>
       </div>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px">
-    ${[["📄","Total Invoices",""+invoices.length,"#dbeafe","#1d4ed8"],["⏳","Em Aberto",""+invoices.filter(i=>i.statusPgto==="Em Aberto").length,"#fee2e2","#dc2626"],["⚠️","Pago Parcial",""+invoices.filter(i=>i.statusPgto==="Pago Parcial").length,"#fef3c7","#d97706"],["✅","Pago Total",""+invoices.filter(i=>i.statusPgto==="Pago Total").length,"#dcfce7","#16a34a"],["🚨","Vencidos",""+vencidos.length,"#fecaca","#991b1b"]].map(([ic,lb,vl,bg,c])=>`<div class="stat" style="background:${bg}"><div style="font-size:20px">${ic}</div><div style="font-size:24px;font-weight:700;color:${c}">${vl}</div><div style="font-size:11px;color:#475569">${lb}</div></div>`).join("")}
+    ${[["📄","Total Invoices",""+invoices.length,"#dbeafe","#1d4ed8"],["⏳","Em Aberto",""+invoices.filter(i=>i.statusPgto==="Em Aberto").length,"#fee2e2","#dc2626"],["⚠️","Pago Parcial",""+invoices.filter(i=>i.statusPgto==="Pago Parcial").length,"#fef3c7","#d97706"],["✅","Pago Total",""+invoices.filter(i=>i.statusPgto==="Pago Total").length,"#dcfce7","#16a34a"],["🚨","Vencidos",""+vencidos.length,"#fecaca","#991b1b"]].map(([ic,lb,vl,bg,c])=>`
+    <div class="stat" style="background:${bg}">
+      <div style="font-size:20px">${ic}</div>
+      <div style="font-size:28px;font-weight:800;color:${c}">${vl}</div>
+      <div style="font-size:13px;font-weight:800;color:#000">${lb}</div>
+    </div>`).join("")}
   </div>
   ${chartDados.length?renderGraficoMoeda(chartDados,"Distribuição por Moeda — % do Volume Total"):""}
   ${alertas.length?`<div class="card"><div style="font-weight:700;color:#dc2626;margin-bottom:10px">🚨 Alertas de Vencimento</div>${alertas.map(i=>{const a=alertaVcto(i.vencimento,i.statusPgto);return`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9"><span><b>${i.nFatura}</b> — ${i.fornecedor}</span><span style="color:${a==="vencido"?"#dc2626":"#d97706"};font-weight:600">${a==="vencido"?"⛔ VENCIDO":"🚨 Vence em breve"} ${fmtD(i.vencimento)}</span></div>`}).join("")}</div>`:""}`;
@@ -514,7 +537,7 @@ function renderInvoices(){
   const colObs=temObs?`<th style="min-width:120px">Obs.</th>`:"";
   const colObsData=(i)=>temObs?`<td style="font-size:11px;color:#475569;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${i.obs||""}">${i.obs||""}</td>`:"";
   const totalCols=temObs?15:14;
-  <div style="overflow-x:auto"><table>
+  return`<div style="overflow-x:auto"><table>
     <thead><tr>
       <th class="col-pasta">Pasta</th>
       <th style="min-width:160px">Fornecedor</th>
