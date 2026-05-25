@@ -416,10 +416,32 @@ async function carregarDados(){
     const wb=XLSX.read(buf,{type:"array",cellDates:true});
     const ws=wb.Sheets["Invoices"];
     if(!ws){invoices=[];return;}
-    const invoicesRaw=XLSX.utils.sheet_to_json(ws,{raw:false,defval:"",header:1});
-    console.log("LINHA 0 (header):", invoicesRaw[0]);
-    console.log("LINHA 1 (dados):", invoicesRaw[1]);
-    console.log("LINHA 2 (dados):", invoicesRaw[2]);
+    const invoicesRaw=XLSX.utils.sheet_to_json(ws,{raw:false,defval:""});
+    invoices=invoicesRaw.map(i=>({
+      pasta:        String(i.pasta||""),
+      cidade:       String(i.cidade||""),
+      fornecedor:   String(i.fornecedor||""),
+      marca:        String(i.marca||""),
+      dtPedido:     String(i.dtPedido||""),
+      nProforma:    String(i.nProforma||""),
+      nFatura:      String(i.nFatura||""),
+      dtEmbarque:   String(i.dtEmbarque||""),
+      emissaoFatura:String(i.emissaoFatura||""),
+      dtAntecipado: String(i.dtAntecipado||""),
+      condPgto:     String(i.condPgto||""),
+      vencimento:   String(i.vencimento||""),
+      dtPgto:       String(i.dtPgto||""),
+      banco:        String(i.banco||""),
+      taxa:         String(parseCurrency(i.taxa)||""),
+      moeda:        String(i.moeda||""),
+      valorMoeda:   String(parseCurrency(i.valorMoeda)||""),
+      reais:        String(parseCurrency(i.reais)||""),
+      statusCambio: String(i.statusCambio||"Pendente"),
+      statusPgto:   String(i.statusPgto||"Em Aberto"),
+      awbBl:        String(i.awbBl||""),
+      valorPago:    String(parseCurrency(i.valorPago)||""),
+      obs:          String(i.obs||"")
+    }));
     invoices=invoicesRaw.map(i=>({
       pasta:        String(i.pasta||""),
       cidade:       String(i.cidade||""),
@@ -485,7 +507,18 @@ async function salvarDados(){
   try{
     document.getElementById("syncStatus").textContent="● Salvando...";
     const cols=["pasta","cidade","fornecedor","marca","dtPedido","nProforma","nFatura","dtEmbarque","emissaoFatura","dtAntecipado","condPgto","vencimento","dtPgto","banco","taxa","moeda","valorMoeda","reais","statusCambio","statusPgto","awbBl","valorPago","obs"];
-    const ws=XLSX.utils.json_to_sheet(invoices.map(i=>{const o={};cols.forEach(c=>o[c]=i[c]||"");return o;}));
+    const ws=XLSX.utils.json_to_sheet(invoices.map(i=>{
+      const o={};
+      cols.forEach(c=>{
+        // salva números sem formatação
+        if(["valorMoeda","reais","taxa","valorPago"].includes(c)){
+          o[c]=parseCurrency(i[c])||"";
+        } else {
+          o[c]=i[c]||"";
+        }
+      });
+      return o;
+    }));
     const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Invoices");
     const buf=XLSX.write(wb,{type:"array",bookType:"xlsx"});
     const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
@@ -1203,10 +1236,13 @@ function exportPDFCambial(){
 function setupPWA(){
   const iconUrl=window.location.origin+"/icon.png";
   document.getElementById("appleIcon").href=iconUrl;
-  const manifest={name:"Invoices Importação",short_name:"Invoices",description:"Controle de faturas internacionais",start_url:window.location.origin+"/",display:"standalone",background_color:"#1e3a5f",theme_color:"#1e3a5f",orientation:"landscape",icons:[{src:iconUrl,sizes:"192x192",type:"image/png",purpose:"any maskable"},{src:iconUrl,sizes:"512x512",type:"image/png",purpose:"any maskable"}]};
+  const manifest={name:"Invoices Importação",short_name:"Invoices",description:"Controle de faturas internacionais",start_url:window.location.origin+"/invoice-importacao/",display:"standalone",background_color:"#1e3a5f",theme_color:"#1e3a5f",orientation:"landscape",icons:[{src:iconUrl,sizes:"192x192",type:"image/png",purpose:"any maskable"},{src:iconUrl,sizes:"512x512",type:"image/png",purpose:"any maskable"}]};
   const blob=new Blob([JSON.stringify(manifest)],{type:"application/json"});
   document.getElementById("manifestLink").href=URL.createObjectURL(blob);
-  if("serviceWorker" in navigator){const swCode=`const CACHE="inv-v1";self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(["/"]))));self.addEventListener("fetch",e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));`;navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode],{type:"application/javascript"}))).catch(()=>{});}
+  // Remove service workers anteriores que causam cache
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.getRegistrations().then(regs=>regs.forEach(r=>r.unregister()));
+  }
 }
 
 // ===== DEMO =====
