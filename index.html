@@ -287,28 +287,35 @@ const pct=(v,t)=>t>0?((v/t)*100).toFixed(1)+"%" :"0%";
 function parseCurrency(s){
   if(!s&&s!==0)return 0;
   if(typeof s==="number")return s;
-  const str=String(s).trim().replace(/\s/g,"");
+  // remove R$, espaços, símbolos de moeda
+  let str=String(s).trim().replace(/R\$\s*/g,"").replace(/[US$€Fr£\s]/g,"").trim();
   if(!str||str==="-")return 0;
-  // Remove símbolo de moeda se houver
-  const clean=str.replace(/[R$US€Fr£]/g,"").trim();
-  // Detecta formato: se tem vírgula após ponto = brasileiro (1.234,56)
-  if(clean.includes(",")&&clean.includes(".")){
-    const dotPos=clean.lastIndexOf(".");
-    const commaPos=clean.lastIndexOf(",");
-    if(commaPos>dotPos){
-      // brasileiro: 1.234,56
-      return parseFloat(clean.replace(/\./g,"").replace(",","."))||0;
+  // formato americano com vírgula como separador de milhar: 900,000.00
+  if(str.includes(",")&&str.includes(".")){
+    const lastDot=str.lastIndexOf(".");
+    const lastComma=str.lastIndexOf(",");
+    if(lastDot>lastComma){
+      // americano: 900,000.00 → remove vírgula
+      return parseFloat(str.replace(/,/g,""))||0;
     } else {
-      // americano: 1,234.56
-      return parseFloat(clean.replace(/,/g,""))||0;
+      // brasileiro: 900.000,00 → remove ponto, troca vírgula
+      return parseFloat(str.replace(/\./g,"").replace(",","."))||0;
     }
   }
-  // Só vírgula: 1234,56 → brasileiro
-  if(clean.includes(",")&&!clean.includes(".")){
-    return parseFloat(clean.replace(",","."))||0;
+  // só vírgula: pode ser 900,00 (americano sem milhar) ou 900,000 (milhar)
+  if(str.includes(",")&&!str.includes(".")){
+    const parts=str.split(",");
+    if(parts[1]&&parts[1].length===3) return parseFloat(str.replace(",",""))||0; // milhar
+    return parseFloat(str.replace(",","."))||0; // decimal
   }
-  // Só ponto ou número puro: 1234.56 ou 1234
-  return parseFloat(clean)||0;
+  return parseFloat(str)||0;
+}
+
+// limpa "R$ " e converte taxa para número puro
+function parseTaxa(s){
+  if(!s)return"";
+  const n=parseCurrency(s);
+  return n>0?String(n):"";
 }
 function fmtCurrencyDisplay(v){
   if(!v&&v!==0)return"";
@@ -428,10 +435,10 @@ async function carregarDados(){
       vencimento:   String(i.vencimento||""),
       dtPgto:       String(i.dtPgto||""),
       banco:        String(i.banco||""),
-      taxa:         String(i.taxa||""),
+      taxa:         parseTaxa(i.taxa||""),
       moeda:        String(i.moeda||""),
-      valorMoeda:   String(i.valorMoeda||""),
-      reais:        String(i.reais||""),
+      valorMoeda:   String(parseCurrency(i.valorMoeda)||""),
+      reais:        String(parseCurrency(i.reais)||""),
       statusCambio: String(i.statusCambio||"Pendente"),
       statusPgto:   String(i.statusPgto||"Em Aberto"),
       awbBl:        String(i.awbBl||""),
