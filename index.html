@@ -410,6 +410,13 @@ async function carregarDados(){
     const ws=wb.Sheets["Invoices"];
     if(!ws){invoices=[];return;}
     invoices=XLSX.utils.sheet_to_json(ws,{raw:true,defval:""});
+    if(invoices.length>0){
+      const sample=invoices[0];
+      console.log("valorMoeda raw:", sample.valorMoeda, "| type:", typeof sample.valorMoeda);
+      console.log("reais raw:", sample.reais, "| type:", typeof sample.reais);
+      console.log("taxa raw:", sample.taxa, "| type:", typeof sample.taxa);
+      console.log("moeda:", sample.moeda);
+    }
     // normaliza todos os campos
     invoices=invoices.map(i=>{
       // valorMoeda pode vir como número (25000.85) ou string ("25.000,85")
