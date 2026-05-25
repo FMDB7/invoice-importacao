@@ -400,13 +400,34 @@ async function carregarDados(){
     const ws=wb.Sheets["Invoices"];
     if(!ws){invoices=[];return;}
     invoices=XLSX.utils.sheet_to_json(ws,{raw:false,defval:""});
-    // normaliza campos numéricos
-    invoices=invoices.map(i=>({
-      ...i,
-      valorMoeda:i.valorMoeda?String(i.valorMoeda):"",
-      reais:i.reais?String(i.reais):"",
-      taxa:i.taxa?String(i.taxa):""
-    }));
+    // normaliza — aceita colunas em português (versão traduzida) ou inglês
+    invoices=invoices.map(i=>{
+      return {
+        pasta:        i.pasta        || i["pasta"]         || "",
+        cidade:       i.cidade       || i["cidade"]        || "",
+        fornecedor:   i.fornecedor   || i["fornecedor"]    || "",
+        marca:        i.marca        || i["marca"]         || "",
+        dtPedido:     i.dtPedido     || i["dtPedido"]      || "",
+        nProforma:    i.nProforma    || i["nProforma"]     || "",
+        nFatura:      i.nFatura      || i["nFatura"]       || "",
+        dtEmbarque:   i.dtEmbarque   || i["dtEmbarque"]    || "",
+        emissaoFatura:i.emissaoFatura|| i["emissaoFatura"] || "",
+        dtAntecipado: i.dtAntecipado || i["dtAntecipado"]  || "",
+        condPgto:     i.condPgto     || i["condPgto"]      || "",
+        vencimento:   i.vencimento   || i["vencimento"]    || "",
+        dtPgto:       i.dtPgto       || i["dtPgto"]        || "",
+        banco:        i.banco        || i["banco"]         || "",
+        taxa:         String(i.taxa  || i["taxa"]          || ""),
+        moeda:        i.moeda        || i["moeda"]         || "",
+        valorMoeda:   String(i.valorMoeda || i["valorMoeda"] || ""),
+        reais:        String(i.reais  || i["reais"]        || ""),
+        statusCambio: i.statusCambio || i["statusCambio"]  || "Pendente",
+        statusPgto:   i.statusPgto   || i["statusPgto"]   || "Em Aberto",
+        awbBl:        i.awbBl        || i["awbBl"]         || "",
+        valorPago:    String(i.valorPago || i["valorPago"] || ""),
+        obs:          i.obs          || i["obs"]           || ""
+      };
+    });
     document.getElementById("syncStatus").textContent="● Conectado ao OneDrive";
   }catch(e){showToast("Erro ao carregar OneDrive","err");invoices=[];}
 }
