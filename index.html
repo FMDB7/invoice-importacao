@@ -409,10 +409,10 @@ async function carregarDados(){
     const wb=XLSX.read(buf,{type:"array",cellDates:true});
     const ws=wb.Sheets["Invoices"];
     if(!ws){invoices=[];return;}
-    // Lê com raw:false para preservar formato de texto das células
-    const invoicesRaw=XLSX.utils.sheet_to_json(ws,{raw:false,defval:""});
-    console.log("COLUNAS:", Object.keys(invoicesRaw[0]||{}).join(" | "));
-    console.log("LINHA1 valorMoeda:", invoicesRaw[0]?.valorMoeda, "reais:", invoicesRaw[0]?.reais);
+    const invoicesRaw=XLSX.utils.sheet_to_json(ws,{raw:false,defval:"",header:1});
+    console.log("LINHA 0 (header):", invoicesRaw[0]);
+    console.log("LINHA 1 (dados):", invoicesRaw[1]);
+    console.log("LINHA 2 (dados):", invoicesRaw[2]);
     invoices=invoicesRaw.map(i=>({
       pasta:        String(i.pasta||""),
       cidade:       String(i.cidade||""),
