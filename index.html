@@ -409,33 +409,37 @@ async function carregarDados(){
     const wb=XLSX.read(buf,{type:"array",cellDates:true});
     const ws=wb.Sheets["Invoices"];
     if(!ws){invoices=[];return;}
-    invoices=XLSX.utils.sheet_to_json(ws,{raw:false,defval:""});
-    // normaliza — aceita colunas em português (versão traduzida) ou inglês
+    invoices=XLSX.utils.sheet_to_json(ws,{raw:true,defval:""});
+    // normaliza todos os campos
     invoices=invoices.map(i=>{
+      // valorMoeda pode vir como número (25000.85) ou string ("25.000,85")
+      const vm=i.valorMoeda!==undefined&&i.valorMoeda!==""?i.valorMoeda:"";
+      const re=i.reais!==undefined&&i.reais!==""?i.reais:"";
+      const tx=i.taxa!==undefined&&i.taxa!==""?i.taxa:"";
       return {
-        pasta:        i.pasta        || i["pasta"]         || "",
-        cidade:       i.cidade       || i["cidade"]        || "",
-        fornecedor:   i.fornecedor   || i["fornecedor"]    || "",
-        marca:        i.marca        || i["marca"]         || "",
-        dtPedido:     i.dtPedido     || i["dtPedido"]      || "",
-        nProforma:    i.nProforma    || i["nProforma"]     || "",
-        nFatura:      i.nFatura      || i["nFatura"]       || "",
-        dtEmbarque:   i.dtEmbarque   || i["dtEmbarque"]    || "",
-        emissaoFatura:i.emissaoFatura|| i["emissaoFatura"] || "",
-        dtAntecipado: i.dtAntecipado || i["dtAntecipado"]  || "",
-        condPgto:     i.condPgto     || i["condPgto"]      || "",
-        vencimento:   i.vencimento   || i["vencimento"]    || "",
-        dtPgto:       i.dtPgto       || i["dtPgto"]        || "",
-        banco:        i.banco        || i["banco"]         || "",
-        taxa:         String(i.taxa  || i["taxa"]          || ""),
-        moeda:        i.moeda        || i["moeda"]         || "",
-        valorMoeda:   String(i.valorMoeda || i["valorMoeda"] || ""),
-        reais:        String(i.reais  || i["reais"]        || ""),
-        statusCambio: i.statusCambio || i["statusCambio"]  || "Pendente",
-        statusPgto:   i.statusPgto   || i["statusPgto"]   || "Em Aberto",
-        awbBl:        i.awbBl        || i["awbBl"]         || "",
-        valorPago:    String(i.valorPago || i["valorPago"] || ""),
-        obs:          i.obs          || i["obs"]           || ""
+        pasta:        String(i.pasta||""),
+        cidade:       String(i.cidade||""),
+        fornecedor:   String(i.fornecedor||""),
+        marca:        String(i.marca||""),
+        dtPedido:     i.dtPedido?formatExcelDate(i.dtPedido):"",
+        nProforma:    String(i.nProforma||""),
+        nFatura:      String(i.nFatura||""),
+        dtEmbarque:   i.dtEmbarque?formatExcelDate(i.dtEmbarque):"",
+        emissaoFatura:i.emissaoFatura?formatExcelDate(i.emissaoFatura):"",
+        dtAntecipado: i.dtAntecipado?formatExcelDate(i.dtAntecipado):"",
+        condPgto:     String(i.condPgto||""),
+        vencimento:   i.vencimento?formatExcelDate(i.vencimento):"",
+        dtPgto:       i.dtPgto?formatExcelDate(i.dtPgto):"",
+        banco:        String(i.banco||""),
+        taxa:         String(tx),
+        moeda:        String(i.moeda||""),
+        valorMoeda:   String(vm),
+        reais:        String(re),
+        statusCambio: String(i.statusCambio||"Pendente"),
+        statusPgto:   String(i.statusPgto||"Em Aberto"),
+        awbBl:        String(i.awbBl||""),
+        valorPago:    String(i.valorPago||""),
+        obs:          String(i.obs||"")
       };
     });
     document.getElementById("syncStatus").textContent="● Conectado ao OneDrive";
