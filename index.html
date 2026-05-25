@@ -36,9 +36,17 @@ input:focus,select:focus,textarea:focus{border-color:#2563eb;box-shadow:0 0 0 3p
 table{width:100%;border-collapse:collapse}
 thead tr{background:#1e3a5f;color:#fff}
 th{padding:8px 10px;text-align:left;font-size:12px;white-space:nowrap}
-td{padding:7px 10px;font-size:12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+td{padding:6px 8px;font-size:12px;border-bottom:1px solid #f1f5f9;vertical-align:middle;white-space:nowrap}
 tr:nth-child(even) td{background:#f8fafc}
-.badge{padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap}
+.col-moeda{min-width:60px;text-align:center}
+.col-valor{min-width:130px;text-align:right}
+.col-taxa{min-width:70px;text-align:center}
+.col-pasta{min-width:80px}
+.col-fatura{min-width:120px}
+.col-data{min-width:90px}
+.col-cond{min-width:80px}
+.col-status{min-width:90px}
+.col-acoes{min-width:100px;white-space:nowrap}
 .badge-red{background:#fee2e2;color:#dc2626}
 .badge-green{background:#dcfce7;color:#16a34a}
 .badge-yellow{background:#fef3c7;color:#d97706}
@@ -503,23 +511,39 @@ function renderInvoices(){
     <button class="btn btn-green" onclick="editIndex=null;abrirFormInvoice()">+ Nova Invoice</button>
   </div>
   <div style="overflow-x:auto"><table>
-    <thead><tr>${["Pasta","Fornecedor","Nº Fatura","Emissão","Vencto","Moeda","Valor Moeda","Taxa","Valor R$","Cond.","Status","Câmbio","AWB/BL","Ações"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+    <thead><tr>
+      <th class="col-pasta">Pasta</th>
+      <th style="min-width:160px">Fornecedor</th>
+      <th class="col-fatura">Nº Fatura</th>
+      <th class="col-data">Emissão</th>
+      <th class="col-data">Vencto</th>
+      <th class="col-moeda">Moeda</th>
+      <th class="col-valor">Valor Moeda</th>
+      <th class="col-taxa">Taxa</th>
+      <th class="col-valor">Valor R$</th>
+      <th class="col-cond">Cond.</th>
+      <th class="col-status">Status</th>
+      <th class="col-status">Câmbio</th>
+      <th style="min-width:80px">AWB/BL</th>
+      <th class="col-acoes">Ações</th>
+    </tr></thead>
     <tbody>${filtradas.length===0?`<tr><td colspan="14" style="text-align:center;padding:20px;color:#94a3b8">Nenhuma invoice encontrada</td></tr>`:filtradas.map(i=>{
       const a=alertaVcto(i.vencimento,i.statusPgto),ri=invoices.indexOf(i);
       return`<tr>
-        <td>${i.pasta||""}</td>
-        <td>${i.fornecedor||""}<br><span style="color:#94a3b8;font-size:10px">${i.marca||""}</span></td>
-        <td>${i.nFatura||""}</td><td>${fmtD(i.emissaoFatura)}</td>
-        <td>${a==="vencido"?'<span style="color:#dc2626">⛔</span> ':a==="urgente"?'<span style="color:#d97706">🚨</span> ':a==="alerta"?'<span>⚠️</span> ':""}${fmtD(i.vencimento)}</td>
-        <td>${moedaBadge(i.moeda)}</td>
-        <td class="col-wide" style="font-weight:600">${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td>
-        <td>${i.taxa||"—"}</td>
-        <td class="col-wide" style="font-weight:700;color:#1e3a5f">${fmtBRL(i.reais)}</td>
-        <td>${i.condPgto||""}</td>
-        <td>${statusBadge(i.statusPgto)}</td>
-        <td><span class="badge ${i.statusCambio==="Fechado"?"badge-green":"badge-yellow"}">${i.statusCambio||"Pendente"}</span></td>
-        <td>${i.awbBl||""}</td>
-        <td style="white-space:nowrap">
+        <td class="col-pasta">${i.pasta||""}</td>
+        <td><b style="font-size:12px">${i.fornecedor||""}</b>${i.marca?`<br><span style="color:#94a3b8;font-size:10px">${i.marca}</span>`:""}</td>
+        <td class="col-fatura">${i.nFatura||""}</td>
+        <td class="col-data">${fmtD(i.emissaoFatura)}</td>
+        <td class="col-data">${a==="vencido"?'<span style="color:#dc2626">⛔</span> ':a==="urgente"?'<span style="color:#d97706">🚨</span> ':a==="alerta"?'<span>⚠️</span> ':""}${fmtD(i.vencimento)}</td>
+        <td class="col-moeda">${moedaBadge(i.moeda)}</td>
+        <td class="col-valor" style="font-weight:600;color:${MOEDA_COR[i.moeda]||'#1e293b'}">${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td>
+        <td class="col-taxa" style="text-align:center">${i.taxa?Number(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4}):"—"}</td>
+        <td class="col-valor" style="font-weight:700;color:#1e3a5f">${fmtBRL(i.reais)}</td>
+        <td class="col-cond" style="font-size:11px">${i.condPgto||""}</td>
+        <td class="col-status">${statusBadge(i.statusPgto)}</td>
+        <td class="col-status"><span class="badge ${i.statusCambio==="Fechado"?"badge-green":"badge-yellow"}">${i.statusCambio||"Pendente"}</span></td>
+        <td style="min-width:80px;font-size:11px">${i.awbBl||""}</td>
+        <td class="col-acoes">
           <button class="btn-sm" style="background:#f1f5f9" onclick="editarInvoice(${ri})">✏️</button>
           ${i.statusPgto!=="Pago Total"?`<button class="btn-sm" style="background:#dcfce7;color:#16a34a" onclick="abrirPgto(${ri})">💰</button>`:""}
           <button class="btn-sm" style="background:#fee2e2;color:#dc2626" onclick="excluirInvoice(${ri})">🗑️</button>
