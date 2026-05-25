@@ -533,11 +533,7 @@ function renderInvoices(){
     <button class="btn btn-primary" onclick="exportPDF()">🖨️ PDF</button>
     <button class="btn btn-green" onclick="editIndex=null;abrirFormInvoice()">+ Nova Invoice</button>
   </div>
-  const temObs=filtradas.some(i=>i.obs&&i.obs.trim()!=="");
-  const colObs=temObs?`<th style="min-width:120px">Obs.</th>`:"";
-  const colObsData=(i)=>temObs?`<td style="font-size:11px;color:#475569;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${i.obs||""}">${i.obs||""}</td>`:"";
-  const totalCols=temObs?15:14;
-  return`<div style="overflow-x:auto"><table>
+  return `<div style="overflow-x:auto"><table>
     <thead><tr>
       <th class="col-pasta">Pasta</th>
       <th style="min-width:160px">Fornecedor</th>
@@ -552,10 +548,9 @@ function renderInvoices(){
       <th class="col-status">Status</th>
       <th class="col-status">Câmbio</th>
       <th style="min-width:80px">AWB/BL</th>
-      ${colObs}
       <th class="col-acoes">Ações</th>
     </tr></thead>
-    <tbody>${filtradas.length===0?`<tr><td colspan="${totalCols}" style="text-align:center;padding:20px;color:#94a3b8">Nenhuma invoice encontrada</td></tr>`:filtradas.map(i=>{
+    <tbody>${filtradas.length===0?`<tr><td colspan="14" style="text-align:center;padding:20px;color:#94a3b8">Nenhuma invoice encontrada</td></tr>`:filtradas.map(i=>{
       const a=alertaVcto(i.vencimento,i.statusPgto),ri=invoices.indexOf(i);
       return`<tr>
         <td class="col-pasta">${i.pasta||""}</td>
@@ -571,7 +566,6 @@ function renderInvoices(){
         <td class="col-status">${statusBadge(i.statusPgto)}</td>
         <td class="col-status"><span class="badge ${i.statusCambio==="Fechado"?"badge-green":"badge-yellow"}">${i.statusCambio||"Pendente"}</span></td>
         <td style="min-width:80px;font-size:11px">${i.awbBl||""}</td>
-        ${colObsData(i)}
         <td class="col-acoes">
           <button class="btn-sm" style="background:#f1f5f9" onclick="editarInvoice(${ri})">✏️</button>
           ${i.statusPgto!=="Pago Total"?`<button class="btn-sm" style="background:#dcfce7;color:#16a34a" onclick="abrirPgto(${ri})">💰</button>`:""}
