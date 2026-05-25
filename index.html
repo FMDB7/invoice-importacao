@@ -285,20 +285,9 @@ const hoje=()=>new Date().toISOString().split("T")[0];
 const pct=(v,t)=>t>0?((v/t)*100).toFixed(1)+"%" :"0%";
 
 function parseCurrency(s){
-  if(!s&&s!==0)return 0;
+  if(!s)return 0;
   if(typeof s==="number")return s;
-  const str=String(s).trim();
-  if(!str)return 0;
-  // formato brasileiro: 1.234,56
-  if(str.includes(",")&&str.includes(".")){
-    return parseFloat(str.replace(/\./g,"").replace(",","."))||0;
-  }
-  // formato brasileiro sem milhar: 1234,56
-  if(str.includes(",")&&!str.includes(".")){
-    return parseFloat(str.replace(",","."))||0;
-  }
-  // formato americano ou inteiro: 1234.56 ou 1234
-  return parseFloat(str)||0;
+  return parseFloat(String(s).replace(/\./g,"").replace(",","."))||0;
 }
 function fmtCurrencyDisplay(v){
   if(!v&&v!==0)return"";
@@ -399,14 +388,7 @@ async function carregarDados(){
     const wb=XLSX.read(buf,{type:"array",cellDates:true});
     const ws=wb.Sheets["Invoices"];
     if(!ws){invoices=[];return;}
-    invoices=XLSX.utils.sheet_to_json(ws,{raw:false,defval:""});
-    // normaliza campos numéricos
-    invoices=invoices.map(i=>({
-      ...i,
-      valorMoeda:i.valorMoeda?String(i.valorMoeda):"",
-      reais:i.reais?String(i.reais):"",
-      taxa:i.taxa?String(i.taxa):""
-    }));
+    invoices=XLSX.utils.sheet_to_json(ws,{raw:false});
     document.getElementById("syncStatus").textContent="● Conectado ao OneDrive";
   }catch(e){showToast("Erro ao carregar OneDrive","err");invoices=[];}
 }
