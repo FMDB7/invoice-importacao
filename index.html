@@ -411,11 +411,8 @@ async function carregarDados(){
     if(!ws){invoices=[];return;}
     invoices=XLSX.utils.sheet_to_json(ws,{raw:true,defval:""});
     if(invoices.length>0){
-      const sample=invoices[0];
-      console.log("valorMoeda raw:", sample.valorMoeda, "| type:", typeof sample.valorMoeda);
-      console.log("reais raw:", sample.reais, "| type:", typeof sample.reais);
-      console.log("taxa raw:", sample.taxa, "| type:", typeof sample.taxa);
-      console.log("moeda:", sample.moeda);
+      console.log("TODAS AS COLUNAS:", Object.keys(invoices[0]).join(" | "));
+      console.log("VALORES LINHA 1:", JSON.stringify(invoices[0]));
     }
     // normaliza todos os campos
     invoices=invoices.map(i=>{
