@@ -118,6 +118,8 @@ tr:nth-child(even) td{background:#f8fafc}
     </div>
   </div>
 </div>
+
+<!-- MODAL PAGAMENTO -->
 <div class="modal-overlay" id="modalPgto">
   <div class="modal modal-sm">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
@@ -145,9 +147,12 @@ const CONFIG={
 };
 const MOEDAS=["USD","EUR","CHF","GBP"];
 const SIMBOLO={USD:"US$",EUR:"€",CHF:"Fr",GBP:"£"};
-const MOEDA_COR={USD:"#1d4ed8",EUR:"#7c3aed",CHF:"#dc2626",GBP:"#065f46"};
-const MOEDA_BG={USD:"#dbeafe",EUR:"#ede9fe",CHF:"#fee2e2",GBP:"#d1fae5"};
-const MOEDA_CHART={USD:"#3b82f6",EUR:"#8b5cf6",CHF:"#ef4444",GBP:"#10b981"};
+// 🎨 CORES POR MOEDA: USD=Azul | EUR=Verde Escuro | CHF=Vermelho | GBP=Roxo
+const MOEDA_COR={USD:"#1d4ed8",EUR:"#065f46",CHF:"#dc2626",GBP:"#7c3aed"};
+const MOEDA_BG={USD:"#dbeafe",EUR:"#d1fae5",CHF:"#fee2e2",GBP:"#ede9fe"};
+const MOEDA_BORDA={USD:"#3b82f6",EUR:"#10b981",CHF:"#ef4444",GBP:"#8b5cf6"};
+const MOEDA_CHART={USD:"#3b82f6",EUR:"#10b981",CHF:"#ef4444",GBP:"#8b5cf6"};
+const MOEDA_ICONE={USD:"🇺🇸",EUR:"🇪🇺",CHF:"🇨🇭",GBP:"🇬🇧"};
 const STATUS_PGTO=["Em Aberto","Pago Parcial","Pago Total"];
 const STATUS_CAMBIO=["Pendente","Fechado"];
 const COND_PGTO=["À Vista","Antecipado","30 dias","45 dias","60 dias","90 dias","120 dias"];
@@ -156,153 +161,106 @@ const TABS=["Dashboard","Nova Invoice","Invoices","Pagamentos","Rel. Fornecedore
 
 let invoices=[],editIndex=null,currentTab="Dashboard",accessToken=null,currentUser=null;
 let filtroPgto="Todos",relForn="",pgtoTarget=null;
-// filtros com estado pendente (antes de buscar) e aplicado
 let filtros={
   inv:{fornecedor:"",status:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_dtIni:"",_dtFim:""},
-  pgto:{status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:""},
+  pgto:{status:"Todos",dtIni:"",dtFim:"",_status:"Todos",_dtIni:"",_dtFim:""},
   forn:{fornecedor:"",dtIni:"",dtFim:"",_fornecedor:"",_dtIni:"",_dtFim:""},
   cambial:{fornecedor:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_moeda:"",_dtIni:"",_dtFim:""}
 };
 
-// ===== TAXAS DE CÂMBIO =====
-let taxasAtivas = {USD:"", EUR:"", CHF:"", GBP:""};
-
+// ===== TAXAS =====
+let taxasAtivas={USD:"",EUR:"",CHF:"",GBP:""};
 function abrirModalTaxa(){
-  // pega taxas mais recentes das invoices pagas como referência
   MOEDAS.forEach(m=>{
     const arr=invoices.filter(i=>i.moeda===m&&i.taxa&&parseFloat(i.taxa)>0);
-    if(!taxasAtivas[m]&&arr.length){
-      const ultima=arr[arr.length-1];
-      taxasAtivas[m]=parseFloat(ultima.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4});
-    }
+    if(!taxasAtivas[m]&&arr.length)taxasAtivas[m]=parseFloat(arr[arr.length-1].taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4});
   });
-  renderTaxaFields();
-  abrirModal("modalTaxa");
+  renderTaxaFields();abrirModal("modalTaxa");
 }
-
 function renderTaxaFields(){
-  document.getElementById("taxaFields").innerHTML=`
-    <table style="width:100%;border-collapse:collapse;margin-bottom:8px">
-      <thead><tr style="background:#1e3a5f;color:#fff">
-        <th style="padding:8px 12px;text-align:left;font-size:12px">Moeda</th>
-        <th style="padding:8px 12px;text-align:left;font-size:12px">Taxa Atual (R$)</th>
-        <th style="padding:8px 12px;text-align:left;font-size:12px">Nova Taxa (R$)</th>
-        <th style="padding:8px 12px;text-align:left;font-size:12px">Invoices Afetadas</th>
-      </tr></thead>
-      <tbody>
-        ${MOEDAS.map(m=>{
-          const afetadas=invoices.filter(i=>i.moeda===m&&i.statusCambio==="Pendente").length;
-          const taxaAtual=taxasAtivas[m]||"—";
-          return`<tr style="border-bottom:1px solid #f1f5f9">
-            <td style="padding:10px 12px">
-              <span style="background:${MOEDA_BG[m]};color:${MOEDA_COR[m]};padding:3px 10px;border-radius:10px;font-weight:700;font-size:12px">${SIMBOLO[m]} ${m}</span>
-            </td>
-            <td style="padding:10px 12px;font-weight:600;color:${MOEDA_COR[m]}">${taxaAtual}</td>
-            <td style="padding:6px 12px">
-              <input id="taxa_${m}" type="text" inputmode="numeric"
-                placeholder="Ex: 5,4585"
-                value="${taxasAtivas[m]||""}"
-                oninput="handleTaxaModalInput(this,'${m}')"
-                style="width:120px;padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px">
-              <div id="err_${m}" style="color:#dc2626;font-size:10px;margin-top:2px"></div>
-            </td>
-            <td style="padding:10px 12px">
-              <span style="background:${afetadas>0?"#fef3c7":"#f1f5f9"};color:${afetadas>0?"#d97706":"#64748b"};padding:2px 8px;border-radius:8px;font-size:12px;font-weight:600">${afetadas} invoice(s)</span>
-            </td>
-          </tr>`;
-        }).join("")}
-      </tbody>
-    </table>`;
+  document.getElementById("taxaFields").innerHTML=`<table style="width:100%;border-collapse:collapse;margin-bottom:8px">
+    <thead><tr style="background:#1e3a5f;color:#fff"><th style="padding:8px 12px;font-size:12px">Moeda</th><th style="padding:8px 12px;font-size:12px">Taxa Atual</th><th style="padding:8px 12px;font-size:12px">Nova Taxa</th><th style="padding:8px 12px;font-size:12px">Afetadas</th></tr></thead>
+    <tbody>${MOEDAS.map(m=>{
+      const afet=invoices.filter(i=>i.moeda===m&&i.statusCambio==="Pendente").length;
+      return`<tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 12px"><span style="background:${MOEDA_BG[m]};color:${MOEDA_COR[m]};padding:3px 10px;border-radius:10px;font-weight:700;font-size:12px;border:1px solid ${MOEDA_BORDA[m]}">${MOEDA_ICONE[m]} ${m}</span></td>
+        <td style="padding:10px 12px;font-weight:600;color:${MOEDA_COR[m]}">${taxasAtivas[m]||"—"}</td>
+        <td style="padding:6px 12px"><input id="taxa_${m}" type="text" inputmode="numeric" placeholder="Ex: 5,4585" value="${taxasAtivas[m]||""}" oninput="handleTaxaModalInput(this,'${m}')" style="width:120px;padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px"><div id="err_${m}" style="color:#dc2626;font-size:10px;margin-top:2px"></div></td>
+        <td style="padding:10px 12px"><span style="background:${afet>0?"#fef3c7":"#f1f5f9"};color:${afet>0?"#d97706":"#64748b"};padding:2px 8px;border-radius:8px;font-size:12px;font-weight:600">${afet}</span></td>
+      </tr>`;
+    }).join("")}</tbody></table>`;
   atualizarPreviewTaxa();
 }
-
 function handleTaxaModalInput(el,m){
   let raw=el.value.replace(/[^\d]/g,"").slice(0,6);
   if(!raw){el.value="";taxasAtivas[m]="";atualizarPreviewTaxa();return;}
-  const padded=raw.padStart(6,"0");
-  const intPart=padded.slice(0,2).replace(/^0+/,"")||"0";
-  const decPart=padded.slice(2);
-  el.value=`${intPart},${decPart}`;
-  const n=parseFloat(`${intPart}.${decPart}`);
-  // validação
-  const errEl=document.getElementById(`err_${m}`);
-  if(n<1||n>20){
-    errEl.textContent="⚠️ Taxa fora do intervalo aceitável (1,00 a 20,00)";
-    taxasAtivas[m]="";
-  } else {
-    errEl.textContent="";
-    taxasAtivas[m]=el.value;
-  }
+  const pad=raw.padStart(6,"0"),ip=pad.slice(0,2).replace(/^0+/,"")||"0",dp=pad.slice(2);
+  el.value=`${ip},${dp}`;
+  const n=parseFloat(`${ip}.${dp}`);
+  const err=document.getElementById(`err_${m}`);
+  if(n<1||n>20){err.textContent="⚠️ Intervalo: 1,00 a 20,00";taxasAtivas[m]="";}
+  else{err.textContent="";taxasAtivas[m]=el.value;}
   atualizarPreviewTaxa();
 }
-
 function atualizarPreviewTaxa(){
   const linhas=MOEDAS.map(m=>{
     if(!taxasAtivas[m])return"";
     const t=parseFloat(taxasAtivas[m].replace(/\./g,"").replace(",","."))||0;
     if(!t)return"";
-    const afetadas=invoices.filter(i=>i.moeda===m&&i.statusCambio==="Pendente");
-    const totalVM=afetadas.reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
-    const totalR=t*totalVM;
-    return`<tr><td style="padding:5px 10px"><span style="color:${MOEDA_COR[m]};font-weight:700">${m}</span></td><td style="padding:5px 10px">R$ ${taxasAtivas[m]}</td><td style="padding:5px 10px">${fmtM(totalVM,m)}</td><td style="padding:5px 10px;font-weight:700;color:#16a34a">${fmtBRL(totalR)}</td></tr>`;
+    const af=invoices.filter(i=>i.moeda===m&&i.statusCambio==="Pendente");
+    const tv=af.reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
+    return`<tr><td style="padding:5px 10px;color:${MOEDA_COR[m]};font-weight:700">${MOEDA_ICONE[m]} ${m}</td><td style="padding:5px 10px">R$ ${taxasAtivas[m]}</td><td style="padding:5px 10px">${fmtM(tv,m)}</td><td style="padding:5px 10px;font-weight:700;color:#16a34a">${fmtBRL(t*tv)}</td></tr>`;
   }).filter(Boolean).join("");
-  document.getElementById("taxaPreview").innerHTML=linhas?`
-    <div style="background:#f0fdf4;border-radius:8px;padding:12px;border:1px solid #bbf7d0">
-      <div style="font-size:12px;font-weight:700;color:#16a34a;margin-bottom:8px">📊 Preview do impacto:</div>
-      <table style="width:100%;font-size:12px;border-collapse:collapse">
-        <thead><tr style="color:#64748b"><th style="padding:4px 10px;text-align:left">Moeda</th><th style="padding:4px 10px;text-align:left">Nova Taxa</th><th style="padding:4px 10px;text-align:left">Total Moeda</th><th style="padding:4px 10px;text-align:left">Total R$</th></tr></thead>
-        <tbody>${linhas}</tbody>
-      </table>
-    </div>`:"";
+  document.getElementById("taxaPreview").innerHTML=linhas?`<div style="background:#f0fdf4;border-radius:8px;padding:12px;border:1px solid #bbf7d0"><div style="font-size:12px;font-weight:700;color:#16a34a;margin-bottom:8px">📊 Preview do impacto:</div><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="color:#64748b"><th style="padding:4px 10px;text-align:left">Moeda</th><th style="padding:4px 10px;text-align:left">Nova Taxa</th><th style="padding:4px 10px;text-align:left">Total Moeda</th><th style="padding:4px 10px;text-align:left">Total R$</th></tr></thead><tbody>${linhas}</tbody></table></div>`:"";
 }
-
 function confirmarTaxas(){
-  let erros=[];
-  let atualizados=0;
+  let erros=[],atualizados=0;
   MOEDAS.forEach(m=>{
-    const val=taxasAtivas[m];
-    if(!val)return;
+    const val=taxasAtivas[m];if(!val)return;
     const t=parseFloat(val.replace(/\./g,"").replace(",","."))||0;
-    if(t<1||t>20){erros.push(`${m}: taxa fora do intervalo`);return;}
-    // atualiza todas invoices pendentes daquela moeda
+    if(t<1||t>20){erros.push(`${m}: fora do intervalo`);return;}
     invoices.forEach((inv,idx)=>{
       if(inv.moeda===m&&inv.statusCambio==="Pendente"){
         const vm=parseCurrency(inv.valorMoeda)||0;
-        invoices[idx]={...inv,taxa:String(t),reais:vm?(t*vm).toFixed(2):""};
-        atualizados++;
+        invoices[idx]={...inv,taxa:String(t),reais:vm?(t*vm).toFixed(2):""};atualizados++;
       }
     });
   });
   if(erros.length){showToast("Erros: "+erros.join(", "),"err");return;}
-  fecharModal("modalTaxa");
-  salvarDados().then(()=>renderTab(currentTab));
+  fecharModal("modalTaxa");salvarDados().then(()=>renderTab(currentTab));
   showToast(`✅ Taxas aplicadas! ${atualizados} invoice(s) atualizada(s)!`);
 }
+
+// ===== UTILS =====
 const fmtBRL=v=>v!=null&&v!==""&&!isNaN(parseFloat(v))?`R$ ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}`:"—";
 const fmtM=(v,m)=>v!=null&&v!==""&&!isNaN(parseFloat(v))?`${SIMBOLO[m]||""} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}`:"—";
 const fmtD=d=>d?new Date(d+"T00:00:00").toLocaleDateString("pt-BR"):"—";
 const hoje=()=>new Date().toISOString().split("T")[0];
-const pct=(v,t)=>t>0?((v/t)*100).toFixed(1)+"%" :"0%";
+const pct=(v,t)=>t>0?((v/t)*100).toFixed(1)+"%":"0%";
 
 function parseCurrency(s){
-  if(!s)return 0;
-  if(typeof s==="number")return s;
-  return parseFloat(String(s).replace(/\./g,"").replace(",","."))||0;
+  if(s===null||s===undefined||s==="")return 0;
+  if(typeof s==="number")return isNaN(s)?0:s;
+  let str=String(s).trim().replace(/R\$\s*/g,"").replace(/[US$€Fr£\s]/g,"").trim();
+  if(!str||str==="-")return 0;
+  if(/^\d+(\.\d+)?$/.test(str))return parseFloat(str)||0;
+  if(/^\d{1,3}(,\d{3})*(\.\d+)?$/.test(str))return parseFloat(str.replace(/,/g,""))||0;
+  if(/^\d{1,3}(\.\d{3})*(,\d+)?$/.test(str))return parseFloat(str.replace(/\./g,"").replace(",","."))||0;
+  const clean=str.replace(/[^0-9.,]/g,"");
+  const lc=clean.lastIndexOf(","),ld=clean.lastIndexOf(".");
+  if(lc>ld)return parseFloat(clean.replace(/\./g,"").replace(",","."))||0;
+  return parseFloat(clean.replace(/,/g,""))||0;
 }
 function fmtCurrencyDisplay(v){
   if(!v&&v!==0)return"";
   const n=typeof v==="string"?parseCurrency(v):v;
-  if(isNaN(n))return"";
-  return n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  return isNaN(n)?"":n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 function handleTaxaInput(el,key){
   let raw=el.value.replace(/[^\d]/g,"").slice(0,6);
   if(!raw){el.value="";updateForm(key,"");return;}
-  const padded=raw.padStart(6,"0");
-  const intPart=padded.slice(0,2).replace(/^0+/,"")||"0";
-  const decPart=padded.slice(2);
-  el.value=`${intPart},${decPart}`;
-  updateForm(key,String(parseFloat(`${intPart}.${decPart}`)));
+  const pad=raw.padStart(6,"0"),ip=pad.slice(0,2).replace(/^0+/,"")||"0",dp=pad.slice(2);
+  el.value=`${ip},${dp}`;updateForm(key,String(parseFloat(`${ip}.${dp}`)));
 }
 function handleCurrencyInput(el,key){
   let raw=el.value.replace(/[^\d]/g,"");
@@ -313,8 +271,7 @@ function handleCurrencyInput(el,key){
 }
 function calcVcto(embarque,cond){
   if(!embarque||cond==="Antecipado")return"";
-  const dias=COND_DIAS[cond]||0;
-  const d=new Date(embarque+"T00:00:00");d.setDate(d.getDate()+dias);
+  const d=new Date(embarque+"T00:00:00");d.setDate(d.getDate()+(COND_DIAS[cond]||0));
   return d.toISOString().split("T")[0];
 }
 function alertaVcto(vcto,status){
@@ -326,6 +283,9 @@ function statusBadge(s){
   const cls=s==="Pago Total"?"badge-green":s==="Em Aberto"?"badge-red":"badge-yellow";
   return`<span class="badge ${cls}">${s||"Em Aberto"}</span>`;
 }
+function moedaBadge(m){
+  return`<span style="background:${MOEDA_BG[m]||'#f1f5f9'};color:${MOEDA_COR[m]||'#1e293b'};padding:3px 10px;border-radius:10px;font-weight:700;font-size:12px;border:1px solid ${MOEDA_BORDA[m]||'#e2e8f0'}">${MOEDA_ICONE[m]||''} ${m||""}</span>`;
+}
 function showToast(msg,tipo="ok"){
   const t=document.getElementById("toast");t.textContent=msg;
   t.style.background=tipo==="err"?"#dc2626":"#16a34a";t.style.display="block";
@@ -333,23 +293,19 @@ function showToast(msg,tipo="ok"){
 }
 function abrirModal(id){document.getElementById(id).classList.add("open");document.addEventListener("keydown",handleEsc);}
 function fecharModal(id){document.getElementById(id).classList.remove("open");document.removeEventListener("keydown",handleEsc);}
-function handleEsc(e){if(e.key==="Escape"){["modalInvoice","modalPgto"].forEach(id=>{if(document.getElementById(id).classList.contains("open"))fecharModal(id);});}}
+function handleEsc(e){if(e.key==="Escape"){["modalInvoice","modalPgto","modalTaxa"].forEach(id=>{if(document.getElementById(id).classList.contains("open"))fecharModal(id);});}}
 
-// ===== GRÁFICO DE COLUNAS =====
-function renderGraficoMoeda(dados, titulo){
-  // dados = [{moeda, valor, pct, cor}]
+// ===== GRÁFICO =====
+function renderGraficoMoeda(dados,titulo){
   const max=Math.max(...dados.map(d=>d.pct),1);
-  const bars=dados.map(d=>`
-    <div class="chart-bar">
-      <div style="font-size:11px;font-weight:700;color:${d.cor}">${d.pct.toFixed(1)}%</div>
-      <div style="width:52px;height:${Math.max((d.pct/max)*140,4).toFixed(0)}px;background:${d.cor};border-radius:6px 6px 0 0;transition:height .4s"></div>
-      <div style="font-size:11px;font-weight:700;color:${d.cor}">${d.moeda}</div>
-      <div style="font-size:10px;color:#64748b;text-align:center">${fmtM(d.valor,d.moeda)}</div>
-    </div>`).join("");
-  return`<div class="card">
-    <div style="font-weight:700;color:#1e3a5f;margin-bottom:14px">📊 ${titulo}</div>
-    <div class="chart-wrap">${bars}</div>
-  </div>`;
+  const bars=dados.map(d=>`<div class="chart-bar">
+    <div style="font-size:11px;font-weight:700;color:${d.cor}">${d.pct.toFixed(1)}%</div>
+    <div style="width:52px;height:${Math.max((d.pct/max)*140,4).toFixed(0)}px;background:${d.cor};border-radius:6px 6px 0 0"></div>
+    <div style="font-size:13px">${MOEDA_ICONE[d.moeda]||d.moeda}</div>
+    <div style="font-size:11px;font-weight:700;color:${d.cor}">${d.moeda}</div>
+    <div style="font-size:10px;color:#64748b;text-align:center">${fmtM(d.valor,d.moeda)}</div>
+  </div>`).join("");
+  return`<div class="card"><div style="font-weight:700;color:#1e3a5f;margin-bottom:14px">📊 ${titulo}</div><div class="chart-wrap">${bars}</div></div>`;
 }
 
 // ===== AUTH =====
@@ -388,7 +344,7 @@ async function carregarDados(){
     const wb=XLSX.read(buf,{type:"array",cellDates:true});
     const ws=wb.Sheets["Invoices"];
     if(!ws){invoices=[];return;}
-    invoices=XLSX.utils.sheet_to_json(ws,{raw:false});
+    invoices=XLSX.utils.sheet_to_json(ws,{raw:false,defval:""});
     document.getElementById("syncStatus").textContent="● Conectado ao OneDrive";
   }catch(e){showToast("Erro ao carregar OneDrive","err");invoices=[];}
 }
@@ -428,82 +384,46 @@ function renderTab(tab){
   else if(tab==="Análise Cambial")el.innerHTML=renderAnaliseCambial();
 }
 
-// ===== FILTRO HELPERS =====
-function filtroBar(ns, campos, onBuscar){
+// ===== FILTROS =====
+function filtroBar(ns,campos,onBuscar){
   const inputs=campos.map(c=>{
     if(c.type==="select"){
       const val=filtros[ns]["_"+c.key]||filtros[ns][c.key]||"";
       return`<div><label class="form-label">${c.label}</label><select id="f_${ns}_${c.key}" onchange="filtros['${ns}']['_${c.key}']=this.value">${(c.options||[]).map(o=>`<option value="${o.val}"${val===o.val?" selected":""}>${o.txt}</option>`).join("")}</select></div>`;
     }
-    const val=filtros[ns]["_"+c.key]||"";
-    return`<div><label class="form-label">${c.label}</label><input type="date" id="f_${ns}_${c.key}" value="${val}" onchange="filtros['${ns}']['_${c.key}']=this.value"></div>`;
+    return`<div><label class="form-label">${c.label}</label><input type="date" id="f_${ns}_${c.key}" value="${filtros[ns]["_"+c.key]||""}" onchange="filtros['${ns}']['_${c.key}']=this.value"></div>`;
   }).join("");
-  return`<div class="card" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-    ${inputs}
-    <button class="btn-search" onclick="${onBuscar}">🔍 Buscar</button>
-    <button class="btn btn-ghost" onclick="limparFiltro('${ns}')">✖ Limpar</button>
-  </div>`;
+  return`<div class="card" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">${inputs}<button class="btn-search" onclick="${onBuscar}">🔍 Buscar</button><button class="btn btn-ghost" onclick="limparFiltro('${ns}')">✖ Limpar</button></div>`;
 }
-
 function limparFiltro(ns){
-  const f=filtros[ns];
-  Object.keys(f).forEach(k=>f[k]="");
+  Object.keys(filtros[ns]).forEach(k=>filtros[ns][k]="");
   if(ns==="pgto"){filtros.pgto.status="Todos";filtros.pgto._status="Todos";}
-  // limpa os campos visuais
-  ["status","fornecedor","moeda","dtIni","dtFim"].forEach(k=>{
-    const el=document.getElementById(`f_${ns}_${k}`);
-    if(el){if(el.tagName==="SELECT")el.value=el.options[0]?.value||"";else el.value="";}
-  });
   renderTab(currentTab);
 }
-
-function aplicarFiltroInv(){
-  filtros.inv.fornecedor=filtros.inv._fornecedor;
-  filtros.inv.status=filtros.inv._status;
-  filtros.inv.moeda=filtros.inv._moeda;
-  filtros.inv.dtIni=filtros.inv._dtIni;
-  filtros.inv.dtFim=filtros.inv._dtFim;
-  renderTab("Invoices");
-}
+function aplicarFiltroInv(){filtros.inv.fornecedor=filtros.inv._fornecedor;filtros.inv.status=filtros.inv._status;filtros.inv.moeda=filtros.inv._moeda;filtros.inv.dtIni=filtros.inv._dtIni;filtros.inv.dtFim=filtros.inv._dtFim;renderTab("Invoices");}
 function aplicarFiltroPgto(){
   const sel=document.getElementById("f_pgto_status");
-  const dtIni=document.getElementById("f_pgto_dtIni");
-  const dtFim=document.getElementById("f_pgto_dtFim");
+  const di=document.getElementById("f_pgto_dtIni");
+  const df=document.getElementById("f_pgto_dtFim");
   filtros.pgto.status=sel?sel.value:"Todos";
-  filtros.pgto.dtIni=dtIni?dtIni.value:"";
-  filtros.pgto.dtFim=dtFim?dtFim.value:"";
+  filtros.pgto.dtIni=di?di.value:"";
+  filtros.pgto.dtFim=df?df.value:"";
   filtros.pgto._status=filtros.pgto.status;
   filtros.pgto._dtIni=filtros.pgto.dtIni;
   filtros.pgto._dtFim=filtros.pgto.dtFim;
   renderTab("Pagamentos");
 }
-function aplicarFiltroForn(){
-  filtros.forn.fornecedor=filtros.forn._fornecedor;
-  filtros.forn.dtIni=filtros.forn._dtIni;
-  filtros.forn.dtFim=filtros.forn._dtFim;
-  // se selecionou fornecedor no filtro, atualiza relForn também
-  if(filtros.forn.fornecedor) relForn=filtros.forn.fornecedor;
-  renderTab("Rel. Fornecedores");
-}
-function aplicarFiltroCambial(){
-  filtros.cambial.fornecedor=filtros.cambial._fornecedor;
-  filtros.cambial.moeda=filtros.cambial._moeda;
-  filtros.cambial.dtIni=filtros.cambial._dtIni;
-  filtros.cambial.dtFim=filtros.cambial._dtFim;
-  renderTab("Análise Cambial");
-}
-
+function aplicarFiltroForn(){filtros.forn.fornecedor=filtros.forn._fornecedor;filtros.forn.dtIni=filtros.forn._dtIni;filtros.forn.dtFim=filtros.forn._dtFim;if(filtros.forn.fornecedor)relForn=filtros.forn.fornecedor;renderTab("Rel. Fornecedores");}
+function aplicarFiltroCambial(){filtros.cambial.fornecedor=filtros.cambial._fornecedor;filtros.cambial.moeda=filtros.cambial._moeda;filtros.cambial.dtIni=filtros.cambial._dtIni;filtros.cambial.dtFim=filtros.cambial._dtFim;renderTab("Análise Cambial");}
 function filtroAtivoTxt(ns){
-  const f=filtros[ns];
-  const partes=[];
-  if(f.fornecedor)partes.push(`Fornecedor: ${f.fornecedor}`);
-  if(f.moeda)partes.push(`Moeda: ${f.moeda}`);
-  if(f.status&&f.status!=="Todos")partes.push(`Status: ${f.status}`);
-  if(f.dtIni)partes.push(`De: ${fmtD(f.dtIni)}`);
-  if(f.dtFim)partes.push(`Até: ${fmtD(f.dtFim)}`);
-  return partes.length?`✅ Filtro ativo: ${partes.join(" | ")}`:"";
+  const f=filtros[ns],p=[];
+  if(f.fornecedor)p.push(`Fornecedor: ${f.fornecedor}`);
+  if(f.moeda)p.push(`Moeda: ${f.moeda}`);
+  if(f.status&&f.status!=="Todos")p.push(`Status: ${f.status}`);
+  if(f.dtIni)p.push(`De: ${fmtD(f.dtIni)}`);
+  if(f.dtFim)p.push(`Até: ${fmtD(f.dtFim)}`);
+  return p.length?`✅ Filtro ativo: ${p.join(" | ")}` :"";
 }
-
 function getInvFiltradas(){
   const f=filtros.inv;
   return invoices.filter(i=>{
@@ -518,64 +438,46 @@ function getInvFiltradas(){
 
 // ===== DASHBOARD =====
 function renderDashboard(){
-      const kpisMoeda=MOEDAS.map(m=>{
+  const kpisMoeda=MOEDAS.map(m=>{
     const invs=invoices.filter(i=>i.moeda===m);
-    const aberto=invs.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
-    const pago=invs.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
     const total=invs.reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
     if(!total)return"";
-    return`<div class="kpi-moeda" style="background:${MOEDA_BG[m]};border-color:${MOEDA_COR[m]}">
-      <div style="font-size:14px;font-weight:700;color:${MOEDA_COR[m]};margin-bottom:8px">${SIMBOLO[m]} ${m}</div>
-      <div style="margin-bottom:6px">
-        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Total</div>
-        <div style="font-size:20px;font-weight:800;color:${MOEDA_COR[m]};line-height:1">${fmtM(total,m)}</div>
+    const aberto=invs.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
+    const pago=invs.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
+    return`<div style="background:${MOEDA_BG[m]};border-radius:10px;padding:14px 16px;border-left:6px solid ${MOEDA_BORDA[m]}">
+      <div style="font-size:15px;font-weight:800;color:${MOEDA_COR[m]};margin-bottom:10px;display:flex;align-items:center;gap:6px">
+        <span style="font-size:20px">${MOEDA_ICONE[m]}</span>
+        <span style="background:${MOEDA_COR[m]};color:#fff;padding:2px 10px;border-radius:20px;font-size:13px">${m}</span>
+        <span style="font-size:11px;color:${MOEDA_COR[m]};opacity:.7">${SIMBOLO[m]}</span>
       </div>
-      <div style="margin-bottom:6px">
-        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Em Aberto</div>
-        <div style="font-size:17px;font-weight:700;color:#dc2626;line-height:1">${fmtM(aberto,m)}</div>
-      </div>
-      <div>
-        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Pago</div>
-        <div style="font-size:17px;font-weight:700;color:#16a34a;line-height:1">${fmtM(pago,m)}</div>
+      <div style="margin-bottom:8px"><div style="font-size:11px;color:#64748b;font-weight:600">TOTAL</div><div style="font-size:20px;font-weight:800;color:${MOEDA_COR[m]}">${fmtM(total,m)}</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div style="background:#fee2e2;border-radius:6px;padding:6px 8px"><div style="font-size:10px;color:#dc2626;font-weight:600">EM ABERTO</div><div style="font-size:14px;font-weight:700;color:#dc2626">${fmtM(aberto,m)}</div></div>
+        <div style="background:#dcfce7;border-radius:6px;padding:6px 8px"><div style="font-size:10px;color:#16a34a;font-weight:600">PAGO</div><div style="font-size:14px;font-weight:700;color:#16a34a">${fmtM(pago,m)}</div></div>
       </div>
     </div>`;
   }).join("");
-
-  const totReaisPago=invoices.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const totReaisAberto=invoices.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const totReais=invoices.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const totR=invoices.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const totRPago=invoices.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const totRAberto=invoices.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const vencidos=invoices.filter(i=>alertaVcto(i.vencimento,i.statusPgto)==="vencido");
   const alertas=invoices.filter(i=>alertaVcto(i.vencimento,i.statusPgto));
-
-  // dados gráfico
   const totalGeral=MOEDAS.reduce((s,m)=>s+invoices.filter(i=>i.moeda===m).reduce((s2,i)=>s2+parseCurrency(i.valorMoeda),0),0);
-  const chartDados=MOEDAS.map(m=>{
-    const v=invoices.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
-    return{moeda:m,valor:v,pct:totalGeral>0?(v/totalGeral)*100:0,cor:MOEDA_CHART[m]};
-  }).filter(d=>d.valor>0);
-
+  const chartDados=MOEDAS.map(m=>{const v=invoices.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);return{moeda:m,valor:v,pct:totalGeral>0?(v/totalGeral)*100:0,cor:MOEDA_CHART[m]};}).filter(d=>d.valor>0);
   return`
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
     ${kpisMoeda}
-    <div class="kpi-moeda" style="background:#dcfce7;border-color:#16a34a">
-      <div style="font-size:14px;font-weight:700;color:#16a34a;margin-bottom:8px">🇧🇷 REAIS (R$)</div>
-      <div style="margin-bottom:6px">
-        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Total Geral</div>
-        <div style="font-size:20px;font-weight:800;color:#16a34a;line-height:1">${fmtBRL(totReais)}</div>
-      </div>
-      <div style="margin-bottom:6px">
-        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Em Aberto</div>
-        <div style="font-size:17px;font-weight:700;color:#dc2626;line-height:1">${fmtBRL(totReaisAberto)}</div>
-      </div>
-      <div>
-        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Pago</div>
-        <div style="font-size:17px;font-weight:700;color:#16a34a;line-height:1">${fmtBRL(totReaisPago)}</div>
+    <div style="background:#dcfce7;border-radius:10px;padding:14px 16px;border-left:6px solid #16a34a">
+      <div style="font-size:15px;font-weight:800;color:#16a34a;margin-bottom:10px">🇧🇷 REAIS (R$)</div>
+      <div style="margin-bottom:8px"><div style="font-size:11px;color:#64748b;font-weight:600">TOTAL GERAL</div><div style="font-size:20px;font-weight:800;color:#16a34a">${fmtBRL(totR)}</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div style="background:#fee2e2;border-radius:6px;padding:6px 8px"><div style="font-size:10px;color:#dc2626;font-weight:600">EM ABERTO</div><div style="font-size:14px;font-weight:700;color:#dc2626">${fmtBRL(totRAberto)}</div></div>
+        <div style="background:#dcfce7;border-radius:6px;padding:6px 8px"><div style="font-size:10px;color:#16a34a;font-weight:600">PAGO</div><div style="font-size:14px;font-weight:700;color:#16a34a">${fmtBRL(totRPago)}</div></div>
       </div>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px">
-    ${[["📄","Total Invoices",""+invoices.length,"#dbeafe","#1d4ed8"],["⏳","Em Aberto",""+invoices.filter(i=>i.statusPgto==="Em Aberto").length,"#fee2e2","#dc2626"],["⚠️","Pago Parcial",""+invoices.filter(i=>i.statusPgto==="Pago Parcial").length,"#fef3c7","#d97706"],["✅","Pago Total",""+invoices.filter(i=>i.statusPgto==="Pago Total").length,"#dcfce7","#16a34a"],["🚨","Vencidos",""+vencidos.length,"#fecaca","#991b1b"]].map(([ic,lb,vl,bg,c])=>`
-    <div class="stat" style="background:${bg}"><div style="font-size:20px">${ic}</div><div style="font-size:24px;font-weight:700;color:${c}">${vl}</div><div style="font-size:11px;color:#475569">${lb}</div></div>`).join("")}
+    ${[["📄","Total Invoices",""+invoices.length,"#dbeafe","#1d4ed8"],["⏳","Em Aberto",""+invoices.filter(i=>i.statusPgto==="Em Aberto").length,"#fee2e2","#dc2626"],["⚠️","Pago Parcial",""+invoices.filter(i=>i.statusPgto==="Pago Parcial").length,"#fef3c7","#d97706"],["✅","Pago Total",""+invoices.filter(i=>i.statusPgto==="Pago Total").length,"#dcfce7","#16a34a"],["🚨","Vencidos",""+vencidos.length,"#fecaca","#991b1b"]].map(([ic,lb,vl,bg,c])=>`<div class="stat" style="background:${bg}"><div style="font-size:20px">${ic}</div><div style="font-size:24px;font-weight:700;color:${c}">${vl}</div><div style="font-size:11px;color:#475569">${lb}</div></div>`).join("")}
   </div>
   ${chartDados.length?renderGraficoMoeda(chartDados,"Distribuição por Moeda — % do Volume Total"):""}
   ${alertas.length?`<div class="card"><div style="font-weight:700;color:#dc2626;margin-bottom:10px">🚨 Alertas de Vencimento</div>${alertas.map(i=>{const a=alertaVcto(i.vencimento,i.statusPgto);return`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9"><span><b>${i.nFatura}</b> — ${i.fornecedor}</span><span style="color:${a==="vencido"?"#dc2626":"#d97706"};font-weight:600">${a==="vencido"?"⛔ VENCIDO":"🚨 Vence em breve"} ${fmtD(i.vencimento)}</span></div>`}).join("")}</div>`:""}`;
@@ -584,7 +486,6 @@ function renderDashboard(){
 // ===== INVOICES =====
 function renderInvoices(){
   const forn=[...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
-  const f=filtros.inv;
   const filtradas=getInvFiltradas();
   const barInv=filtroBar("inv",[
     {label:"Fornecedor",key:"fornecedor",type:"select",options:[{val:"",txt:"Todos"},...forn.map(f=>({val:f,txt:f}))]},
@@ -593,9 +494,7 @@ function renderInvoices(){
     {label:"Emissão — Data Inicial",key:"dtIni",type:"date"},
     {label:"Emissão — Data Final",key:"dtFim",type:"date"}
   ],"aplicarFiltroInv()");
-
-  return`
-  ${barInv}
+  return`${barInv}
   <div style="margin:-10px 0 12px 0;padding:0 4px"><span style="font-size:11px;color:#2563eb;font-weight:600">${filtroAtivoTxt("inv")}</span></div>
   <div class="card" style="display:flex;justify-content:flex-end;gap:8px;padding:10px 16px">
     <button class="btn" style="background:#fef3c7;color:#d97706;border:1px solid #fde68a;font-weight:700" onclick="abrirModalTaxa()">💱 Taxas de Câmbio</button>
@@ -607,14 +506,13 @@ function renderInvoices(){
     <thead><tr>${["Pasta","Fornecedor","Nº Fatura","Emissão","Vencto","Moeda","Valor Moeda","Taxa","Valor R$","Cond.","Status","Câmbio","AWB/BL","Ações"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
     <tbody>${filtradas.length===0?`<tr><td colspan="14" style="text-align:center;padding:20px;color:#94a3b8">Nenhuma invoice encontrada</td></tr>`:filtradas.map(i=>{
       const a=alertaVcto(i.vencimento,i.statusPgto),ri=invoices.indexOf(i);
-      const vm=parseCurrency(i.valorMoeda);
       return`<tr>
         <td>${i.pasta||""}</td>
         <td>${i.fornecedor||""}<br><span style="color:#94a3b8;font-size:10px">${i.marca||""}</span></td>
         <td>${i.nFatura||""}</td><td>${fmtD(i.emissaoFatura)}</td>
         <td>${a==="vencido"?'<span style="color:#dc2626">⛔</span> ':a==="urgente"?'<span style="color:#d97706">🚨</span> ':a==="alerta"?'<span>⚠️</span> ':""}${fmtD(i.vencimento)}</td>
-        <td><span class="badge badge-blue">${i.moeda||""}</span></td>
-        <td class="col-wide" style="font-weight:600">${fmtM(vm,i.moeda)}</td>
+        <td>${moedaBadge(i.moeda)}</td>
+        <td class="col-wide" style="font-weight:600">${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td>
         <td>${i.taxa||"—"}</td>
         <td class="col-wide" style="font-weight:700;color:#1e3a5f">${fmtBRL(i.reais)}</td>
         <td>${i.condPgto||""}</td>
@@ -685,37 +583,16 @@ function excluirInvoice(idx){if(!confirm("Excluir?"))return;invoices.splice(idx,
 function renderPagamentos(){
   const f=filtros.pgto;
   let dados=invoices;
-  if(f.status&&f.status!=="Todos") dados=dados.filter(i=>i.statusPgto===f.status);
-  if(f.dtIni) dados=dados.filter(i=>(i.dtPgto&&i.dtPgto>=f.dtIni)||(i.emissaoFatura&&i.emissaoFatura>=f.dtIni));
-  if(f.dtFim) dados=dados.filter(i=>(i.dtPgto&&i.dtPgto<=f.dtFim)||(i.emissaoFatura&&i.emissaoFatura<=f.dtFim));
-  const ativoTxt=(()=>{
-    const partes=[];
-    if(f.status&&f.status!=="Todos") partes.push(`Status: ${f.status}`);
-    if(f.dtIni) partes.push(`De: ${fmtD(f.dtIni)}`);
-    if(f.dtFim) partes.push(`Até: ${fmtD(f.dtFim)}`);
-    return partes.length?`✅ Filtro ativo: ${partes.join(" | ")}`:""
-  })();
+  if(f.status&&f.status!=="Todos")dados=dados.filter(i=>i.statusPgto===f.status);
+  if(f.dtIni)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto>=f.dtIni)||(i.emissaoFatura&&i.emissaoFatura>=f.dtIni));
+  if(f.dtFim)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto<=f.dtFim)||(i.emissaoFatura&&i.emissaoFatura<=f.dtFim));
+  const ativoTxt=(()=>{const p=[];if(f.status&&f.status!=="Todos")p.push(`Status: ${f.status}`);if(f.dtIni)p.push(`De: ${fmtD(f.dtIni)}`);if(f.dtFim)p.push(`Até: ${fmtD(f.dtFim)}`);return p.length?`✅ Filtro ativo: ${p.join(" | ")}`:"";})();
   const barPgto=filtroBar("pgto",[
     {label:"Status",key:"status",type:"select",options:[{val:"Todos",txt:"Todos"},...STATUS_PGTO.map(s=>({val:s,txt:s}))]},
     {label:"Data Inicial",key:"dtIni",type:"date"},
     {label:"Data Final",key:"dtFim",type:"date"}
   ],"aplicarFiltroPgto()");
-
-  const cardsMoeda=MOEDAS.map(m=>{
-    const t=invoices.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
-    if(!t)return"";
-    return`<div class="stat" style="background:${MOEDA_BG[m]};border-left:4px solid ${MOEDA_COR[m]}">
-      <div style="font-size:11px;color:#64748b;font-weight:600">${m} ${SIMBOLO[m]}</div>
-      <div style="font-size:18px;font-weight:700;color:${MOEDA_COR[m]}">${fmtM(t,m)}</div>
-    </div>`;
-  }).join("");
-
-  const bar=filtroBar("pgto",[
-    {label:"Status",key:"status",type:"select",options:[{val:"Todos",txt:"Todos"},...STATUS_PGTO.map(s=>({val:s,txt:s}))]},
-    {label:"Data Inicial",key:"dtIni",type:"date"},
-    {label:"Data Final",key:"dtFim",type:"date"}
-  ],"aplicarFiltroPgto()");
-
+  const cardsMoeda=MOEDAS.map(m=>{const t=invoices.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);if(!t)return"";return`<div class="stat" style="background:${MOEDA_BG[m]};border-left:4px solid ${MOEDA_BORDA[m]}"><div style="font-size:11px;color:${MOEDA_COR[m]};font-weight:700">${MOEDA_ICONE[m]} ${m}</div><div style="font-size:18px;font-weight:700;color:${MOEDA_COR[m]}">${fmtM(t,m)}</div></div>`;}).join("");
   return`
   <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">💰 Controle de Pagamentos</div>
   ${barPgto}
@@ -725,45 +602,31 @@ function renderPagamentos(){
     <button class="btn btn-primary" onclick="exportPDFPgto()">🖨️ PDF</button>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px">
-    ${[["Em Aberto","#dc2626","#fee2e2"],["Pago Parcial","#d97706","#fef3c7"],["Pago Total","#16a34a","#dcfce7"]].map(([s,c,bg])=>{
-      const invs=invoices.filter(i=>i.statusPgto===s);
-      return`<div class="stat" style="background:${bg};border-left:4px solid ${c}">
-        <div style="color:${c};font-weight:700;font-size:12px">${s}</div>
-        <div style="font-size:26px;font-weight:700;color:${c}">${invs.length}</div>
-        <div style="font-size:13px;font-weight:700;color:${c}">${fmtBRL(invs.reduce((s2,i)=>s2+(parseFloat(i.reais)||0),0))}</div>
-      </div>`;
-    }).join("")}
+    ${[["Em Aberto","#dc2626","#fee2e2"],["Pago Parcial","#d97706","#fef3c7"],["Pago Total","#16a34a","#dcfce7"]].map(([s,c,bg])=>{const invs=invoices.filter(i=>i.statusPgto===s);return`<div class="stat" style="background:${bg};border-left:4px solid ${c}"><div style="color:${c};font-weight:700;font-size:12px">${s}</div><div style="font-size:26px;font-weight:700;color:${c}">${invs.length}</div><div style="font-size:13px;font-weight:700;color:${c}">${fmtBRL(invs.reduce((s2,i)=>s2+(parseFloat(i.reais)||0),0))}</div></div>`;}).join("")}
     ${cardsMoeda}
   </div>
   <div style="overflow-x:auto"><table>
     <thead><tr>${["Nº Fatura","Fornecedor","Moeda","Valor Moeda","Taxa","Valor R$","Vencto","Cond.","Status","Data Pgto","Banco","Ação"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
-    <tbody>${dados.map(i=>{
-      const ri=invoices.indexOf(i),vm=parseCurrency(i.valorMoeda);
-      return`<tr>
-        <td>${i.nFatura||""}</td><td>${i.fornecedor||""}</td>
-        <td><span class="badge badge-blue">${i.moeda||""}</span></td>
-        <td class="col-wide">${fmtM(vm,i.moeda)}</td><td>${i.taxa||"—"}</td>
-        <td class="col-wide" style="font-weight:700">${fmtBRL(i.reais)}</td>
-        <td>${fmtD(i.vencimento)}</td><td>${i.condPgto||""}</td>
-        <td>${statusBadge(i.statusPgto)}</td>
-        <td>${fmtD(i.dtPgto)}</td><td>${i.banco||"—"}</td>
-        <td style="white-space:nowrap">
-          ${i.statusPgto!=="Pago Total"?`<button class="btn-sm" style="background:#dbeafe;color:#1d4ed8" onclick="abrirPgto(${ri})">💰 Registrar</button>`:""}
-          ${(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial")?`<button class="btn-sm" style="background:#fef3c7;color:#d97706" onclick="desfazerPagamento(${ri})">↩ Desfazer</button>`:""}
-        </td>
-      </tr>`;
-    }).join("")}</tbody>
+    <tbody>${dados.map(i=>{const ri=invoices.indexOf(i);return`<tr>
+      <td>${i.nFatura||""}</td><td>${i.fornecedor||""}</td>
+      <td>${moedaBadge(i.moeda)}</td>
+      <td class="col-wide">${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td>
+      <td>${i.taxa||"—"}</td>
+      <td class="col-wide" style="font-weight:700">${fmtBRL(i.reais)}</td>
+      <td>${fmtD(i.vencimento)}</td><td>${i.condPgto||""}</td>
+      <td>${statusBadge(i.statusPgto)}</td>
+      <td>${fmtD(i.dtPgto)}</td><td>${i.banco||"—"}</td>
+      <td style="white-space:nowrap">
+        ${i.statusPgto!=="Pago Total"?`<button class="btn-sm" style="background:#dbeafe;color:#1d4ed8" onclick="abrirPgto(${ri})">💰 Registrar</button>`:""}
+        ${(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial")?`<button class="btn-sm" style="background:#fef3c7;color:#d97706" onclick="desfazerPagamento(${ri})">↩ Desfazer</button>`:""}
+      </td>
+    </tr>`;}).join("")}</tbody>
   </table></div>`;
 }
-
-function desfazerPagamento(idx){
-  if(!confirm("Desfazer?"))return;
-  invoices[idx]={...invoices[idx],dtPgto:"",banco:"",taxa:"",reais:"",statusCambio:"Pendente",statusPgto:"Em Aberto",valorPago:""};
-  salvarDados().then(()=>renderTab("Pagamentos"));showToast("Desfeito!");
-}
+function desfazerPagamento(idx){if(!confirm("Desfazer?"))return;invoices[idx]={...invoices[idx],dtPgto:"",banco:"",taxa:"",reais:"",statusCambio:"Pendente",statusPgto:"Em Aberto",valorPago:""};salvarDados().then(()=>renderTab("Pagamentos"));showToast("Desfeito!");}
 function abrirPgto(idx){
-  pgtoTarget=idx;const i=invoices[idx];const vm=parseCurrency(i.valorMoeda);
-  document.getElementById("pgtoInfo").innerHTML=`<b>${i.nFatura}</b> — ${i.fornecedor} &nbsp;|&nbsp; <span style="color:${MOEDA_COR[i.moeda]};font-weight:700">${i.moeda} ${fmtM(vm,i.moeda)}</span>`;
+  pgtoTarget=idx;const i=invoices[idx];
+  document.getElementById("pgtoInfo").innerHTML=`<b>${i.nFatura}</b> — ${i.fornecedor} &nbsp;|&nbsp; ${moedaBadge(i.moeda)} <span style="font-weight:700">${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</span>`;
   document.getElementById("pgtoFields").innerHTML=`
     <div>${flabel("Data Pagamento")}<input id="p_dtPgto" type="date" value="${hoje()}"></div>
     <div>${flabel("Banco")}<input id="p_banco" value="${i.banco||""}"></div>
@@ -773,20 +636,15 @@ function abrirPgto(idx){
   abrirModal("modalPgto");
 }
 function calcPgtoTaxa(el){
-  let raw=el.value.replace(/[^\d]/g,"").slice(0,6);
-  if(!raw){el.value="";return;}
-  const padded=raw.padStart(6,"0");
-  const intPart=padded.slice(0,2).replace(/^0+/,"")||"0";
-  const decPart=padded.slice(2);
-  el.value=`${intPart},${decPart}`;
-  const n=parseFloat(`${intPart}.${decPart}`);
-  const vm=parseCurrency(invoices[pgtoTarget].valorMoeda)||0;
+  let raw=el.value.replace(/[^\d]/g,"").slice(0,6);if(!raw){el.value="";return;}
+  const pad=raw.padStart(6,"0"),ip=pad.slice(0,2).replace(/^0+/,"")||"0",dp=pad.slice(2);
+  el.value=`${ip},${dp}`;
+  const n=parseFloat(`${ip}.${dp}`),vm=parseCurrency(invoices[pgtoTarget].valorMoeda)||0;
   if(n&&vm)document.getElementById("p_reais").value=fmtBRL((n*vm).toFixed(2));
 }
 function salvarPagamento(){
   const i=invoices[pgtoTarget];
-  const taxaStr=document.getElementById("p_taxa").value;
-  const taxa=parseFloat(taxaStr.replace(/\./g,"").replace(",","."))||0;
+  const taxa=parseFloat(document.getElementById("p_taxa").value.replace(/\./g,"").replace(",","."))||0;
   const vm=parseCurrency(i.valorMoeda)||0;
   invoices[pgtoTarget]={...i,dtPgto:document.getElementById("p_dtPgto").value,banco:document.getElementById("p_banco").value,taxa:String(taxa),reais:taxa&&vm?(taxa*vm).toFixed(2):i.reais,statusCambio:"Fechado",statusPgto:document.getElementById("p_status").value};
   fecharModal("modalPgto");salvarDados().then(()=>renderTab("Pagamentos"));showToast("Pagamento registrado!");
@@ -801,13 +659,11 @@ function renderRelForn(){
   if(f.dtFim)invsForn=invsForn.filter(i=>i.emissaoFatura<=f.dtFim);
   const totMoeda={};MOEDAS.forEach(m=>{totMoeda[m]=invsForn.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);});
   const totR=invsForn.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-
   const barForn=filtroBar("forn",[
     {label:"Fornecedor",key:"fornecedor",type:"select",options:[{val:"",txt:"Todos"},...forn.map(f=>({val:f,txt:f}))]},
     {label:"Data Inicial",key:"dtIni",type:"date"},
     {label:"Data Final",key:"dtFim",type:"date"}
   ],"aplicarFiltroForn()");
-
   return`
   <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">📊 Relatório por Fornecedor</div>
   ${barForn}
@@ -816,14 +672,14 @@ function renderRelForn(){
     <span style="font-weight:700;color:#1e3a5f">📌 ${relForn}</span>
     <button class="btn btn-primary" onclick="exportPDFForn('${relForn}')">🖨️ PDF</button>
     <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVForn('${relForn}')">⬇️ Excel</button>
-    <button class="btn btn-ghost" onclick="relForn='';filtros.forn.fornecedor='';filtros.forn._fornecedor='';renderTab('Rel. Fornecedores')">✖ Limpar seleção</button>
+    <button class="btn btn-ghost" onclick="relForn='';filtros.forn.fornecedor='';filtros.forn._fornecedor='';renderTab('Rel. Fornecedores')">✖ Limpar</button>
   </div>`:""}
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="font-weight:700;color:#1e3a5f">📋 Ranking de Fornecedores</div>
       <div style="display:flex;gap:8px">
-        <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0;font-size:12px" onclick="exportCSVRanking()">⬇️ Excel Ranking</button>
-        <button class="btn btn-primary" style="font-size:12px" onclick="exportPDFRanking()">🖨️ PDF Ranking</button>
+        <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0;font-size:12px" onclick="exportCSVRanking()">⬇️ Excel</button>
+        <button class="btn btn-primary" style="font-size:12px" onclick="exportPDFRanking()">🖨️ PDF</button>
       </div>
     </div>
     <div style="overflow-x:auto"><table><thead><tr>${["Fornecedor","Moeda","Valor Moeda","Em Aberto","Pago Total","Total R$",""].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
@@ -831,11 +687,11 @@ function renderRelForn(){
       const invs=invoices.filter(i=>i.fornecedor===fn);
       const totR2=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
       const pm={};invs.forEach(i=>{if(i.moeda)pm[i.moeda]=(pm[i.moeda]||0)+parseCurrency(i.valorMoeda);});
-      const mStr=Object.entries(pm).map(([m,v])=>`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
+      const mStr=Object.entries(pm).map(([m,v])=>`<span style="color:${MOEDA_COR[m]};font-weight:700">${MOEDA_ICONE[m]} ${SIMBOLO[m]}</span> ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
       return`<tr style="cursor:pointer;${relForn===fn?"background:#dbeafe!important":""}" onclick="relForn='${fn}';renderTab('Rel. Fornecedores')">
         <td style="font-weight:600;color:${relForn===fn?"#1d4ed8":"#2563eb"}">${fn} ${relForn===fn?"✅":""}</td>
-        <td>${Object.keys(pm).join("/")||"—"}</td>
-        <td style="font-weight:700;color:#1d4ed8">${mStr||"—"}</td>
+        <td>${Object.keys(pm).map(m=>`<span style="color:${MOEDA_COR[m]}">${MOEDA_ICONE[m]} ${m}</span>`).join(" ")||"—"}</td>
+        <td>${mStr||"—"}</td>
         <td><span class="badge badge-red">${invs.filter(i=>i.statusPgto==="Em Aberto").length}</span></td>
         <td><span class="badge badge-green">${invs.filter(i=>i.statusPgto==="Pago Total").length}</span></td>
         <td style="font-weight:700;color:#16a34a">${fmtBRL(totR2)}</td>
@@ -845,13 +701,13 @@ function renderRelForn(){
   </div>
   ${relForn&&invsForn.length>0?`<div class="card"><div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:8px">🏢 Detalhes — ${relForn}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-      ${MOEDAS.map(m=>totMoeda[m]>0?`<div style="background:${MOEDA_BG[m]};border-radius:8px;padding:10px 16px;border-left:3px solid ${MOEDA_COR[m]}"><div style="font-size:11px;color:#64748b">Total ${m}</div><div style="font-weight:700;color:${MOEDA_COR[m]}">${fmtM(totMoeda[m],m)}</div></div>`:"").join("")}
+      ${MOEDAS.map(m=>totMoeda[m]>0?`<div style="background:${MOEDA_BG[m]};border-radius:8px;padding:10px 16px;border-left:3px solid ${MOEDA_BORDA[m]}"><div style="font-size:11px;color:#64748b">${MOEDA_ICONE[m]} Total ${m}</div><div style="font-weight:700;color:${MOEDA_COR[m]}">${fmtM(totMoeda[m],m)}</div></div>`:"").join("")}
       <div style="background:#dcfce7;border-radius:8px;padding:10px 16px;border-left:3px solid #16a34a"><div style="font-size:11px;color:#64748b">Total R$</div><div style="font-weight:700;color:#16a34a">${fmtBRL(totR)}</div></div>
     </div>
     <div style="overflow-x:auto"><table><thead><tr>${["Nº Fatura","Emissão","Vencimento","Moeda","Valor na Moeda","Taxa (R$)","Valor em R$","Cond.","Status"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
     <tbody>${invsForn.map(i=>`<tr>
       <td>${i.nFatura||""}</td><td>${fmtD(i.emissaoFatura)}</td><td>${fmtD(i.vencimento)}</td>
-      <td><span class="badge badge-blue">${i.moeda||""}</span></td>
+      <td>${moedaBadge(i.moeda)}</td>
       <td style="font-weight:700;color:${MOEDA_COR[i.moeda]||"#1d4ed8"}">${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td>
       <td>${i.taxa?`R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}`:"—"}</td>
       <td style="font-weight:700;color:#16a34a">${fmtBRL(i.reais)}</td>
@@ -869,39 +725,32 @@ function renderAnaliseCambial(){
   if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
   if(f.dtIni)dados=dados.filter(i=>i.dtPgto>=f.dtIni);
   if(f.dtFim)dados=dados.filter(i=>i.dtPgto<=f.dtFim);
-
   const totMoeda={},totReaisMoeda={},taxaMedia={};
   MOEDAS.forEach(m=>{
     const arr=dados.filter(i=>i.moeda===m);
     totMoeda[m]=arr.reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
     totReaisMoeda[m]=arr.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-    if(arr.length){taxaMedia[m]=(arr.reduce((s,i)=>s+(parseFloat(i.taxa)||0),0)/arr.length).toFixed(4);}
+    if(arr.length)taxaMedia[m]=(arr.reduce((s,i)=>s+(parseFloat(i.taxa)||0),0)/arr.length).toFixed(4);
   });
   const totReais=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const totalMoedaGeral=MOEDAS.reduce((s,m)=>s+totMoeda[m],0);
-
-  // Cards com percentual
+  const totalMG=MOEDAS.reduce((s,m)=>s+totMoeda[m],0);
   const cardsMoeda=MOEDAS.map(m=>totMoeda[m]>0?`
-    <div class="kpi-moeda" style="background:${MOEDA_BG[m]};border-color:${MOEDA_COR[m]}">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <span style="font-size:13px;font-weight:700;color:${MOEDA_COR[m]}">${SIMBOLO[m]} ${m}</span>
-        <span style="font-size:16px;font-weight:700;color:${MOEDA_COR[m]};background:#fff;padding:2px 8px;border-radius:8px">${pct(totMoeda[m],totalMoedaGeral)}</span>
+    <div style="background:${MOEDA_BG[m]};border-radius:10px;padding:14px 16px;border-left:5px solid ${MOEDA_BORDA[m]}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:14px;font-weight:800;color:${MOEDA_COR[m]}">${MOEDA_ICONE[m]} ${m}</span>
+        <span style="font-size:18px;font-weight:800;color:${MOEDA_COR[m]};background:#fff;padding:2px 10px;border-radius:10px">${pct(totMoeda[m],totalMG)}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:#64748b">Total Pago</span><span style="font-weight:700;color:${MOEDA_COR[m]}">${fmtM(totMoeda[m],m)}</span></div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:#64748b">Em R$</span><span style="font-weight:700;color:#16a34a">${fmtBRL(totReaisMoeda[m])}</span></div>
-      <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#64748b">Taxa Média</span><span style="font-weight:600;color:#475569">${taxaMedia[m]||"—"}</span></div>
+      <div style="margin-bottom:4px"><span style="font-size:11px;color:#64748b">Total Pago</span><br><span style="font-weight:700;color:${MOEDA_COR[m]};font-size:16px">${fmtM(totMoeda[m],m)}</span></div>
+      <div style="margin-bottom:4px"><span style="font-size:11px;color:#64748b">Em R$</span><br><span style="font-weight:700;color:#16a34a">${fmtBRL(totReaisMoeda[m])}</span></div>
+      <div><span style="font-size:11px;color:#64748b">Taxa Média</span><br><span style="font-weight:600;color:#475569">${taxaMedia[m]||"—"}</span></div>
     </div>`:"").join("");
-
-  // Gráfico
-  const chartDados=MOEDAS.map(m=>({moeda:m,valor:totMoeda[m],pct:totalMoedaGeral>0?(totMoeda[m]/totalMoedaGeral)*100:0,cor:MOEDA_CHART[m]})).filter(d=>d.valor>0);
-
+  const chartDados=MOEDAS.map(m=>({moeda:m,valor:totMoeda[m],pct:totalMG>0?(totMoeda[m]/totalMG)*100:0,cor:MOEDA_CHART[m]})).filter(d=>d.valor>0);
   const barCambial=filtroBar("cambial",[
     {label:"Fornecedor",key:"fornecedor",type:"select",options:[{val:"",txt:"Todos"},...forn.map(f=>({val:f,txt:f}))]},
     {label:"Moeda",key:"moeda",type:"select",options:[{val:"",txt:"Todas"},...MOEDAS.map(m=>({val:m,txt:m}))]},
     {label:"Data Inicial",key:"dtIni",type:"date"},
     {label:"Data Final",key:"dtFim",type:"date"}
   ],"aplicarFiltroCambial()");
-
   return`
   <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">📈 Análise Cambial</div>
   ${barCambial}
@@ -912,8 +761,8 @@ function renderAnaliseCambial(){
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px">
     ${cardsMoeda}
-    <div class="kpi-moeda" style="background:#dcfce7;border-color:#16a34a">
-      <div style="font-size:13px;font-weight:700;color:#16a34a;margin-bottom:6px">🇧🇷 Total Geral R$</div>
+    <div style="background:#dcfce7;border-radius:10px;padding:14px 16px;border-left:5px solid #16a34a">
+      <div style="font-size:14px;font-weight:800;color:#16a34a;margin-bottom:8px">🇧🇷 Total Geral R$</div>
       <div style="font-size:22px;font-weight:700;color:#16a34a">${fmtBRL(totReais)}</div>
       <div style="font-size:11px;color:#475569;margin-top:4px">${dados.length} pagamento(s)</div>
     </div>
@@ -923,7 +772,7 @@ function renderAnaliseCambial(){
     <thead><tr>${["Fornecedor","Data Pgto","Moeda","Taxa de Câmbio","Valor na Moeda","Valor em R$","Nº Fatura","Banco","Status"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
     <tbody>${dados.length===0?`<tr><td colspan="9" style="text-align:center;padding:20px;color:#94a3b8">Nenhum pagamento encontrado.</td></tr>`:dados.map(i=>`<tr>
       <td><b>${i.fornecedor||""}</b></td><td>${fmtD(i.dtPgto)}</td>
-      <td><span class="badge" style="background:${MOEDA_BG[i.moeda]};color:${MOEDA_COR[i.moeda]}">${i.moeda||""}</span></td>
+      <td>${moedaBadge(i.moeda)}</td>
       <td style="font-weight:600">R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}</td>
       <td style="font-weight:700;color:${MOEDA_COR[i.moeda]||"#1d4ed8"}">${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td>
       <td style="font-weight:700;color:#16a34a">${fmtBRL(i.reais)}</td>
@@ -937,17 +786,14 @@ function pdfStyles(){return`*{box-sizing:border-box;margin:0;padding:0}body{font
 
 // ===== EXPORTAÇÕES =====
 function dl(href,name){const a=document.createElement("a");a.href=href;a.download=name;a.click();}
-
 function exportCSV(){
   const filtradas=getInvFiltradas();
   const cols=["pasta","cidade","fornecedor","marca","dtPedido","nProforma","nFatura","dtEmbarque","emissaoFatura","dtAntecipado","condPgto","vencimento","dtPgto","banco","taxa","moeda","valorMoeda","reais","statusCambio","statusPgto","awbBl","obs"];
-  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...filtradas.map(i=>cols.map(c=>`"${i[c]||""}"`).join(","))].join("\n")),"invoices.csv");
-  showToast("CSV exportado!");
+  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...filtradas.map(i=>cols.map(c=>`"${i[c]||""}"`).join(","))].join("\n")),"invoices.csv");showToast("CSV exportado!");
 }
 function exportCSVPgto(){
   const cols=["nFatura","fornecedor","moeda","valorMoeda","taxa","reais","vencimento","condPgto","statusPgto","dtPgto","banco"];
-  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...invoices.map(i=>cols.map(c=>`"${i[c]||""}"`).join(","))].join("\n")),"pagamentos.csv");
-  showToast("CSV exportado!");
+  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...invoices.map(i=>cols.map(c=>`"${i[c]||""}"`).join(","))].join("\n")),"pagamentos.csv");showToast("CSV exportado!");
 }
 function exportCSVRanking(){
   const forn=[...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
@@ -956,37 +802,15 @@ function exportCSVRanking(){
     const invs=invoices.filter(i=>i.fornecedor===fn);
     const totR=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
     const pm={};invs.forEach(i=>{if(i.moeda)pm[i.moeda]=(pm[i.moeda]||0)+parseCurrency(i.valorMoeda);});
-    const mStr=Object.entries(pm).map(([m,v])`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
+    const mStr=Object.entries(pm).map(([m,v])=>`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
     return[fn,Object.keys(pm).join("/"),mStr,invs.filter(i=>i.statusPgto==="Em Aberto").length,invs.filter(i=>i.statusPgto==="Pago Total").length,fmtBRL(totR)].map(v=>`"${v}"`).join(",");
   });
-  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...rows].join("\n")),"ranking_fornecedores.csv");
-  showToast("CSV Ranking exportado!");
+  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...rows].join("\n")),"ranking.csv");showToast("CSV exportado!");
 }
-
-function exportPDFRanking(){
-  const forn=[...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
-  const rows=forn.map((fn,idx)=>{
-    const invs=invoices.filter(i=>i.fornecedor===fn);
-    const totR=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-    const pm={};invs.forEach(i=>{if(i.moeda)pm[i.moeda]=(pm[i.moeda]||0)+parseCurrency(i.valorMoeda);});
-    const mStr=Object.entries(pm).map(([m,v])`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
-    return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td><b>${fn}</b></td><td>${Object.keys(pm).join("/")||"—"}</td><td>${mStr||"—"}</td><td style="text-align:center">${invs.filter(i=>i.statusPgto==="Em Aberto").length}</td><td style="text-align:center">${invs.filter(i=>i.statusPgto==="Pago Total").length}</td><td style="font-weight:700;color:#16a34a">${fmtBRL(totR)}</td></tr>`;
-  }).join("");
-  const totGeral=invoices.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const w=window.open("","_blank");
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ranking Fornecedores</title><style>${pdfStyles()}</style></head><body>
-  <div class="hdr"><div><h1>📋 Ranking de Fornecedores — Importação</h1><p>Gerado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${forn.length}</b> fornecedores</div></div>
-  <table><thead><tr><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th style="text-align:center">Em Aberto</th><th style="text-align:center">Pago Total</th><th>Total R$</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="tot"><b>Total Geral R$:</b> <span style="color:#16a34a">${fmtBRL(totGeral)}</span></div>
-  <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado automaticamente</span></div>
-  <script>window.print()<\/script></body></html>`);
-}
-
 function exportCSVForn(forn){
   const invs=invoices.filter(i=>i.fornecedor===forn);
   const cols=["nFatura","emissaoFatura","vencimento","moeda","valorMoeda","taxa","reais","statusPgto"];
-  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...invs.map(i=>cols.map(c=>`"${i[c]||""}"`).join(","))].join("\n")),`${forn}.csv`);
-  showToast("CSV exportado!");
+  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...invs.map(i=>cols.map(c=>`"${i[c]||""}"`).join(","))].join("\n")),`${forn}.csv`);showToast("CSV exportado!");
 }
 function exportCSVCambial(){
   const f=filtros.cambial;
@@ -996,10 +820,8 @@ function exportCSVCambial(){
   if(f.dtIni)dados=dados.filter(i=>i.dtPgto>=f.dtIni);
   if(f.dtFim)dados=dados.filter(i=>i.dtPgto<=f.dtFim);
   const cols=["fornecedor","dtPgto","moeda","taxa","valorMoeda","reais","nFatura","banco","statusPgto"];
-  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...dados.map(i=>cols.map(c=>`"${i[c]||""}"`).join(","))].join("\n")),"analise_cambial.csv");
-  showToast("CSV exportado!");
+  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...dados.map(i=>cols.map(c=>`"${i[c]||""}"`).join(","))].join("\n")),"analise_cambial.csv");showToast("CSV exportado!");
 }
-
 function exportPDF(){
   const filtradas=getInvFiltradas();
   const totR=filtradas.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
@@ -1008,125 +830,67 @@ function exportPDF(){
   const totME=MOEDAS.map(m=>{const t=filtradas.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);return t>0?`<b>${m}:</b> ${fmtM(t,m)}`:null;}).filter(Boolean).join(" | ");
   const rows=filtradas.map((i,idx)=>{const cor=i.statusPgto==="Pago Total"?"#16a34a":i.statusPgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.pasta||""}</td><td><b>${i.fornecedor||""}</b></td><td>${i.nFatura||""}</td><td>${fmtD(i.emissaoFatura)}</td><td>${fmtD(i.vencimento)}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${i.condPgto||""}</td><td>${fmtD(i.dtPgto)}</td><td><span style="color:${cor};font-weight:600">${i.statusPgto||""}</span></td></tr>`;}).join("");
   const w=window.open("","_blank");
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoices</title><style>${pdfStyles()}</style></head><body>
-  <div class="hdr"><div><h1>🌐 Relatório de Invoices — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</p></div><div><b>${filtradas.length}</b> faturas</div></div>
-  <div class="cards"><div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${filtradas.filter(i=>i.statusPgto==="Em Aberto").length}</div></div><div class="card" style="background:#fef3c7;border-color:#d97706"><div class="cl">Pago Parcial</div><div class="cv" style="color:#d97706">${filtradas.filter(i=>i.statusPgto==="Pago Parcial").length}</div></div><div class="card" style="background:#dcfce7;border-color:#16a34a"><div class="cl">Pago Total</div><div class="cv" style="color:#16a34a">${filtradas.filter(i=>i.statusPgto==="Pago Total").length}</div></div><div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div></div>
-  <table><thead><tr><th>Pasta</th><th>Fornecedor</th><th>Nº Fatura</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Cond.</th><th>Dt.Pgto</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="tot"><span><b>Total R$:</b> ${fmtBRL(totR)}</span><span><b>Pago:</b> <span style="color:#16a34a">${fmtBRL(totPgR)}</span></span><span><b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(totAbR)}</span></span></div>
-  <div class="tot" style="margin-top:6px"><b>Total Moeda Estrangeira:</b> ${totME||"—"}</div>
-  <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado automaticamente</span></div>
-  <script>window.print()<\/script></body></html>`);
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoices</title><style>${pdfStyles()}</style></head><body><div class="hdr"><div><h1>🌐 Relatório de Invoices — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</p></div><div><b>${filtradas.length}</b> faturas</div></div><div class="cards"><div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${filtradas.filter(i=>i.statusPgto==="Em Aberto").length}</div></div><div class="card" style="background:#fef3c7;border-color:#d97706"><div class="cl">Pago Parcial</div><div class="cv" style="color:#d97706">${filtradas.filter(i=>i.statusPgto==="Pago Parcial").length}</div></div><div class="card" style="background:#dcfce7;border-color:#16a34a"><div class="cl">Pago Total</div><div class="cv" style="color:#16a34a">${filtradas.filter(i=>i.statusPgto==="Pago Total").length}</div></div><div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div></div><table><thead><tr><th>Pasta</th><th>Fornecedor</th><th>Nº Fatura</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Cond.</th><th>Dt.Pgto</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table><div class="tot"><span><b>Total R$:</b> ${fmtBRL(totR)}</span><span><b>Pago:</b> <span style="color:#16a34a">${fmtBRL(totPgR)}</span></span><span><b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(totAbR)}</span></span></div><div class="tot" style="margin-top:6px"><b>Total Moeda Estrangeira:</b> ${totME||"—"}</div><div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado automaticamente</span></div><script>window.print()<\/script></body></html>`);
 }
-
 function exportPDFPgto(){
-  const f=filtros.pgto;
-  let dados=invoices;
-  if(f.status&&f.status!=="Todos") dados=dados.filter(i=>i.statusPgto===f.status);
-  if(f.dtIni) dados=dados.filter(i=>(i.dtPgto&&i.dtPgto>=f.dtIni)||(i.emissaoFatura&&i.emissaoFatura>=f.dtIni));
-  if(f.dtFim) dados=dados.filter(i=>(i.dtPgto&&i.dtPgto<=f.dtFim)||(i.emissaoFatura&&i.emissaoFatura<=f.dtFim));
-
+  const f=filtros.pgto;let dados=invoices;
+  if(f.status&&f.status!=="Todos")dados=dados.filter(i=>i.statusPgto===f.status);
+  if(f.dtIni)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto>=f.dtIni)||(i.emissaoFatura&&i.emissaoFatura>=f.dtIni));
+  if(f.dtFim)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto<=f.dtFim)||(i.emissaoFatura&&i.emissaoFatura<=f.dtFim));
   const totR=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totPgR=dados.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totAbR=dados.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totME=MOEDAS.map(m=>{const t=dados.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);return t>0?`<b>${m}:</b> ${fmtM(t,m)}`:null;}).filter(Boolean).join(" | ");
-  const filtroDesc=f.status&&f.status!=="Todos"?`Status: ${f.status}`:"Todos os status";
-
-  const rows=dados.map((i,idx)=>{
-    const cor=i.statusPgto==="Pago Total"?"#16a34a":i.statusPgto==="Em Aberto"?"#dc2626":"#d97706";
-    return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}">
-      <td>${i.nFatura||""}</td><td>${i.fornecedor||""}</td>
-      <td>${i.moeda||""}</td>
-      <td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td>
-      <td>${i.taxa||"—"}</td>
-      <td>${fmtBRL(i.reais)}</td>
-      <td>${fmtD(i.vencimento)}</td>
-      <td>${i.condPgto||""}</td>
-      <td><span style="color:${cor};font-weight:600">${i.statusPgto||""}</span></td>
-      <td>${fmtD(i.dtPgto)}</td>
-      <td>${i.banco||"—"}</td>
-    </tr>`;
-  }).join("");
-
+  const rows=dados.map((i,idx)=>{const cor=i.statusPgto==="Pago Total"?"#16a34a":i.statusPgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.nFatura||""}</td><td>${i.fornecedor||""}</td><td>${i.moeda||""}</td><td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${fmtD(i.vencimento)}</td><td>${i.condPgto||""}</td><td><span style="color:${cor};font-weight:600">${i.statusPgto||""}</span></td><td>${fmtD(i.dtPgto)}</td><td>${i.banco||"—"}</td></tr>`;}).join("");
   const w=window.open("","_blank");
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pagamentos</title><style>${pdfStyles()}</style></head><body>
-  <div class="hdr">
-    <div><h1>💰 Relatório de Pagamentos — Importação</h1>
-    <p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} &nbsp;|&nbsp; Filtro: ${filtroDesc}${f.dtIni?" | De: "+fmtD(f.dtIni):""}${f.dtFim?" | Até: "+fmtD(f.dtFim):""}</p></div>
-    <div><b>${dados.length}</b> registros</div>
-  </div>
-  <div class="cards">
-    <div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${dados.filter(i=>i.statusPgto==="Em Aberto").length}</div></div>
-    <div class="card" style="background:#fef3c7;border-color:#d97706"><div class="cl">Pago Parcial</div><div class="cv" style="color:#d97706">${dados.filter(i=>i.statusPgto==="Pago Parcial").length}</div></div>
-    <div class="card" style="background:#dcfce7;border-color:#16a34a"><div class="cl">Pago Total</div><div class="cv" style="color:#16a34a">${dados.filter(i=>i.statusPgto==="Pago Total").length}</div></div>
-    <div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div>
-  </div>
-  <table>
-    <thead><tr><th>Nº Fatura</th><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Vencimento</th><th>Cond.</th><th>Status</th><th>Dt.Pgto</th><th>Banco</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>
-  <div class="tot"><span><b>Total R$:</b> ${fmtBRL(totR)}</span><span><b>Pago:</b> <span style="color:#16a34a">${fmtBRL(totPgR)}</span></span><span><b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(totAbR)}</span></span></div>
-  <div class="tot" style="margin-top:6px"><b>Total Moeda Estrangeira:</b> ${totME||"—"}</div>
-  <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado automaticamente</span></div>
-  <script>window.print()<\/script></body></html>`);
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pagamentos</title><style>${pdfStyles()}</style></head><body><div class="hdr"><div><h1>💰 Relatório de Pagamentos — Importação</h1><p>Filtro: ${f.status&&f.status!=="Todos"?f.status:"Todos"}${f.dtIni?" | De: "+fmtD(f.dtIni):""}${f.dtFim?" | Até: "+fmtD(f.dtFim):""}</p></div><div><b>${dados.length}</b> registros</div></div><div class="cards"><div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${dados.filter(i=>i.statusPgto==="Em Aberto").length}</div></div><div class="card" style="background:#fef3c7;border-color:#d97706"><div class="cl">Pago Parcial</div><div class="cv" style="color:#d97706">${dados.filter(i=>i.statusPgto==="Pago Parcial").length}</div></div><div class="card" style="background:#dcfce7;border-color:#16a34a"><div class="cl">Pago Total</div><div class="cv" style="color:#16a34a">${dados.filter(i=>i.statusPgto==="Pago Total").length}</div></div><div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div></div><table><thead><tr><th>Nº Fatura</th><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Vencimento</th><th>Cond.</th><th>Status</th><th>Dt.Pgto</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table><div class="tot"><span><b>Total R$:</b> ${fmtBRL(totR)}</span><span><b>Pago:</b> <span style="color:#16a34a">${fmtBRL(totPgR)}</span></span><span><b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(totAbR)}</span></span></div><div class="tot" style="margin-top:6px"><b>Total Moeda Estrangeira:</b> ${totME||"—"}</div><div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado automaticamente</span></div><script>window.print()<\/script></body></html>`);
 }
-
+function exportPDFRanking(){
+  const forn=[...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
+  const rows=forn.map((fn,idx)=>{const invs=invoices.filter(i=>i.fornecedor===fn);const totR=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);const pm={};invs.forEach(i=>{if(i.moeda)pm[i.moeda]=(pm[i.moeda]||0)+parseCurrency(i.valorMoeda);});const mStr=Object.entries(pm).map(([m,v])`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td><b>${fn}</b></td><td>${Object.keys(pm).join("/")||"—"}</td><td>${mStr||"—"}</td><td style="text-align:center">${invs.filter(i=>i.statusPgto==="Em Aberto").length}</td><td style="text-align:center">${invs.filter(i=>i.statusPgto==="Pago Total").length}</td><td style="font-weight:700;color:#16a34a">${fmtBRL(totR)}</td></tr>`;}).join("");
+  const w=window.open("","_blank");
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ranking</title><style>${pdfStyles()}</style></head><body><div class="hdr"><div><h1>📋 Ranking de Fornecedores</h1><p>Gerado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${forn.length}</b> fornecedores</div></div><table><thead><tr><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th>Em Aberto</th><th>Pago Total</th><th>Total R$</th></tr></thead><tbody>${rows}</tbody></table><div class="tot"><b>Total Geral R$:</b> <span style="color:#16a34a">${fmtBRL(invoices.reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span></div><div class="footer"><span>Sistema Controle de Invoices</span><span>Gerado automaticamente</span></div><script>window.print()<\/script></body></html>`);
+}
 function exportPDFForn(forn){
-  const f=filtros.forn;
-  let invs=invoices.filter(i=>i.fornecedor===forn);
-  if(f.dtIni)invs=invs.filter(i=>i.emissaoFatura>=f.dtIni);
-  if(f.dtFim)invs=invs.filter(i=>i.emissaoFatura<=f.dtFim);
-  const totMoeda2={};MOEDAS.forEach(m=>{totMoeda2[m]=invs.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);});
+  const f=filtros.forn;let invs=invoices.filter(i=>i.fornecedor===forn);
+  if(f.dtIni)invs=invs.filter(i=>i.emissaoFatura>=f.dtIni);if(f.dtFim)invs=invs.filter(i=>i.emissaoFatura<=f.dtFim);
+  const tm={};MOEDAS.forEach(m=>{tm[m]=invs.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);});
   const totR=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const mStr=MOEDAS.map(m=>totMoeda2[m]>0?`<b>${m}:</b> ${fmtM(totMoeda2[m],m)}`:"").filter(Boolean).join(" | ");
+  const mStr=MOEDAS.map(m=>tm[m]>0?`<b>${m}:</b> ${fmtM(tm[m],m)}`:"").filter(Boolean).join(" | ");
   const rows=invs.map((i,idx)=>{const cor=i.statusPgto==="Pago Total"?"#16a34a":i.statusPgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.nFatura||""}</td><td>${fmtD(i.emissaoFatura)}</td><td>${fmtD(i.vencimento)}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td><td>${i.taxa?`R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}`:"—"}</td><td>${fmtBRL(i.reais)}</td><td>${i.condPgto||""}</td><td><span style="color:${cor};font-weight:600">${i.statusPgto||""}</span></td></tr>`;}).join("");
   const w=window.open("","_blank");
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${forn}</title><style>${pdfStyles()}</style></head><body>
-  <div class="hdr"><h1>🏢 Relatório — ${forn}</h1><p>Gerado em ${new Date().toLocaleDateString("pt-BR")}</p></div>
-  <table><thead><tr><th>Nº Fatura</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor na Moeda</th><th>Taxa R$</th><th>Valor R$</th><th>Cond.</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="tot"><b>Totais por moeda:</b> ${mStr||"—"}</div>
-  <div class="tot" style="margin-top:6px"><b>Total Geral em R$:</b> <span style="color:#16a34a">${fmtBRL(totR)}</span></div>
-  <div class="footer"><span>Sistema Controle de Invoices</span><span>Gerado automaticamente</span></div>
-  <script>window.print()<\/script></body></html>`);
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${forn}</title><style>${pdfStyles()}</style></head><body><div class="hdr"><h1>🏢 Relatório — ${forn}</h1><p>Gerado em ${new Date().toLocaleDateString("pt-BR")}</p></div><table><thead><tr><th>Nº Fatura</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor na Moeda</th><th>Taxa R$</th><th>Valor R$</th><th>Cond.</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table><div class="tot"><b>Totais por moeda:</b> ${mStr||"—"}</div><div class="tot" style="margin-top:6px"><b>Total Geral em R$:</b> <span style="color:#16a34a">${fmtBRL(totR)}</span></div><div class="footer"><span>Sistema Controle de Invoices</span><span>Gerado automaticamente</span></div><script>window.print()<\/script></body></html>`);
 }
-
 function exportPDFCambial(){
-  const f=filtros.cambial;
-  let dados=invoices.filter(i=>i.dtPgto&&i.taxa&&parseFloat(i.taxa)>0);
-  if(f.fornecedor)dados=dados.filter(i=>i.fornecedor===f.fornecedor);
-  if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
-  if(f.dtIni)dados=dados.filter(i=>i.dtPgto>=f.dtIni);
-  if(f.dtFim)dados=dados.filter(i=>i.dtPgto<=f.dtFim);
+  const f=filtros.cambial;let dados=invoices.filter(i=>i.dtPgto&&i.taxa&&parseFloat(i.taxa)>0);
+  if(f.fornecedor)dados=dados.filter(i=>i.fornecedor===f.fornecedor);if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
+  if(f.dtIni)dados=dados.filter(i=>i.dtPgto>=f.dtIni);if(f.dtFim)dados=dados.filter(i=>i.dtPgto<=f.dtFim);
   const totR=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const totMoeda={};MOEDAS.forEach(m=>{totMoeda[m]=dados.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);});
-  const taxaMedia={};MOEDAS.forEach(m=>{const arr=dados.filter(i=>i.moeda===m&&i.taxa);if(arr.length)taxaMedia[m]=(arr.reduce((s,i)=>s+(parseFloat(i.taxa)||0),0)/arr.length).toFixed(4);});
-  const mStr=MOEDAS.map(m=>totMoeda[m]>0?`<b>${m}:</b> ${fmtM(totMoeda[m],m)} (taxa média: ${taxaMedia[m]})`:"").filter(Boolean).join(" | ");
+  const tm={};MOEDAS.forEach(m=>{tm[m]=dados.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);});
+  const txa={};MOEDAS.forEach(m=>{const arr=dados.filter(i=>i.moeda===m&&i.taxa);if(arr.length)txa[m]=(arr.reduce((s,i)=>s+(parseFloat(i.taxa)||0),0)/arr.length).toFixed(4);});
+  const mStr=MOEDAS.map(m=>tm[m]>0?`<b>${m}:</b> ${fmtM(tm[m],m)} (taxa média: ${txa[m]})`:"").filter(Boolean).join(" | ");
   const rows=dados.map((i,idx)=>`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td><b>${i.fornecedor||""}</b></td><td>${fmtD(i.dtPgto)}</td><td>${i.moeda||""}</td><td>R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}</td><td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td><td>${fmtBRL(i.reais)}</td><td>${i.nFatura||""}</td><td>${i.banco||"—"}</td></tr>`).join("");
   const w=window.open("","_blank");
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Análise Cambial</title><style>${pdfStyles()}</style></head><body>
-  <div class="hdr"><div><h1>📈 Análise Cambial — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${dados.length}</b> pagamentos</div></div>
-  <table><thead><tr><th>Fornecedor</th><th>Data Pgto</th><th>Moeda</th><th>Taxa Câmbio</th><th>Valor na Moeda</th><th>Valor R$</th><th>Nº Fatura</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="tot"><b>Total por moeda:</b> ${mStr||"—"}</div>
-  <div class="tot" style="margin-top:6px"><b>Total Geral R$:</b> <span style="color:#16a34a">${fmtBRL(totR)}</span></div>
-  <div class="footer"><span>Análise Cambial — Importação</span><span>Gerado automaticamente</span></div>
-  <script>window.print()<\/script></body></html>`);
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Análise Cambial</title><style>${pdfStyles()}</style></head><body><div class="hdr"><div><h1>📈 Análise Cambial — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${dados.length}</b> pagamentos</div></div><table><thead><tr><th>Fornecedor</th><th>Data Pgto</th><th>Moeda</th><th>Taxa Câmbio</th><th>Valor na Moeda</th><th>Valor R$</th><th>Nº Fatura</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table><div class="tot"><b>Total por moeda:</b> ${mStr||"—"}</div><div class="tot" style="margin-top:6px"><b>Total Geral R$:</b> <span style="color:#16a34a">${fmtBRL(totR)}</span></div><div class="footer"><span>Análise Cambial — Importação</span><span>Gerado automaticamente</span></div><script>window.print()<\/script></body></html>`);
 }
 
 // ===== PWA =====
 function setupPWA(){
-  const iconUrl=window.location.origin+"/icon.png";
+  const iconUrl=window.location.origin+"/invoice-importacao/icon.png";
   document.getElementById("appleIcon").href=iconUrl;
-  const manifest={name:"Invoices Importação",short_name:"Invoices",description:"Controle de faturas internacionais",start_url:window.location.origin+"/",display:"standalone",background_color:"#1e3a5f",theme_color:"#1e3a5f",orientation:"landscape",icons:[{src:iconUrl,sizes:"192x192",type:"image/png",purpose:"any maskable"},{src:iconUrl,sizes:"512x512",type:"image/png",purpose:"any maskable"}]};
+  const manifest={name:"Invoices Importação",short_name:"Invoices",description:"Controle de faturas internacionais",start_url:window.location.origin+"/invoice-importacao/",display:"standalone",background_color:"#1e3a5f",theme_color:"#1e3a5f",orientation:"landscape",icons:[{src:iconUrl,sizes:"192x192",type:"image/png",purpose:"any maskable"},{src:iconUrl,sizes:"512x512",type:"image/png",purpose:"any maskable"}]};
   const blob=new Blob([JSON.stringify(manifest)],{type:"application/json"});
   document.getElementById("manifestLink").href=URL.createObjectURL(blob);
-  if("serviceWorker" in navigator){const swCode=`const CACHE="inv-v1";self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(["/"]))));self.addEventListener("fetch",e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));`;navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode],{type:"application/javascript"}))).catch(()=>{});}
+  // Remove service workers anteriores
+  if("serviceWorker" in navigator)navigator.serviceWorker.getRegistrations().then(regs=>regs.forEach(r=>r.unregister()));
 }
 
 // ===== DEMO =====
 function getDemoData(){return[
-  {pasta:"2024-001",cidade:"Milão",fornecedor:"Gucci SRL",marca:"Gucci",dtPedido:"2024-01-10",nProforma:"PRF-001",nFatura:"INV-2024-001",dtEmbarque:"2024-01-20",emissaoFatura:"2024-01-15",dtAntecipado:"",condPgto:"30 dias",vencimento:"2024-02-19",dtPgto:"2024-02-14",banco:"Itaú",taxa:"5.42",moeda:"EUR",valorMoeda:"15.000,00",reais:"81300",statusCambio:"Fechado",statusPgto:"Pago Total",awbBl:"AWB-12345",obs:""},
-  {pasta:"2024-002",cidade:"Nova York",fornecedor:"Nike Inc",marca:"Nike",dtPedido:"2024-02-05",nProforma:"PRF-002",nFatura:"INV-2024-002",dtEmbarque:"2024-02-20",emissaoFatura:"2024-02-10",dtAntecipado:"",condPgto:"60 dias",vencimento:"2026-06-10",dtPgto:"",banco:"",taxa:"",moeda:"USD",valorMoeda:"22.000,00",reais:"",statusCambio:"Pendente",statusPgto:"Em Aberto",awbBl:"BL-67890",obs:""},
-  {pasta:"2024-003",cidade:"Zurique",fornecedor:"Rolex AG",marca:"Rolex",dtPedido:"2024-03-01",nProforma:"PRF-003",nFatura:"INV-2024-003",dtEmbarque:"2024-03-10",emissaoFatura:"2024-03-05",dtAntecipado:"2024-02-28",condPgto:"Antecipado",vencimento:"",dtPgto:"2024-02-28",banco:"Bradesco",taxa:"5.85",moeda:"CHF",valorMoeda:"45.000,00",reais:"263250",statusCambio:"Fechado",statusPgto:"Pago Total",awbBl:"AWB-99001",obs:""},
-  {pasta:"2024-004",cidade:"Londres",fornecedor:"Burberry Ltd",marca:"Burberry",dtPedido:"2024-04-01",nProforma:"PRF-004",nFatura:"INV-2024-004",dtEmbarque:"2024-04-15",emissaoFatura:"2024-04-10",dtAntecipado:"",condPgto:"45 dias",vencimento:"2026-05-30",dtPgto:"",banco:"",taxa:"",moeda:"GBP",valorMoeda:"18.500,00",reais:"",statusCambio:"Pendente",statusPgto:"Em Aberto",awbBl:"BL-44321",obs:""},
+  {pasta:"2024-001",cidade:"Milão",fornecedor:"Gucci SRL",marca:"Gucci",dtPedido:"2024-01-10",nProforma:"PRF-001",nFatura:"INV-2024-001",dtEmbarque:"2024-01-20",emissaoFatura:"2024-01-15",dtAntecipado:"",condPgto:"30 dias",vencimento:"2024-02-19",dtPgto:"2024-02-14",banco:"Itaú",taxa:"5.42",moeda:"EUR",valorMoeda:"15000",reais:"81300",statusCambio:"Fechado",statusPgto:"Pago Total",awbBl:"AWB-12345",obs:""},
+  {pasta:"2024-002",cidade:"Nova York",fornecedor:"Nike Inc",marca:"Nike",dtPedido:"2024-02-05",nProforma:"PRF-002",nFatura:"INV-2024-002",dtEmbarque:"2024-02-20",emissaoFatura:"2024-02-10",dtAntecipado:"",condPgto:"60 dias",vencimento:"2026-06-10",dtPgto:"",banco:"",taxa:"",moeda:"USD",valorMoeda:"22000",reais:"",statusCambio:"Pendente",statusPgto:"Em Aberto",awbBl:"BL-67890",obs:""},
+  {pasta:"2024-003",cidade:"Zurique",fornecedor:"Rolex AG",marca:"Rolex",dtPedido:"2024-03-01",nProforma:"PRF-003",nFatura:"INV-2024-003",dtEmbarque:"2024-03-10",emissaoFatura:"2024-03-05",dtAntecipado:"2024-02-28",condPgto:"Antecipado",vencimento:"",dtPgto:"2024-02-28",banco:"Bradesco",taxa:"5.85",moeda:"CHF",valorMoeda:"45000",reais:"263250",statusCambio:"Fechado",statusPgto:"Pago Total",awbBl:"AWB-99001",obs:""},
+  {pasta:"2024-004",cidade:"Londres",fornecedor:"Burberry Ltd",marca:"Burberry",dtPedido:"2024-04-01",nProforma:"PRF-004",nFatura:"INV-2024-004",dtEmbarque:"2024-04-15",emissaoFatura:"2024-04-10",dtAntecipado:"",condPgto:"45 dias",vencimento:"2026-05-30",dtPgto:"",banco:"",taxa:"",moeda:"GBP",valorMoeda:"18500",reais:"",statusCambio:"Pendente",statusPgto:"Em Aberto",awbBl:"BL-44321",obs:""},
 ];}
 
 window.onload=()=>{if(!checkAuth()){}};
