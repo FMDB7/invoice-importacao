@@ -409,11 +409,35 @@ async function carregarDados(){
     const wb=XLSX.read(buf,{type:"array",cellDates:true});
     const ws=wb.Sheets["Invoices"];
     if(!ws){invoices=[];return;}
-    invoices=XLSX.utils.sheet_to_json(ws,{raw:true,defval:""});
-    if(invoices.length>0){
-      console.log("TODAS AS COLUNAS:", Object.keys(invoices[0]).join(" | "));
-      console.log("VALORES LINHA 1:", JSON.stringify(invoices[0]));
-    }
+    // Lê com raw:false para preservar formato de texto das células
+    const invoicesRaw=XLSX.utils.sheet_to_json(ws,{raw:false,defval:""});
+    console.log("COLUNAS:", Object.keys(invoicesRaw[0]||{}).join(" | "));
+    console.log("LINHA1 valorMoeda:", invoicesRaw[0]?.valorMoeda, "reais:", invoicesRaw[0]?.reais);
+    invoices=invoicesRaw.map(i=>({
+      pasta:        String(i.pasta||""),
+      cidade:       String(i.cidade||""),
+      fornecedor:   String(i.fornecedor||""),
+      marca:        String(i.marca||""),
+      dtPedido:     String(i.dtPedido||""),
+      nProforma:    String(i.nProforma||""),
+      nFatura:      String(i.nFatura||""),
+      dtEmbarque:   String(i.dtEmbarque||""),
+      emissaoFatura:String(i.emissaoFatura||""),
+      dtAntecipado: String(i.dtAntecipado||""),
+      condPgto:     String(i.condPgto||""),
+      vencimento:   String(i.vencimento||""),
+      dtPgto:       String(i.dtPgto||""),
+      banco:        String(i.banco||""),
+      taxa:         String(i.taxa||""),
+      moeda:        String(i.moeda||""),
+      valorMoeda:   String(i.valorMoeda||""),
+      reais:        String(i.reais||""),
+      statusCambio: String(i.statusCambio||"Pendente"),
+      statusPgto:   String(i.statusPgto||"Em Aberto"),
+      awbBl:        String(i.awbBl||""),
+      valorPago:    String(i.valorPago||""),
+      obs:          String(i.obs||"")
+    }));
     // normaliza todos os campos
     invoices=invoices.map(i=>{
       // valorMoeda pode vir como número (25000.85) ou string ("25.000,85")
