@@ -73,6 +73,21 @@ tr:nth-child(even) td{background:#f8fafc}
 .kpi-label{font-size:11px;color:#64748b;margin-bottom:2px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
 .stat-label{font-size:11px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-top:4px}
 
+/* Bank multi-select filter */
+.banco-filter-wrap{position:relative}
+.banco-dropdown{position:absolute;top:100%;left:0;z-index:60;background:#fff;border:1.5px solid #2563eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);min-width:200px;max-height:260px;overflow-y:auto;display:none;margin-top:4px}
+.banco-dropdown.open{display:block}
+.banco-option{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:12px;transition:background .1s}
+.banco-option:hover{background:#f1f5f9}
+.banco-option input[type=checkbox]{width:14px;height:14px;accent-color:#2563eb;cursor:pointer;flex-shrink:0}
+.banco-option.selected{background:#eff6ff}
+.banco-trigger{width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px;background:#fff;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:6px;white-space:nowrap;overflow:hidden}
+.banco-trigger:focus,.banco-trigger.active{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe;outline:none}
+.banco-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.banco-chip{background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.banco-chip-x{cursor:pointer;font-size:13px;line-height:1;color:#2563eb;font-weight:700}
+.banco-chip-x:hover{color:#dc2626}
+
 /* Column widths */
 .col-pasta{width:80px;min-width:70px}
 .col-cidade{width:90px;min-width:80px}
@@ -192,7 +207,7 @@ let invoices=[],editIndex=null,currentTab="Dashboard",accessToken=null,currentUs
 let filtroPgto="Todos",relForn="",pgtoTarget=null;
 let filtros={
   inv:{fornecedor:"",status:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_dtIni:"",_dtFim:""},
-  pgto:{status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:""},
+  pgto:{status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:"",bancos:[],_bancos:[]},
   forn:{fornecedor:"",dtIni:"",dtFim:"",_fornecedor:"",_dtIni:"",_dtFim:""},
   cambial:{fornecedor:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_moeda:"",_dtIni:"",_dtFim:""}
 };
@@ -467,8 +482,8 @@ function filtroBar(ns,campos,onBuscar){
 
 function limparFiltro(ns){
   const f=filtros[ns];
-  Object.keys(f).forEach(k=>f[k]="");
-  if(ns==="pgto"){filtros.pgto.status="Todos";filtros.pgto._status="Todos";}
+  Object.keys(f).forEach(k=>{if(Array.isArray(f[k]))f[k]=[];else f[k]="";});
+  if(ns==="pgto"){filtros.pgto.status="Todos";filtros.pgto._status="Todos";filtros.pgto.bancos=[];filtros.pgto._bancos=[];}
   ["status","fornecedor","moeda","dtIni","dtFim"].forEach(k=>{
     const el=document.getElementById(`f_${ns}_${k}`);
     if(el){if(el.tagName==="SELECT")el.value=el.options[0]?.value||"";else el.value="";}
@@ -494,8 +509,68 @@ function aplicarFiltroPgto(){
   filtros.pgto._status=filtros.pgto.status;
   filtros.pgto._dtIni=filtros.pgto.dtIni;
   filtros.pgto._dtFim=filtros.pgto.dtFim;
+  filtros.pgto.bancos=[...filtros.pgto._bancos];
   renderTab("Pagamentos");
 }
+
+// ===== BANCO MULTI-SELECT =====
+function getBancosDisponiveis(){
+  return [...new Set(invoices.map(i=>i.banco).filter(b=>b&&b.trim()!==""))].sort();
+}
+
+function toggleBancoDropdown(){
+  const dd=document.getElementById("banco-dropdown");
+  const tr=document.getElementById("banco-trigger");
+  if(!dd)return;
+  const isOpen=dd.classList.contains("open");
+  if(isOpen){dd.classList.remove("open");tr.classList.remove("active");}
+  else{dd.classList.add("open");tr.classList.add("active");}
+}
+
+function toggleBancoOpcao(banco){
+  const arr=filtros.pgto._bancos;
+  const idx=arr.indexOf(banco);
+  if(idx===-1)arr.push(banco);else arr.splice(idx,1);
+  // update checkbox visual
+  const cb=document.getElementById(`cb_banco_${CSS.escape(banco)}`);
+  if(cb)cb.checked=arr.includes(banco);
+  // update option highlight
+  const opt=document.getElementById(`opt_banco_${CSS.escape(banco)}`);
+  if(opt)opt.classList.toggle("selected",arr.includes(banco));
+  // update trigger label + chips instantly (real-time)
+  atualizarBancoTrigger();
+  // apply filter real-time
+  filtros.pgto.bancos=[...arr];
+  renderTab("Pagamentos");
+}
+
+function removerBancoChip(banco){
+  filtros.pgto._bancos=filtros.pgto._bancos.filter(b=>b!==banco);
+  filtros.pgto.bancos=[...filtros.pgto._bancos];
+  renderTab("Pagamentos");
+}
+
+function atualizarBancoTrigger(){
+  const tr=document.getElementById("banco-trigger");
+  const chips=document.getElementById("banco-chips");
+  if(!tr)return;
+  const sel=filtros.pgto._bancos;
+  tr.querySelector(".banco-trigger-txt").textContent=sel.length===0?"Todos os bancos":sel.length===1?sel[0]:`${sel.length} bancos selecionados`;
+  if(chips){
+    chips.innerHTML=sel.map(b=>`<span class="banco-chip">${b}<span class="banco-chip-x" onclick="event.stopPropagation();removerBancoChip('${b.replace(/'/g,"\\'")}')">×</span></span>`).join("");
+  }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener("click",function(e){
+  const wrap=document.getElementById("banco-filter-wrap");
+  if(wrap&&!wrap.contains(e.target)){
+    const dd=document.getElementById("banco-dropdown");
+    const tr=document.getElementById("banco-trigger");
+    if(dd)dd.classList.remove("open");
+    if(tr)tr.classList.remove("active");
+  }
+});
 function aplicarFiltroForn(){
   filtros.forn.fornecedor=filtros.forn._fornecedor;
   filtros.forn.dtIni=filtros.forn._dtIni;
@@ -736,22 +811,95 @@ function excluirInvoice(idx){if(!confirm("Excluir?"))return;invoices.splice(idx,
 // ===== PAGAMENTOS =====
 function renderPagamentos(){
   const f=filtros.pgto;
+  const bancosDisponiveis=getBancosDisponiveis();
+
   let dados=invoices;
   if(f.status&&f.status!=="Todos")dados=dados.filter(i=>i.statusPgto===f.status);
   if(f.dtIni)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto>=f.dtIni)||(i.emissaoFatura&&i.emissaoFatura>=f.dtIni));
   if(f.dtFim)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto<=f.dtFim)||(i.emissaoFatura&&i.emissaoFatura<=f.dtFim));
+  if(f.bancos&&f.bancos.length>0)dados=dados.filter(i=>f.bancos.includes(i.banco));
+
   const ativoTxt=(()=>{
     const partes=[];
     if(f.status&&f.status!=="Todos")partes.push(`Status: ${f.status}`);
+    if(f.bancos&&f.bancos.length>0)partes.push(`Banco(s): ${f.bancos.join(", ")}`);
     if(f.dtIni)partes.push(`De: ${fmtD(f.dtIni)}`);
     if(f.dtFim)partes.push(`Até: ${fmtD(f.dtFim)}`);
     return partes.length?`✅ Filtro ativo: ${partes.join(" | ")}`:"";
   })();
-  const barPgto=filtroBar("pgto",[
-    {label:"Status",key:"status",type:"select",options:[{val:"Todos",txt:"Todos"},...STATUS_PGTO.map(s=>({val:s,txt:s}))]},
-    {label:"Data Inicial",key:"dtIni",type:"date"},
-    {label:"Data Final",key:"dtFim",type:"date"}
-  ],"aplicarFiltroPgto()");
+
+  // Build the banco multi-select dropdown HTML
+  const selBancos=filtros.pgto._bancos;
+  const bancoBtnTxt=selBancos.length===0?"Todos os bancos":selBancos.length===1?selBancos[0]:`${selBancos.length} bancos selecionados`;
+  const bancoDropdownHTML=`
+    <div id="banco-filter-wrap" class="banco-filter-wrap" style="min-width:200px">
+      <label class="form-label">🏦 Banco</label>
+      <button id="banco-trigger" class="banco-trigger${selBancos.length>0?" active":""}" onclick="toggleBancoDropdown()" type="button">
+        <span class="banco-trigger-txt">${bancoBtnTxt}</span>
+        <span style="color:#64748b;font-size:10px">▼</span>
+      </button>
+      <div id="banco-dropdown" class="banco-dropdown">
+        <div style="padding:8px 12px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;font-weight:700;color:#1e3a5f">${bancosDisponiveis.length} banco(s)</span>
+          ${selBancos.length>0?`<button onclick="filtros.pgto._bancos=[];filtros.pgto.bancos=[];renderTab('Pagamentos')" style="font-size:10px;background:none;border:none;color:#dc2626;cursor:pointer;font-weight:600">✖ Limpar</button>`:""}
+        </div>
+        ${bancosDisponiveis.length===0?`<div style="padding:12px;color:#94a3b8;font-size:12px;text-align:center">Nenhum banco cadastrado</div>`:bancosDisponiveis.map(b=>`
+          <div id="opt_banco_${b.replace(/[^a-zA-Z0-9]/g,"_")}" class="banco-option${selBancos.includes(b)?" selected":""}" onclick="toggleBancoOpcao('${b.replace(/'/g,"\\'")}')">
+            <input type="checkbox" id="cb_banco_${b.replace(/[^a-zA-Z0-9]/g,"_")}" ${selBancos.includes(b)?"checked":""} onclick="event.stopPropagation();toggleBancoOpcao('${b.replace(/'/g,"\\'")}')">
+            <span style="font-weight:${selBancos.includes(b)?"700":"400"}">${b}</span>
+          </div>`).join("")}
+      </div>
+      ${selBancos.length>0?`<div id="banco-chips" class="banco-chips">${selBancos.map(b=>`<span class="banco-chip">${b}<span class="banco-chip-x" onclick="removerBancoChip('${b.replace(/'/g,"\\'")}')">×</span></span>`).join("")}</div>`:`<div id="banco-chips" class="banco-chips"></div>`}
+    </div>`;
+
+  const barPgto=`<div class="card" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start">
+    <div>
+      <label class="form-label">Status</label>
+      <select id="f_pgto_status" onchange="filtros.pgto._status=this.value">
+        <option value="Todos"${f._status==="Todos"||!f._status?" selected":""}>Todos</option>
+        ${STATUS_PGTO.map(s=>`<option value="${s}"${f._status===s?" selected":""}>${s}</option>`).join("")}
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Data Inicial</label>
+      <input type="date" id="f_pgto_dtIni" value="${f._dtIni||""}" onchange="filtros.pgto._dtIni=this.value">
+    </div>
+    <div>
+      <label class="form-label">Data Final</label>
+      <input type="date" id="f_pgto_dtFim" value="${f._dtFim||""}" onchange="filtros.pgto._dtFim=this.value">
+    </div>
+    ${bancoDropdownHTML}
+    <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:2px;margin-top:auto">
+      <button class="btn-search" onclick="aplicarFiltroPgto()">🔍 Buscar</button>
+      <button class="btn btn-ghost" onclick="limparFiltro('pgto')">✖ Limpar</button>
+    </div>
+  </div>`;
+
+  // Totals per bank (for filtered data with bank payment)
+  const bancosNoFiltro=f.bancos&&f.bancos.length>0?f.bancos:bancosDisponiveis;
+  const totPorBanco=bancosNoFiltro.map(b=>{
+    const pagos=dados.filter(i=>i.banco===b&&(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial"));
+    const total=pagos.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+    const qtd=pagos.length;
+    return{banco:b,total,qtd};
+  }).filter(b=>b.total>0);
+
+  const resumoBancos=totPorBanco.length>1?`
+    <div class="card" style="margin-bottom:14px">
+      <div style="font-weight:700;color:#1e3a5f;margin-bottom:10px;font-size:13px">🏦 Resumo por Banco</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        ${totPorBanco.map((b,idx)=>{
+          const cores=["#1d4ed8","#16a34a","#d97706","#7c3aed","#dc2626","#0891b2"];
+          const c=cores[idx%cores.length];
+          const bg=c==="#1d4ed8"?"#dbeafe":c==="#16a34a"?"#dcfce7":c==="#d97706"?"#fef3c7":c==="#7c3aed"?"#ede9fe":c==="#dc2626"?"#fee2e2":"#e0f2fe";
+          return`<div style="background:${bg};border-radius:8px;padding:10px 16px;border-left:4px solid ${c};min-width:160px">
+            <div style="font-size:11px;font-weight:700;color:${c};text-transform:uppercase;margin-bottom:4px">🏦 ${b.banco}</div>
+            <div style="font-size:17px;font-weight:800;color:${c}">${fmtBRL(b.total)}</div>
+            <div style="font-size:10px;color:#64748b;margin-top:2px">${b.qtd} pagamento(s)</div>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>`:"";
 
   const cardsMoeda=MOEDAS.map(m=>{
     const t=invoices.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
@@ -772,7 +920,7 @@ function renderPagamentos(){
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px">
     ${[["Em Aberto","#dc2626","#fee2e2"],["Pago Parcial","#d97706","#fef3c7"],["Pago Total","#16a34a","#dcfce7"]].map(([s,c,bg])=>{
-      const invs=invoices.filter(i=>i.statusPgto===s);
+      const invs=dados.filter(i=>i.statusPgto===s);
       return`<div class="stat" style="background:${bg};border-left:4px solid ${c}">
         <div style="color:${c};font-weight:700;font-size:12px">${s}</div>
         <div style="font-size:26px;font-weight:700;color:${c}">${invs.length}</div>
@@ -781,6 +929,7 @@ function renderPagamentos(){
     }).join("")}
     ${cardsMoeda}
   </div>
+  ${resumoBancos}
   <div class="table-wrap"><table>
     <thead><tr>
       <th class="col-invoice">Nº Invoice</th>
@@ -797,7 +946,7 @@ function renderPagamentos(){
       <th class="col-awb">Banco</th>
       <th class="col-acoes">Ação</th>
     </tr></thead>
-    <tbody>${dados.map(i=>{
+    <tbody>${dados.length===0?`<tr><td colspan="13" style="text-align:center;padding:20px;color:#94a3b8">Nenhum registro encontrado</td></tr>`:dados.map(i=>{
       const ri=invoices.indexOf(i),vm=parseCurrency(i.valorMoeda);
       return`<tr>
         <td class="col-invoice">${i.nFatura||""}</td>
@@ -811,7 +960,7 @@ function renderPagamentos(){
         <td class="col-cond">${i.condPgto||""}</td>
         <td class="col-status">${statusBadge(i.statusPgto)}</td>
         <td class="col-data">${fmtD(i.dtPgto)}</td>
-        <td class="col-awb">${i.banco||"—"}</td>
+        <td class="col-awb">${i.banco?`<span style="background:#dbeafe;color:#1d4ed8;padding:2px 7px;border-radius:8px;font-size:11px;font-weight:600">${i.banco}</span>`:"—"}</td>
         <td class="col-acoes" style="white-space:nowrap">
           ${i.statusPgto!=="Pago Total"?`<button class="btn-sm" style="background:#dbeafe;color:#1d4ed8" onclick="abrirPgto(${ri})">💰 Registrar</button>`:""}
           ${(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial")?`<button class="btn-sm" style="background:#fef3c7;color:#d97706" onclick="desfazerPagamento(${ri})">↩ Desfazer</button>`:""}
@@ -1008,8 +1157,35 @@ function exportCSV(){
   showToast("CSV exportado!");
 }
 function exportCSVPgto(){
+  const f=filtros.pgto;
+  let dados=invoices;
+  if(f.status&&f.status!=="Todos")dados=dados.filter(i=>i.statusPgto===f.status);
+  if(f.dtIni)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto>=f.dtIni)||(i.emissaoFatura&&i.emissaoFatura>=f.dtIni));
+  if(f.dtFim)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto<=f.dtFim)||(i.emissaoFatura&&i.emissaoFatura<=f.dtFim));
+  if(f.bancos&&f.bancos.length>0)dados=dados.filter(i=>f.bancos.includes(i.banco));
+
   const cols=["nFatura","fornecedor","cidade","moeda","valorMoeda","taxa","reais","vencimento","condPgto","statusPgto","dtPgto","banco"];
-  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...invoices.map(i=>cols.map(c=>`"${i[c]||""}"`).join(","))].join("\n")),"pagamentos.csv");
+  const header=cols.join(",");
+  const dataRows=dados.map(i=>cols.map(c=>`"${i[c]||""}"`).join(","));
+
+  // Bank summary at the bottom
+  const bancosNoRelatorio=[...new Set(dados.filter(i=>i.banco&&(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial")).map(i=>i.banco))].sort();
+  const totPgR=dados.filter(i=>i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const summaryRows=bancosNoRelatorio.length>0?[
+    ["","","","","","","","","","","",""].join(","),
+    ['"=== RESUMO POR BANCO ==="',"","","","","","","","","","",""].join(","),
+    ['"Banco"','"Qtd. Pagamentos"','"Total Pago (R$)"','"% do Total"',"","","","","","","",""].join(","),
+    ...bancosNoRelatorio.map(b=>{
+      const pagos=dados.filter(i=>i.banco===b&&(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial"));
+      const tot=pagos.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+      const perc=totPgR>0?((tot/totPgR)*100).toFixed(1)+"%":"—";
+      return[`"${b}"`,`"${pagos.length}"`,`"${fmtBRL(tot)}"`,`"${perc}"`,`""`,`""`,`""`,`""`,`""`,`""`,`""`,`""`].join(",");
+    }),
+    ['"TOTAL GERAL PAGO"',`"${dados.filter(i=>i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial").length}"`,`"${fmtBRL(totPgR)}"`,`"100%"`,`""`,`""`,`""`,`""`,`""`,`""`,`""`,`""`].join(",")
+  ]:[];
+
+  const csvContent=[header,...dataRows,...summaryRows].join("\n");
+  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent(csvContent),"pagamentos.csv");
   showToast("CSV exportado!");
 }
 function exportCSVRanking(){
@@ -1089,15 +1265,56 @@ function exportPDFPgto(){
   if(f.status&&f.status!=="Todos")dados=dados.filter(i=>i.statusPgto===f.status);
   if(f.dtIni)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto>=f.dtIni)||(i.emissaoFatura&&i.emissaoFatura>=f.dtIni));
   if(f.dtFim)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto<=f.dtFim)||(i.emissaoFatura&&i.emissaoFatura<=f.dtFim));
+  if(f.bancos&&f.bancos.length>0)dados=dados.filter(i=>f.bancos.includes(i.banco));
+
   const totR=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totPgR=dados.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totAbR=dados.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totME=MOEDAS.map(m=>{const t=dados.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);return t>0?`<b>${m}:</b> ${fmtM(t,m)}`:null;}).filter(Boolean).join(" | ");
-  const filtroDesc=f.status&&f.status!=="Todos"?`Status: ${f.status}`:"Todos os status";
+  const filtroDesc=[
+    f.status&&f.status!=="Todos"?`Status: ${f.status}`:"",
+    f.bancos&&f.bancos.length>0?`Banco(s): ${f.bancos.join(", ")}`:""
+  ].filter(Boolean).join(" | ")||"Todos os status";
+
+  // Bank summary
+  const bancosNoRelatorio=[...new Set(dados.filter(i=>i.banco&&(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial")).map(i=>i.banco))].sort();
+  const resumoBancosHTML=bancosNoRelatorio.length>0?`
+    <div style="margin-top:18px;border-top:2px solid #1e3a5f;padding-top:14px">
+      <div style="font-weight:700;font-size:13px;color:#1e3a5f;margin-bottom:10px">🏦 Resumo de Pagamentos por Banco</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr style="background:#1e3a5f;color:#fff">
+          <th style="padding:7px 10px;text-align:left">Banco</th>
+          <th style="padding:7px 10px;text-align:center">Qtd. Pagamentos</th>
+          <th style="padding:7px 10px;text-align:right">Total Pago (R$)</th>
+          <th style="padding:7px 10px;text-align:right">% do Total</th>
+        </tr></thead>
+        <tbody>
+          ${bancosNoRelatorio.map((b,idx)=>{
+            const pagos=dados.filter(i=>i.banco===b&&(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial"));
+            const tot=pagos.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+            const perc=totPgR>0?((tot/totPgR)*100).toFixed(1)+"%":"—";
+            return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}">
+              <td style="padding:6px 10px;font-weight:700">🏦 ${b}</td>
+              <td style="padding:6px 10px;text-align:center">${pagos.length}</td>
+              <td style="padding:6px 10px;text-align:right;font-weight:700;color:#16a34a">${fmtBRL(tot)}</td>
+              <td style="padding:6px 10px;text-align:right;color:#1d4ed8;font-weight:600">${perc}</td>
+            </tr>`;
+          }).join("")}
+          <tr style="background:#f0fdf4;font-weight:700">
+            <td style="padding:7px 10px;color:#16a34a">TOTAL GERAL PAGO</td>
+            <td style="padding:7px 10px;text-align:center;color:#16a34a">${dados.filter(i=>i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial").length}</td>
+            <td style="padding:7px 10px;text-align:right;color:#16a34a;font-size:13px">${fmtBRL(totPgR)}</td>
+            <td style="padding:7px 10px;text-align:right;color:#16a34a">100%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`:"";
+
   const rows=dados.map((i,idx)=>{
     const cor=i.statusPgto==="Pago Total"?"#16a34a":i.statusPgto==="Em Aberto"?"#dc2626":"#d97706";
     return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.nFatura||""}</td><td>${i.fornecedor||""}</td><td>${i.cidade||""}</td><td>${i.moeda||""}</td><td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${fmtD(i.vencimento)}</td><td>${i.condPgto||""}</td><td><span style="color:${cor};font-weight:700">${i.statusPgto||""}</span></td><td>${fmtD(i.dtPgto)}</td><td>${i.banco||"—"}</td></tr>`;
   }).join("");
+
   const w=window.open("","_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pagamentos</title><style>${pdfStyles()}</style></head><body>
   <div class="hdr"><div><h1>💰 Relatório de Pagamentos — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} | Filtro: ${filtroDesc}${f.dtIni?" | De: "+fmtD(f.dtIni):""}${f.dtFim?" | Até: "+fmtD(f.dtFim):""}</p></div><div><b>${dados.length}</b> registros</div></div>
@@ -1105,6 +1322,7 @@ function exportPDFPgto(){
   <table><thead><tr><th>Nº Invoice</th><th>Fornecedor</th><th>Cidade</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Vencimento</th><th>Cond.</th><th>Status</th><th>Dt.Pgto</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="tot"><span><b>Total R$:</b> ${fmtBRL(totR)}</span><span><b>Pago:</b> <span style="color:#16a34a">${fmtBRL(totPgR)}</span></span><span><b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(totAbR)}</span></span></div>
   <div class="tot" style="margin-top:6px"><b>Total Moeda Estrangeira:</b> ${totME||"—"}</div>
+  ${resumoBancosHTML}
   <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado automaticamente</span></div>
   <script>window.print()<\/script></body></html>`);
   w.document.close();
