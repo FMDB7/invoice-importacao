@@ -15,9 +15,11 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',sans-serif;background:#f1f5f9;font-size:13px;color:#1e293b}
-.header{background:linear-gradient(135deg,#1e3a5f,#2563eb);padding:14px 24px;display:flex;align-items:center;gap:12px}
+
+/* FROZEN HEADER */
+.header{background:linear-gradient(135deg,#1e3a5f,#2563eb);padding:14px 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .header h1{color:#fff;font-size:16px}.header p{color:#93c5fd;font-size:11px}
-.tabs{background:#fff;border-bottom:2px solid #e2e8f0;display:flex;overflow-x:auto}
+.tabs{background:#fff;border-bottom:2px solid #e2e8f0;display:flex;overflow-x:auto;position:sticky;top:57px;z-index:49;box-shadow:0 2px 4px rgba(0,0,0,.06)}
 .tab{padding:10px 16px;border:none;background:transparent;color:#64748b;cursor:pointer;font-size:13px;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-2px}
 .tab.active{background:#2563eb;color:#fff;font-weight:700;border-color:#2563eb}
 .content{padding:16px;max-width:1600px;margin:0 auto}
@@ -33,12 +35,23 @@ input:focus,select:focus,textarea:focus{border-color:#2563eb;box-shadow:0 0 0 3p
 .btn-ghost{background:transparent;color:#64748b;border:1px solid #e2e8f0}
 .btn-search{background:#0f172a;color:#fff;padding:8px 18px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px}
 .btn-sm{padding:4px 8px;font-size:12px;border:none;border-radius:5px;cursor:pointer;margin-right:3px}
+
+/* TABLE with sticky thead */
+.table-wrap{overflow-x:auto}
+.table-wrap table{width:100%;border-collapse:collapse}
+.table-wrap thead tr{background:#1e3a5f;color:#fff}
+.table-wrap thead th{padding:8px 10px;text-align:left;font-size:12px;white-space:nowrap;position:sticky;top:0;z-index:10;background:#1e3a5f}
+.table-wrap td{padding:7px 10px;font-size:12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+.table-wrap tr:nth-child(even) td{background:#f8fafc}
+
+/* Legacy table (no scroll context) */
 table{width:100%;border-collapse:collapse}
 thead tr{background:#1e3a5f;color:#fff}
 th{padding:8px 10px;text-align:left;font-size:12px;white-space:nowrap}
 td{padding:7px 10px;font-size:12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
 tr:nth-child(even) td{background:#f8fafc}
-.badge{padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap}
+
+.badge{padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap}
 .badge-red{background:#fee2e2;color:#dc2626}
 .badge-green{background:#dcfce7;color:#16a34a}
 .badge-yellow{background:#fef3c7;color:#d97706}
@@ -55,6 +68,26 @@ tr:nth-child(even) td{background:#f8fafc}
 .kpi-moeda{border-radius:10px;padding:14px 16px;border-left:5px solid}
 .chart-bar{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
 .chart-wrap{display:flex;align-items:flex-end;gap:16px;height:180px;padding:0 10px}
+
+/* Dashboard bold labels */
+.kpi-label{font-size:11px;color:#64748b;margin-bottom:2px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.stat-label{font-size:11px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-top:4px}
+
+/* Column widths */
+.col-pasta{width:80px;min-width:70px}
+.col-cidade{width:90px;min-width:80px}
+.col-fornecedor{min-width:130px}
+.col-invoice{width:110px;min-width:100px}
+.col-data{width:88px;min-width:80px}
+.col-moeda{width:64px;min-width:60px;text-align:center}
+.col-valor{width:130px;min-width:120px}
+.col-taxa{width:72px;min-width:64px}
+.col-cond{width:90px;min-width:80px}
+.col-status{width:100px;min-width:90px}
+.col-cambio{width:88px;min-width:80px}
+.col-awb{width:100px;min-width:90px}
+.col-obs{min-width:120px;max-width:200px}
+.col-acoes{width:90px;min-width:80px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -152,11 +185,11 @@ const STATUS_PGTO=["Em Aberto","Pago Parcial","Pago Total"];
 const STATUS_CAMBIO=["Pendente","Fechado"];
 const COND_PGTO=["À Vista","Antecipado","30 dias","45 dias","60 dias","90 dias","120 dias"];
 const COND_DIAS={"À Vista":0,"Antecipado":0,"30 dias":30,"45 dias":45,"60 dias":60,"90 dias":90,"120 dias":120};
-const TABS=["Dashboard","Nova Invoice","Invoices","Pagamentos","Rel. Fornecedores","Análise Cambial"];
+// "Rel. Fornecedores" renamed to "Fornecedores"
+const TABS=["Dashboard","Nova Invoice","Invoices","Pagamentos","Fornecedores","Análise Cambial"];
 
 let invoices=[],editIndex=null,currentTab="Dashboard",accessToken=null,currentUser=null;
 let filtroPgto="Todos",relForn="",pgtoTarget=null;
-// filtros com estado pendente (antes de buscar) e aplicado
 let filtros={
   inv:{fornecedor:"",status:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_dtIni:"",_dtFim:""},
   pgto:{status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:""},
@@ -164,11 +197,9 @@ let filtros={
   cambial:{fornecedor:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_moeda:"",_dtIni:"",_dtFim:""}
 };
 
-// ===== TAXAS DE CÂMBIO =====
-let taxasAtivas = {USD:"", EUR:"", CHF:"", GBP:""};
+let taxasAtivas={USD:"",EUR:"",CHF:"",GBP:""};
 
 function abrirModalTaxa(){
-  // pega taxas mais recentes das invoices pagas como referência
   MOEDAS.forEach(m=>{
     const arr=invoices.filter(i=>i.moeda===m&&i.taxa&&parseFloat(i.taxa)>0);
     if(!taxasAtivas[m]&&arr.length){
@@ -176,8 +207,7 @@ function abrirModalTaxa(){
       taxasAtivas[m]=parseFloat(ultima.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4});
     }
   });
-  renderTaxaFields();
-  abrirModal("modalTaxa");
+  renderTaxaFields();abrirModal("modalTaxa");
 }
 
 function renderTaxaFields(){
@@ -224,15 +254,9 @@ function handleTaxaModalInput(el,m){
   const decPart=padded.slice(2);
   el.value=`${intPart},${decPart}`;
   const n=parseFloat(`${intPart}.${decPart}`);
-  // validação
   const errEl=document.getElementById(`err_${m}`);
-  if(n<1||n>20){
-    errEl.textContent="⚠️ Taxa fora do intervalo aceitável (1,00 a 20,00)";
-    taxasAtivas[m]="";
-  } else {
-    errEl.textContent="";
-    taxasAtivas[m]=el.value;
-  }
+  if(n<1||n>20){errEl.textContent="⚠️ Taxa fora do intervalo aceitável (1,00 a 20,00)";taxasAtivas[m]="";}
+  else{errEl.textContent="";taxasAtivas[m]=el.value;}
   atualizarPreviewTaxa();
 }
 
@@ -257,14 +281,11 @@ function atualizarPreviewTaxa(){
 }
 
 function confirmarTaxas(){
-  let erros=[];
-  let atualizados=0;
+  let erros=[];let atualizados=0;
   MOEDAS.forEach(m=>{
-    const val=taxasAtivas[m];
-    if(!val)return;
+    const val=taxasAtivas[m];if(!val)return;
     const t=parseFloat(val.replace(/\./g,"").replace(",","."))||0;
     if(t<1||t>20){erros.push(`${m}: taxa fora do intervalo`);return;}
-    // atualiza todas invoices pendentes daquela moeda
     invoices.forEach((inv,idx)=>{
       if(inv.moeda===m&&inv.statusCambio==="Pendente"){
         const vm=parseCurrency(inv.valorMoeda)||0;
@@ -278,15 +299,15 @@ function confirmarTaxas(){
   salvarDados().then(()=>renderTab(currentTab));
   showToast(`✅ Taxas aplicadas! ${atualizados} invoice(s) atualizada(s)!`);
 }
+
 const fmtBRL=v=>v!=null&&v!==""&&!isNaN(parseFloat(v))?`R$ ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}`:"—";
 const fmtM=(v,m)=>v!=null&&v!==""&&!isNaN(parseFloat(v))?`${SIMBOLO[m]||""} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}`:"—";
 const fmtD=d=>d?new Date(d+"T00:00:00").toLocaleDateString("pt-BR"):"—";
 const hoje=()=>new Date().toISOString().split("T")[0];
-const pct=(v,t)=>t>0?((v/t)*100).toFixed(1)+"%" :"0%";
+const pct=(v,t)=>t>0?((v/t)*100).toFixed(1)+"%":"0%";
 
 function parseCurrency(s){
-  if(!s)return 0;
-  if(typeof s==="number")return s;
+  if(!s)return 0;if(typeof s==="number")return s;
   return parseFloat(String(s).replace(/\./g,"").replace(",","."))||0;
 }
 function fmtCurrencyDisplay(v){
@@ -335,9 +356,8 @@ function abrirModal(id){document.getElementById(id).classList.add("open");docume
 function fecharModal(id){document.getElementById(id).classList.remove("open");document.removeEventListener("keydown",handleEsc);}
 function handleEsc(e){if(e.key==="Escape"){["modalInvoice","modalPgto"].forEach(id=>{if(document.getElementById(id).classList.contains("open"))fecharModal(id);});}}
 
-// ===== GRÁFICO DE COLUNAS =====
-function renderGraficoMoeda(dados, titulo){
-  // dados = [{moeda, valor, pct, cor}]
+// ===== GRÁFICO =====
+function renderGraficoMoeda(dados,titulo){
   const max=Math.max(...dados.map(d=>d.pct),1);
   const bars=dados.map(d=>`
     <div class="chart-bar">
@@ -424,12 +444,12 @@ function renderTab(tab){
   else if(tab==="Nova Invoice"){abrirFormInvoice();el.innerHTML=renderInvoices();}
   else if(tab==="Invoices")el.innerHTML=renderInvoices();
   else if(tab==="Pagamentos")el.innerHTML=renderPagamentos();
-  else if(tab==="Rel. Fornecedores")el.innerHTML=renderRelForn();
+  else if(tab==="Fornecedores")el.innerHTML=renderRelForn();
   else if(tab==="Análise Cambial")el.innerHTML=renderAnaliseCambial();
 }
 
 // ===== FILTRO HELPERS =====
-function filtroBar(ns, campos, onBuscar){
+function filtroBar(ns,campos,onBuscar){
   const inputs=campos.map(c=>{
     if(c.type==="select"){
       const val=filtros[ns]["_"+c.key]||filtros[ns][c.key]||"";
@@ -449,7 +469,6 @@ function limparFiltro(ns){
   const f=filtros[ns];
   Object.keys(f).forEach(k=>f[k]="");
   if(ns==="pgto"){filtros.pgto.status="Todos";filtros.pgto._status="Todos";}
-  // limpa os campos visuais
   ["status","fornecedor","moeda","dtIni","dtFim"].forEach(k=>{
     const el=document.getElementById(`f_${ns}_${k}`);
     if(el){if(el.tagName==="SELECT")el.value=el.options[0]?.value||"";else el.value="";}
@@ -481,9 +500,8 @@ function aplicarFiltroForn(){
   filtros.forn.fornecedor=filtros.forn._fornecedor;
   filtros.forn.dtIni=filtros.forn._dtIni;
   filtros.forn.dtFim=filtros.forn._dtFim;
-  // se selecionou fornecedor no filtro, atualiza relForn também
-  if(filtros.forn.fornecedor) relForn=filtros.forn.fornecedor;
-  renderTab("Rel. Fornecedores");
+  if(filtros.forn.fornecedor)relForn=filtros.forn.fornecedor;
+  renderTab("Fornecedores");
 }
 function aplicarFiltroCambial(){
   filtros.cambial.fornecedor=filtros.cambial._fornecedor;
@@ -494,8 +512,7 @@ function aplicarFiltroCambial(){
 }
 
 function filtroAtivoTxt(ns){
-  const f=filtros[ns];
-  const partes=[];
+  const f=filtros[ns];const partes=[];
   if(f.fornecedor)partes.push(`Fornecedor: ${f.fornecedor}`);
   if(f.moeda)partes.push(`Moeda: ${f.moeda}`);
   if(f.status&&f.status!=="Todos")partes.push(`Status: ${f.status}`);
@@ -518,7 +535,7 @@ function getInvFiltradas(){
 
 // ===== DASHBOARD =====
 function renderDashboard(){
-      const kpisMoeda=MOEDAS.map(m=>{
+  const kpisMoeda=MOEDAS.map(m=>{
     const invs=invoices.filter(i=>i.moeda===m);
     const aberto=invs.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
     const pago=invs.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
@@ -527,15 +544,15 @@ function renderDashboard(){
     return`<div class="kpi-moeda" style="background:${MOEDA_BG[m]};border-color:${MOEDA_COR[m]}">
       <div style="font-size:14px;font-weight:700;color:${MOEDA_COR[m]};margin-bottom:8px">${SIMBOLO[m]} ${m}</div>
       <div style="margin-bottom:6px">
-        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Total</div>
+        <div class="kpi-label">Total</div>
         <div style="font-size:20px;font-weight:800;color:${MOEDA_COR[m]};line-height:1">${fmtM(total,m)}</div>
       </div>
       <div style="margin-bottom:6px">
-        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Em Aberto</div>
+        <div class="kpi-label" style="color:#dc2626">Em Aberto</div>
         <div style="font-size:17px;font-weight:700;color:#dc2626;line-height:1">${fmtM(aberto,m)}</div>
       </div>
       <div>
-        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Pago</div>
+        <div class="kpi-label" style="color:#16a34a">Pago</div>
         <div style="font-size:17px;font-weight:700;color:#16a34a;line-height:1">${fmtM(pago,m)}</div>
       </div>
     </div>`;
@@ -547,12 +564,20 @@ function renderDashboard(){
   const vencidos=invoices.filter(i=>alertaVcto(i.vencimento,i.statusPgto)==="vencido");
   const alertas=invoices.filter(i=>alertaVcto(i.vencimento,i.statusPgto));
 
-  // dados gráfico
   const totalGeral=MOEDAS.reduce((s,m)=>s+invoices.filter(i=>i.moeda===m).reduce((s2,i)=>s2+parseCurrency(i.valorMoeda),0),0);
   const chartDados=MOEDAS.map(m=>{
     const v=invoices.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
     return{moeda:m,valor:v,pct:totalGeral>0?(v/totalGeral)*100:0,cor:MOEDA_CHART[m]};
   }).filter(d=>d.valor>0);
+
+  // Stats with bold labels and bold status names
+  const statsData=[
+    ["📄","#dbeafe","#1d4ed8","Total Invoices",""+invoices.length],
+    ["⏳","#fee2e2","#dc2626","Em Aberto",""+invoices.filter(i=>i.statusPgto==="Em Aberto").length],
+    ["⚠️","#fef3c7","#d97706","Pago Parcial",""+invoices.filter(i=>i.statusPgto==="Pago Parcial").length],
+    ["✅","#dcfce7","#16a34a","Pago Total",""+invoices.filter(i=>i.statusPgto==="Pago Total").length],
+    ["🚨","#fecaca","#991b1b","Vencidos",""+vencidos.length]
+  ];
 
   return`
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
@@ -560,31 +585,34 @@ function renderDashboard(){
     <div class="kpi-moeda" style="background:#dcfce7;border-color:#16a34a">
       <div style="font-size:14px;font-weight:700;color:#16a34a;margin-bottom:8px">🇧🇷 REAIS (R$)</div>
       <div style="margin-bottom:6px">
-        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Total Geral</div>
+        <div class="kpi-label">Total Geral</div>
         <div style="font-size:20px;font-weight:800;color:#16a34a;line-height:1">${fmtBRL(totReais)}</div>
       </div>
       <div style="margin-bottom:6px">
-        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Em Aberto</div>
+        <div class="kpi-label" style="color:#dc2626">Em Aberto</div>
         <div style="font-size:17px;font-weight:700;color:#dc2626;line-height:1">${fmtBRL(totReaisAberto)}</div>
       </div>
       <div>
-        <div style="font-size:11px;color:#64748b;margin-bottom:2px">Pago</div>
+        <div class="kpi-label" style="color:#16a34a">Pago</div>
         <div style="font-size:17px;font-weight:700;color:#16a34a;line-height:1">${fmtBRL(totReaisPago)}</div>
       </div>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px">
-    ${[["📄","Total Invoices",""+invoices.length,"#dbeafe","#1d4ed8"],["⏳","Em Aberto",""+invoices.filter(i=>i.statusPgto==="Em Aberto").length,"#fee2e2","#dc2626"],["⚠️","Pago Parcial",""+invoices.filter(i=>i.statusPgto==="Pago Parcial").length,"#fef3c7","#d97706"],["✅","Pago Total",""+invoices.filter(i=>i.statusPgto==="Pago Total").length,"#dcfce7","#16a34a"],["🚨","Vencidos",""+vencidos.length,"#fecaca","#991b1b"]].map(([ic,lb,vl,bg,c])=>`
-    <div class="stat" style="background:${bg}"><div style="font-size:20px">${ic}</div><div style="font-size:24px;font-weight:700;color:${c}">${vl}</div><div style="font-size:11px;color:#475569">${lb}</div></div>`).join("")}
+    ${statsData.map(([ic,bg,c,lb,vl])=>`
+    <div class="stat" style="background:${bg}">
+      <div style="font-size:20px">${ic}</div>
+      <div style="font-size:24px;font-weight:700;color:${c}">${vl}</div>
+      <div class="stat-label" style="color:${c}">${lb}</div>
+    </div>`).join("")}
   </div>
   ${chartDados.length?renderGraficoMoeda(chartDados,"Distribuição por Moeda — % do Volume Total"):""}
-  ${alertas.length?`<div class="card"><div style="font-weight:700;color:#dc2626;margin-bottom:10px">🚨 Alertas de Vencimento</div>${alertas.map(i=>{const a=alertaVcto(i.vencimento,i.statusPgto);return`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9"><span><b>${i.nFatura}</b> — ${i.fornecedor}</span><span style="color:${a==="vencido"?"#dc2626":"#d97706"};font-weight:600">${a==="vencido"?"⛔ VENCIDO":"🚨 Vence em breve"} ${fmtD(i.vencimento)}</span></div>`}).join("")}</div>`:""}`;
+  ${alertas.length?`<div class="card"><div style="font-weight:700;color:#dc2626;margin-bottom:10px">🚨 Alertas de Vencimento</div>${alertas.map(i=>{const a=alertaVcto(i.vencimento,i.statusPgto);return`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9"><span><b>${i.nFatura}</b> — ${i.fornecedor}</span><span style="color:${a==="vencido"?"#dc2626":"#d97706"};font-weight:700">${a==="vencido"?"⛔ VENCIDO":"🚨 Vence em breve"} ${fmtD(i.vencimento)}</span></div>`}).join("")}</div>`:""}`;
 }
 
 // ===== INVOICES =====
 function renderInvoices(){
   const forn=[...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
-  const f=filtros.inv;
   const filtradas=getInvFiltradas();
   const barInv=filtroBar("inv",[
     {label:"Fornecedor",key:"fornecedor",type:"select",options:[{val:"",txt:"Todos"},...forn.map(f=>({val:f,txt:f}))]},
@@ -593,6 +621,9 @@ function renderInvoices(){
     {label:"Emissão — Data Inicial",key:"dtIni",type:"date"},
     {label:"Emissão — Data Final",key:"dtFim",type:"date"}
   ],"aplicarFiltroInv()");
+
+  // Columns: Pasta | Cidade | Fornecedor | Nº Invoice | Emissão | Vencto | Moeda | Valor Moeda | Taxa | Valor R$ | Cond. | Status | Câmbio | AWB/BL | Obs | Ações
+  const hasObs=filtradas.some(i=>i.obs&&i.obs.trim()!=="");
 
   return`
   ${barInv}
@@ -603,25 +634,46 @@ function renderInvoices(){
     <button class="btn btn-primary" onclick="exportPDF()">🖨️ PDF</button>
     <button class="btn btn-green" onclick="editIndex=null;abrirFormInvoice()">+ Nova Invoice</button>
   </div>
-  <div style="overflow-x:auto"><table>
-    <thead><tr>${["Pasta","Fornecedor","Nº Fatura","Emissão","Vencto","Moeda","Valor Moeda","Taxa","Valor R$","Cond.","Status","Câmbio","AWB/BL","Ações"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
-    <tbody>${filtradas.length===0?`<tr><td colspan="14" style="text-align:center;padding:20px;color:#94a3b8">Nenhuma invoice encontrada</td></tr>`:filtradas.map(i=>{
+  <div class="table-wrap"><table>
+    <thead><tr>
+      <th class="col-pasta">Pasta</th>
+      <th class="col-cidade">Cidade</th>
+      <th class="col-fornecedor">Fornecedor</th>
+      <th class="col-invoice">Nº Invoice</th>
+      <th class="col-data">Emissão</th>
+      <th class="col-data">Vencto</th>
+      <th class="col-moeda">Moeda</th>
+      <th class="col-valor">Valor Moeda</th>
+      <th class="col-taxa">Taxa</th>
+      <th class="col-valor">Valor R$</th>
+      <th class="col-cond">Cond.</th>
+      <th class="col-status">Status</th>
+      <th class="col-cambio">Câmbio</th>
+      <th class="col-awb">AWB/BL</th>
+      ${hasObs?`<th class="col-obs">Obs.</th>`:""}
+      <th class="col-acoes">Ações</th>
+    </tr></thead>
+    <tbody>${filtradas.length===0?`<tr><td colspan="${hasObs?16:15}" style="text-align:center;padding:20px;color:#94a3b8">Nenhuma invoice encontrada</td></tr>`:filtradas.map(i=>{
       const a=alertaVcto(i.vencimento,i.statusPgto),ri=invoices.indexOf(i);
       const vm=parseCurrency(i.valorMoeda);
+      const obsCell=hasObs?`<td style="max-width:200px;font-size:11px;color:#475569">${i.obs&&i.obs.trim()?`<span title="${i.obs}">${i.obs.length>40?i.obs.substring(0,38)+"…":i.obs}</span>`:"—"}</td>`:"";
       return`<tr>
-        <td>${i.pasta||""}</td>
-        <td>${i.fornecedor||""}<br><span style="color:#94a3b8;font-size:10px">${i.marca||""}</span></td>
-        <td>${i.nFatura||""}</td><td>${fmtD(i.emissaoFatura)}</td>
-        <td>${a==="vencido"?'<span style="color:#dc2626">⛔</span> ':a==="urgente"?'<span style="color:#d97706">🚨</span> ':a==="alerta"?'<span>⚠️</span> ':""}${fmtD(i.vencimento)}</td>
-        <td><span class="badge badge-blue">${i.moeda||""}</span></td>
-        <td class="col-wide" style="font-weight:600">${fmtM(vm,i.moeda)}</td>
-        <td>${i.taxa||"—"}</td>
-        <td class="col-wide" style="font-weight:700;color:#1e3a5f">${fmtBRL(i.reais)}</td>
-        <td>${i.condPgto||""}</td>
-        <td>${statusBadge(i.statusPgto)}</td>
-        <td><span class="badge ${i.statusCambio==="Fechado"?"badge-green":"badge-yellow"}">${i.statusCambio||"Pendente"}</span></td>
-        <td>${i.awbBl||""}</td>
-        <td style="white-space:nowrap">
+        <td class="col-pasta">${i.pasta||""}</td>
+        <td class="col-cidade">${i.cidade||""}</td>
+        <td class="col-fornecedor">${i.fornecedor||""}<br><span style="color:#94a3b8;font-size:10px">${i.marca||""}</span></td>
+        <td class="col-invoice">${i.nFatura||""}</td>
+        <td class="col-data">${fmtD(i.emissaoFatura)}</td>
+        <td class="col-data">${a==="vencido"?'<span style="color:#dc2626">⛔</span> ':a==="urgente"?'<span style="color:#d97706">🚨</span> ':a==="alerta"?'<span>⚠️</span> ':""}${fmtD(i.vencimento)}</td>
+        <td class="col-moeda"><span class="badge badge-blue">${i.moeda||""}</span></td>
+        <td class="col-valor" style="font-weight:600">${fmtM(vm,i.moeda)}</td>
+        <td class="col-taxa">${i.taxa||"—"}</td>
+        <td class="col-valor" style="font-weight:700;color:#1e3a5f">${fmtBRL(i.reais)}</td>
+        <td class="col-cond">${i.condPgto||""}</td>
+        <td class="col-status">${statusBadge(i.statusPgto)}</td>
+        <td class="col-cambio"><span class="badge ${i.statusCambio==="Fechado"?"badge-green":"badge-yellow"}">${i.statusCambio||"Pendente"}</span></td>
+        <td class="col-awb">${i.awbBl||""}</td>
+        ${obsCell}
+        <td class="col-acoes">
           <button class="btn-sm" style="background:#f1f5f9" onclick="editarInvoice(${ri})">✏️</button>
           ${i.statusPgto!=="Pago Total"?`<button class="btn-sm" style="background:#dcfce7;color:#16a34a" onclick="abrirPgto(${ri})">💰</button>`:""}
           <button class="btn-sm" style="background:#fee2e2;color:#dc2626" onclick="excluirInvoice(${ri})">🗑️</button>
@@ -649,7 +701,7 @@ function renderFormFields(){
     <div>${flabel("Fornecedor ★")}<input value="${f.fornecedor||""}" onchange="updateForm('fornecedor',this.value)"></div>
     <div>${flabel("Marca")}<input value="${f.marca||""}" onchange="updateForm('marca',this.value)"></div>
     <div>${flabel("Nº Proforma")}<input value="${f.nProforma||""}" onchange="updateForm('nProforma',this.value)"></div>
-    <div>${flabel("Nº Fatura ★")}<input value="${f.nFatura||""}" onchange="updateForm('nFatura',this.value)"></div>
+    <div>${flabel("Nº Invoice ★")}<input value="${f.nFatura||""}" onchange="updateForm('nFatura',this.value)"></div>
     <div>${flabel("AWB / BL")}<input value="${f.awbBl||""}" onchange="updateForm('awbBl',this.value)"></div>
     <div>${flabel("Dt. Pedido Fornecedor")}<input type="date" value="${f.dtPedido||""}" onchange="updateForm('dtPedido',this.value)"></div>
     <div>${flabel("Emissão da Fatura")}<input type="date" value="${f.emissaoFatura||""}" onchange="updateForm('emissaoFatura',this.value)"></div>
@@ -673,7 +725,7 @@ function updateForm(k,v){
   if(k==="taxa"||k==="valorMoeda"){const t=parseFloat(formState.taxa)||0,vm=parseCurrency(formState.valorMoeda)||0;formState.reais=t&&vm?(t*vm).toFixed(2):"";const el=document.getElementById("inp_reais");if(el)el.value=formState.reais?fmtBRL(formState.reais):"";}
 }
 function salvarInvoice(){
-  if(!formState.fornecedor||!formState.nFatura){showToast("Fornecedor e Nº Fatura são obrigatórios","err");return;}
+  if(!formState.fornecedor||!formState.nFatura){showToast("Fornecedor e Nº Invoice são obrigatórios","err");return;}
   if(editIndex!==null)invoices[editIndex]={...formState};else invoices.push({...formState});
   fecharModal("modalInvoice");editIndex=null;
   salvarDados().then(()=>renderTab("Invoices"));showToast("Invoice salva!");
@@ -685,15 +737,15 @@ function excluirInvoice(idx){if(!confirm("Excluir?"))return;invoices.splice(idx,
 function renderPagamentos(){
   const f=filtros.pgto;
   let dados=invoices;
-  if(f.status&&f.status!=="Todos") dados=dados.filter(i=>i.statusPgto===f.status);
-  if(f.dtIni) dados=dados.filter(i=>(i.dtPgto&&i.dtPgto>=f.dtIni)||(i.emissaoFatura&&i.emissaoFatura>=f.dtIni));
-  if(f.dtFim) dados=dados.filter(i=>(i.dtPgto&&i.dtPgto<=f.dtFim)||(i.emissaoFatura&&i.emissaoFatura<=f.dtFim));
+  if(f.status&&f.status!=="Todos")dados=dados.filter(i=>i.statusPgto===f.status);
+  if(f.dtIni)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto>=f.dtIni)||(i.emissaoFatura&&i.emissaoFatura>=f.dtIni));
+  if(f.dtFim)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto<=f.dtFim)||(i.emissaoFatura&&i.emissaoFatura<=f.dtFim));
   const ativoTxt=(()=>{
     const partes=[];
-    if(f.status&&f.status!=="Todos") partes.push(`Status: ${f.status}`);
-    if(f.dtIni) partes.push(`De: ${fmtD(f.dtIni)}`);
-    if(f.dtFim) partes.push(`Até: ${fmtD(f.dtFim)}`);
-    return partes.length?`✅ Filtro ativo: ${partes.join(" | ")}`:""
+    if(f.status&&f.status!=="Todos")partes.push(`Status: ${f.status}`);
+    if(f.dtIni)partes.push(`De: ${fmtD(f.dtIni)}`);
+    if(f.dtFim)partes.push(`Até: ${fmtD(f.dtFim)}`);
+    return partes.length?`✅ Filtro ativo: ${partes.join(" | ")}`:"";
   })();
   const barPgto=filtroBar("pgto",[
     {label:"Status",key:"status",type:"select",options:[{val:"Todos",txt:"Todos"},...STATUS_PGTO.map(s=>({val:s,txt:s}))]},
@@ -705,16 +757,10 @@ function renderPagamentos(){
     const t=invoices.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
     if(!t)return"";
     return`<div class="stat" style="background:${MOEDA_BG[m]};border-left:4px solid ${MOEDA_COR[m]}">
-      <div style="font-size:11px;color:#64748b;font-weight:600">${m} ${SIMBOLO[m]}</div>
+      <div style="font-size:11px;color:#64748b;font-weight:700">${m} ${SIMBOLO[m]}</div>
       <div style="font-size:18px;font-weight:700;color:${MOEDA_COR[m]}">${fmtM(t,m)}</div>
     </div>`;
   }).join("");
-
-  const bar=filtroBar("pgto",[
-    {label:"Status",key:"status",type:"select",options:[{val:"Todos",txt:"Todos"},...STATUS_PGTO.map(s=>({val:s,txt:s}))]},
-    {label:"Data Inicial",key:"dtIni",type:"date"},
-    {label:"Data Final",key:"dtFim",type:"date"}
-  ],"aplicarFiltroPgto()");
 
   return`
   <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">💰 Controle de Pagamentos</div>
@@ -735,19 +781,38 @@ function renderPagamentos(){
     }).join("")}
     ${cardsMoeda}
   </div>
-  <div style="overflow-x:auto"><table>
-    <thead><tr>${["Nº Fatura","Fornecedor","Moeda","Valor Moeda","Taxa","Valor R$","Vencto","Cond.","Status","Data Pgto","Banco","Ação"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+  <div class="table-wrap"><table>
+    <thead><tr>
+      <th class="col-invoice">Nº Invoice</th>
+      <th class="col-fornecedor">Fornecedor</th>
+      <th class="col-cidade">Cidade</th>
+      <th class="col-moeda">Moeda</th>
+      <th class="col-valor">Valor Moeda</th>
+      <th class="col-taxa">Taxa</th>
+      <th class="col-valor">Valor R$</th>
+      <th class="col-data">Vencto</th>
+      <th class="col-cond">Cond.</th>
+      <th class="col-status">Status</th>
+      <th class="col-data">Data Pgto</th>
+      <th class="col-awb">Banco</th>
+      <th class="col-acoes">Ação</th>
+    </tr></thead>
     <tbody>${dados.map(i=>{
       const ri=invoices.indexOf(i),vm=parseCurrency(i.valorMoeda);
       return`<tr>
-        <td>${i.nFatura||""}</td><td>${i.fornecedor||""}</td>
-        <td><span class="badge badge-blue">${i.moeda||""}</span></td>
-        <td class="col-wide">${fmtM(vm,i.moeda)}</td><td>${i.taxa||"—"}</td>
-        <td class="col-wide" style="font-weight:700">${fmtBRL(i.reais)}</td>
-        <td>${fmtD(i.vencimento)}</td><td>${i.condPgto||""}</td>
-        <td>${statusBadge(i.statusPgto)}</td>
-        <td>${fmtD(i.dtPgto)}</td><td>${i.banco||"—"}</td>
-        <td style="white-space:nowrap">
+        <td class="col-invoice">${i.nFatura||""}</td>
+        <td class="col-fornecedor">${i.fornecedor||""}</td>
+        <td class="col-cidade">${i.cidade||""}</td>
+        <td class="col-moeda"><span class="badge badge-blue">${i.moeda||""}</span></td>
+        <td class="col-valor">${fmtM(vm,i.moeda)}</td>
+        <td class="col-taxa">${i.taxa||"—"}</td>
+        <td class="col-valor" style="font-weight:700">${fmtBRL(i.reais)}</td>
+        <td class="col-data">${fmtD(i.vencimento)}</td>
+        <td class="col-cond">${i.condPgto||""}</td>
+        <td class="col-status">${statusBadge(i.statusPgto)}</td>
+        <td class="col-data">${fmtD(i.dtPgto)}</td>
+        <td class="col-awb">${i.banco||"—"}</td>
+        <td class="col-acoes" style="white-space:nowrap">
           ${i.statusPgto!=="Pago Total"?`<button class="btn-sm" style="background:#dbeafe;color:#1d4ed8" onclick="abrirPgto(${ri})">💰 Registrar</button>`:""}
           ${(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial")?`<button class="btn-sm" style="background:#fef3c7;color:#d97706" onclick="desfazerPagamento(${ri})">↩ Desfazer</button>`:""}
         </td>
@@ -792,7 +857,7 @@ function salvarPagamento(){
   fecharModal("modalPgto");salvarDados().then(()=>renderTab("Pagamentos"));showToast("Pagamento registrado!");
 }
 
-// ===== REL. FORNECEDORES =====
+// ===== FORNECEDORES (renamed from Rel. Fornecedores) =====
 function renderRelForn(){
   const forn=[...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
   const f=filtros.forn;
@@ -803,7 +868,7 @@ function renderRelForn(){
   const totR=invsForn.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
 
   const barForn=filtroBar("forn",[
-    {label:"Fornecedor",key:"fornecedor",type:"select",options:[{val:"",txt:"Todos"},...forn.map(f=>({val:f,txt:f}))]},
+    {label:"Fornecedor",key:"fornecedor",type:"select",options:[{val:"",txt:"Todos"},...forn.map(fn=>({val:fn,txt:fn}))]},
     {label:"Data Inicial",key:"dtIni",type:"date"},
     {label:"Data Final",key:"dtFim",type:"date"}
   ],"aplicarFiltroForn()");
@@ -816,7 +881,7 @@ function renderRelForn(){
     <span style="font-weight:700;color:#1e3a5f">📌 ${relForn}</span>
     <button class="btn btn-primary" onclick="exportPDFForn('${relForn}')">🖨️ PDF</button>
     <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVForn('${relForn}')">⬇️ Excel</button>
-    <button class="btn btn-ghost" onclick="relForn='';filtros.forn.fornecedor='';filtros.forn._fornecedor='';renderTab('Rel. Fornecedores')">✖ Limpar seleção</button>
+    <button class="btn btn-ghost" onclick="relForn='';filtros.forn.fornecedor='';filtros.forn._fornecedor='';renderTab('Fornecedores')">✖ Limpar seleção</button>
   </div>`:""}
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -826,13 +891,13 @@ function renderRelForn(){
         <button class="btn btn-primary" style="font-size:12px" onclick="exportPDFRanking()">🖨️ PDF Ranking</button>
       </div>
     </div>
-    <div style="overflow-x:auto"><table><thead><tr>${["Fornecedor","Moeda","Valor Moeda","Em Aberto","Pago Total","Total R$",""].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+    <div class="table-wrap"><table><thead><tr>${["Fornecedor","Moeda","Valor Moeda","Em Aberto","Pago Total","Total R$",""].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
     <tbody>${forn.map(fn=>{
       const invs=invoices.filter(i=>i.fornecedor===fn);
       const totR2=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
       const pm={};invs.forEach(i=>{if(i.moeda)pm[i.moeda]=(pm[i.moeda]||0)+parseCurrency(i.valorMoeda);});
       const mStr=Object.entries(pm).map(([m,v])=>`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
-      return`<tr style="cursor:pointer;${relForn===fn?"background:#dbeafe!important":""}" onclick="relForn='${fn}';renderTab('Rel. Fornecedores')">
+      return`<tr style="cursor:pointer;${relForn===fn?"background:#dbeafe!important":""}" onclick="relForn='${fn}';renderTab('Fornecedores')">
         <td style="font-weight:600;color:${relForn===fn?"#1d4ed8":"#2563eb"}">${fn} ${relForn===fn?"✅":""}</td>
         <td>${Object.keys(pm).join("/")||"—"}</td>
         <td style="font-weight:700;color:#1d4ed8">${mStr||"—"}</td>
@@ -848,7 +913,7 @@ function renderRelForn(){
       ${MOEDAS.map(m=>totMoeda[m]>0?`<div style="background:${MOEDA_BG[m]};border-radius:8px;padding:10px 16px;border-left:3px solid ${MOEDA_COR[m]}"><div style="font-size:11px;color:#64748b">Total ${m}</div><div style="font-weight:700;color:${MOEDA_COR[m]}">${fmtM(totMoeda[m],m)}</div></div>`:"").join("")}
       <div style="background:#dcfce7;border-radius:8px;padding:10px 16px;border-left:3px solid #16a34a"><div style="font-size:11px;color:#64748b">Total R$</div><div style="font-weight:700;color:#16a34a">${fmtBRL(totR)}</div></div>
     </div>
-    <div style="overflow-x:auto"><table><thead><tr>${["Nº Fatura","Emissão","Vencimento","Moeda","Valor na Moeda","Taxa (R$)","Valor em R$","Cond.","Status"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+    <div class="table-wrap"><table><thead><tr>${["Nº Invoice","Emissão","Vencimento","Moeda","Valor na Moeda","Taxa (R$)","Valor em R$","Cond.","Status"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
     <tbody>${invsForn.map(i=>`<tr>
       <td>${i.nFatura||""}</td><td>${fmtD(i.emissaoFatura)}</td><td>${fmtD(i.vencimento)}</td>
       <td><span class="badge badge-blue">${i.moeda||""}</span></td>
@@ -880,7 +945,6 @@ function renderAnaliseCambial(){
   const totReais=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totalMoedaGeral=MOEDAS.reduce((s,m)=>s+totMoeda[m],0);
 
-  // Cards com percentual
   const cardsMoeda=MOEDAS.map(m=>totMoeda[m]>0?`
     <div class="kpi-moeda" style="background:${MOEDA_BG[m]};border-color:${MOEDA_COR[m]}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -892,11 +956,10 @@ function renderAnaliseCambial(){
       <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#64748b">Taxa Média</span><span style="font-weight:600;color:#475569">${taxaMedia[m]||"—"}</span></div>
     </div>`:"").join("");
 
-  // Gráfico
   const chartDados=MOEDAS.map(m=>({moeda:m,valor:totMoeda[m],pct:totalMoedaGeral>0?(totMoeda[m]/totalMoedaGeral)*100:0,cor:MOEDA_CHART[m]})).filter(d=>d.valor>0);
 
   const barCambial=filtroBar("cambial",[
-    {label:"Fornecedor",key:"fornecedor",type:"select",options:[{val:"",txt:"Todos"},...forn.map(f=>({val:f,txt:f}))]},
+    {label:"Fornecedor",key:"fornecedor",type:"select",options:[{val:"",txt:"Todos"},...forn.map(fn=>({val:fn,txt:fn}))]},
     {label:"Moeda",key:"moeda",type:"select",options:[{val:"",txt:"Todas"},...MOEDAS.map(m=>({val:m,txt:m}))]},
     {label:"Data Inicial",key:"dtIni",type:"date"},
     {label:"Data Final",key:"dtFim",type:"date"}
@@ -919,8 +982,8 @@ function renderAnaliseCambial(){
     </div>
   </div>
   ${chartDados.length?renderGraficoMoeda(chartDados,"Distribuição por Moeda — % do Volume Pago"):""}
-  <div style="overflow-x:auto"><table>
-    <thead><tr>${["Fornecedor","Data Pgto","Moeda","Taxa de Câmbio","Valor na Moeda","Valor em R$","Nº Fatura","Banco","Status"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+  <div class="table-wrap"><table>
+    <thead><tr>${["Fornecedor","Data Pgto","Moeda","Taxa de Câmbio","Valor na Moeda","Valor em R$","Nº Invoice","Banco","Status"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
     <tbody>${dados.length===0?`<tr><td colspan="9" style="text-align:center;padding:20px;color:#94a3b8">Nenhum pagamento encontrado.</td></tr>`:dados.map(i=>`<tr>
       <td><b>${i.fornecedor||""}</b></td><td>${fmtD(i.dtPgto)}</td>
       <td><span class="badge" style="background:${MOEDA_BG[i.moeda]};color:${MOEDA_COR[i.moeda]}">${i.moeda||""}</span></td>
@@ -933,7 +996,7 @@ function renderAnaliseCambial(){
 }
 
 // ===== PDF STYLES =====
-function pdfStyles(){return`*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;background:#fff;color:#1e293b;padding:24px}.hdr{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:18px 24px;border-radius:10px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}.hdr h1{font-size:16px;margin-bottom:3px}.hdr p{font-size:11px;opacity:.8}.cards{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}.card{flex:1;min-width:110px;border-radius:8px;padding:10px 14px;border-left:4px solid}.cl{font-size:10px;color:#64748b;margin-bottom:2px;font-weight:600;text-transform:uppercase}.cv{font-size:15px;font-weight:700}table{width:100%;border-collapse:collapse;font-size:10.5px}thead tr{background:#1e3a5f;color:#fff}th{padding:7px 8px;text-align:left;font-weight:600;white-space:nowrap}td{padding:5px 8px;border-bottom:1px solid #f1f5f9;vertical-align:middle}.tot{background:#f8fafc;border-radius:8px;padding:10px 14px;margin-top:12px;display:flex;gap:20px;flex-wrap:wrap;font-size:11px}.footer{margin-top:14px;display:flex;justify-content:space-between;border-top:2px solid #e2e8f0;padding-top:10px;font-size:10px;color:#94a3b8}@media print{.hdr,.cards,thead tr{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`;}
+function pdfStyles(){return`*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;background:#fff;color:#1e293b;padding:24px}.hdr{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:18px 24px;border-radius:10px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}.hdr h1{font-size:16px;margin-bottom:3px}.hdr p{font-size:11px;opacity:.8}.cards{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}.card{flex:1;min-width:110px;border-radius:8px;padding:10px 14px;border-left:4px solid}.cl{font-size:10px;color:#64748b;margin-bottom:2px;font-weight:700;text-transform:uppercase}.cv{font-size:15px;font-weight:700}table{width:100%;border-collapse:collapse;font-size:10.5px}thead tr{background:#1e3a5f;color:#fff}th{padding:7px 8px;text-align:left;font-weight:700;white-space:nowrap}td{padding:5px 8px;border-bottom:1px solid #f1f5f9;vertical-align:middle}.tot{background:#f8fafc;border-radius:8px;padding:10px 14px;margin-top:12px;display:flex;gap:20px;flex-wrap:wrap;font-size:11px}.footer{margin-top:14px;display:flex;justify-content:space-between;border-top:2px solid #e2e8f0;padding-top:10px;font-size:10px;color:#94a3b8}@media print{.hdr,.cards,thead tr{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`;}
 
 // ===== EXPORTAÇÕES =====
 function dl(href,name){const a=document.createElement("a");a.href=href;a.download=name;a.click();}
@@ -945,7 +1008,7 @@ function exportCSV(){
   showToast("CSV exportado!");
 }
 function exportCSVPgto(){
-  const cols=["nFatura","fornecedor","moeda","valorMoeda","taxa","reais","vencimento","condPgto","statusPgto","dtPgto","banco"];
+  const cols=["nFatura","fornecedor","cidade","moeda","valorMoeda","taxa","reais","vencimento","condPgto","statusPgto","dtPgto","banco"];
   dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...invoices.map(i=>cols.map(c=>`"${i[c]||""}"`).join(","))].join("\n")),"pagamentos.csv");
   showToast("CSV exportado!");
 }
@@ -956,7 +1019,7 @@ function exportCSVRanking(){
     const invs=invoices.filter(i=>i.fornecedor===fn);
     const totR=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
     const pm={};invs.forEach(i=>{if(i.moeda)pm[i.moeda]=(pm[i.moeda]||0)+parseCurrency(i.valorMoeda);});
-    const mStr=Object.entries(pm).map(([m,v])`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
+    const mStr=Object.entries(pm).map(([m,v])=>`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
     return[fn,Object.keys(pm).join("/"),mStr,invs.filter(i=>i.statusPgto==="Em Aberto").length,invs.filter(i=>i.statusPgto==="Pago Total").length,fmtBRL(totR)].map(v=>`"${v}"`).join(",");
   });
   dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...rows].join("\n")),"ranking_fornecedores.csv");
@@ -969,7 +1032,7 @@ function exportPDFRanking(){
     const invs=invoices.filter(i=>i.fornecedor===fn);
     const totR=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
     const pm={};invs.forEach(i=>{if(i.moeda)pm[i.moeda]=(pm[i.moeda]||0)+parseCurrency(i.valorMoeda);});
-    const mStr=Object.entries(pm).map(([m,v])`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
+    const mStr=Object.entries(pm).map(([m,v])=>`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
     return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td><b>${fn}</b></td><td>${Object.keys(pm).join("/")||"—"}</td><td>${mStr||"—"}</td><td style="text-align:center">${invs.filter(i=>i.statusPgto==="Em Aberto").length}</td><td style="text-align:center">${invs.filter(i=>i.statusPgto==="Pago Total").length}</td><td style="font-weight:700;color:#16a34a">${fmtBRL(totR)}</td></tr>`;
   }).join("");
   const totGeral=invoices.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
@@ -980,11 +1043,12 @@ function exportPDFRanking(){
   <div class="tot"><b>Total Geral R$:</b> <span style="color:#16a34a">${fmtBRL(totGeral)}</span></div>
   <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado automaticamente</span></div>
   <script>window.print()<\/script></body></html>`);
+  w.document.close();
 }
 
 function exportCSVForn(forn){
   const invs=invoices.filter(i=>i.fornecedor===forn);
-  const cols=["nFatura","emissaoFatura","vencimento","moeda","valorMoeda","taxa","reais","statusPgto"];
+  const cols=["nFatura","emissaoFatura","vencimento","moeda","valorMoeda","taxa","reais","statusPgto","condPgto","cidade","obs"];
   dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...invs.map(i=>cols.map(c=>`"${i[c]||""}"`).join(","))].join("\n")),`${forn}.csv`);
   showToast("CSV exportado!");
 }
@@ -1006,68 +1070,44 @@ function exportPDF(){
   const totPgR=filtradas.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totAbR=filtradas.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totME=MOEDAS.map(m=>{const t=filtradas.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);return t>0?`<b>${m}:</b> ${fmtM(t,m)}`:null;}).filter(Boolean).join(" | ");
-  const rows=filtradas.map((i,idx)=>{const cor=i.statusPgto==="Pago Total"?"#16a34a":i.statusPgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.pasta||""}</td><td><b>${i.fornecedor||""}</b></td><td>${i.nFatura||""}</td><td>${fmtD(i.emissaoFatura)}</td><td>${fmtD(i.vencimento)}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${i.condPgto||""}</td><td>${fmtD(i.dtPgto)}</td><td><span style="color:${cor};font-weight:600">${i.statusPgto||""}</span></td></tr>`;}).join("");
+  const rows=filtradas.map((i,idx)=>{const cor=i.statusPgto==="Pago Total"?"#16a34a":i.statusPgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.pasta||""}</td><td>${i.cidade||""}</td><td><b>${i.fornecedor||""}</b></td><td>${i.nFatura||""}</td><td>${fmtD(i.emissaoFatura)}</td><td>${fmtD(i.vencimento)}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${i.condPgto||""}</td><td>${fmtD(i.dtPgto)}</td><td><span style="color:${cor};font-weight:700">${i.statusPgto||""}</span></td></tr>`;}).join("");
   const w=window.open("","_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoices</title><style>${pdfStyles()}</style></head><body>
   <div class="hdr"><div><h1>🌐 Relatório de Invoices — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</p></div><div><b>${filtradas.length}</b> faturas</div></div>
   <div class="cards"><div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${filtradas.filter(i=>i.statusPgto==="Em Aberto").length}</div></div><div class="card" style="background:#fef3c7;border-color:#d97706"><div class="cl">Pago Parcial</div><div class="cv" style="color:#d97706">${filtradas.filter(i=>i.statusPgto==="Pago Parcial").length}</div></div><div class="card" style="background:#dcfce7;border-color:#16a34a"><div class="cl">Pago Total</div><div class="cv" style="color:#16a34a">${filtradas.filter(i=>i.statusPgto==="Pago Total").length}</div></div><div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div></div>
-  <table><thead><tr><th>Pasta</th><th>Fornecedor</th><th>Nº Fatura</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Cond.</th><th>Dt.Pgto</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
+  <table><thead><tr><th>Pasta</th><th>Cidade</th><th>Fornecedor</th><th>Nº Invoice</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Cond.</th><th>Dt.Pgto</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="tot"><span><b>Total R$:</b> ${fmtBRL(totR)}</span><span><b>Pago:</b> <span style="color:#16a34a">${fmtBRL(totPgR)}</span></span><span><b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(totAbR)}</span></span></div>
   <div class="tot" style="margin-top:6px"><b>Total Moeda Estrangeira:</b> ${totME||"—"}</div>
   <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado automaticamente</span></div>
   <script>window.print()<\/script></body></html>`);
+  w.document.close();
 }
 
 function exportPDFPgto(){
   const f=filtros.pgto;
   let dados=invoices;
-  if(f.status&&f.status!=="Todos") dados=dados.filter(i=>i.statusPgto===f.status);
-  if(f.dtIni) dados=dados.filter(i=>(i.dtPgto&&i.dtPgto>=f.dtIni)||(i.emissaoFatura&&i.emissaoFatura>=f.dtIni));
-  if(f.dtFim) dados=dados.filter(i=>(i.dtPgto&&i.dtPgto<=f.dtFim)||(i.emissaoFatura&&i.emissaoFatura<=f.dtFim));
-
+  if(f.status&&f.status!=="Todos")dados=dados.filter(i=>i.statusPgto===f.status);
+  if(f.dtIni)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto>=f.dtIni)||(i.emissaoFatura&&i.emissaoFatura>=f.dtIni));
+  if(f.dtFim)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto<=f.dtFim)||(i.emissaoFatura&&i.emissaoFatura<=f.dtFim));
   const totR=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totPgR=dados.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totAbR=dados.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totME=MOEDAS.map(m=>{const t=dados.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);return t>0?`<b>${m}:</b> ${fmtM(t,m)}`:null;}).filter(Boolean).join(" | ");
   const filtroDesc=f.status&&f.status!=="Todos"?`Status: ${f.status}`:"Todos os status";
-
   const rows=dados.map((i,idx)=>{
     const cor=i.statusPgto==="Pago Total"?"#16a34a":i.statusPgto==="Em Aberto"?"#dc2626":"#d97706";
-    return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}">
-      <td>${i.nFatura||""}</td><td>${i.fornecedor||""}</td>
-      <td>${i.moeda||""}</td>
-      <td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td>
-      <td>${i.taxa||"—"}</td>
-      <td>${fmtBRL(i.reais)}</td>
-      <td>${fmtD(i.vencimento)}</td>
-      <td>${i.condPgto||""}</td>
-      <td><span style="color:${cor};font-weight:600">${i.statusPgto||""}</span></td>
-      <td>${fmtD(i.dtPgto)}</td>
-      <td>${i.banco||"—"}</td>
-    </tr>`;
+    return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.nFatura||""}</td><td>${i.fornecedor||""}</td><td>${i.cidade||""}</td><td>${i.moeda||""}</td><td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${fmtD(i.vencimento)}</td><td>${i.condPgto||""}</td><td><span style="color:${cor};font-weight:700">${i.statusPgto||""}</span></td><td>${fmtD(i.dtPgto)}</td><td>${i.banco||"—"}</td></tr>`;
   }).join("");
-
   const w=window.open("","_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pagamentos</title><style>${pdfStyles()}</style></head><body>
-  <div class="hdr">
-    <div><h1>💰 Relatório de Pagamentos — Importação</h1>
-    <p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} &nbsp;|&nbsp; Filtro: ${filtroDesc}${f.dtIni?" | De: "+fmtD(f.dtIni):""}${f.dtFim?" | Até: "+fmtD(f.dtFim):""}</p></div>
-    <div><b>${dados.length}</b> registros</div>
-  </div>
-  <div class="cards">
-    <div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${dados.filter(i=>i.statusPgto==="Em Aberto").length}</div></div>
-    <div class="card" style="background:#fef3c7;border-color:#d97706"><div class="cl">Pago Parcial</div><div class="cv" style="color:#d97706">${dados.filter(i=>i.statusPgto==="Pago Parcial").length}</div></div>
-    <div class="card" style="background:#dcfce7;border-color:#16a34a"><div class="cl">Pago Total</div><div class="cv" style="color:#16a34a">${dados.filter(i=>i.statusPgto==="Pago Total").length}</div></div>
-    <div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div>
-  </div>
-  <table>
-    <thead><tr><th>Nº Fatura</th><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Vencimento</th><th>Cond.</th><th>Status</th><th>Dt.Pgto</th><th>Banco</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>
+  <div class="hdr"><div><h1>💰 Relatório de Pagamentos — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} | Filtro: ${filtroDesc}${f.dtIni?" | De: "+fmtD(f.dtIni):""}${f.dtFim?" | Até: "+fmtD(f.dtFim):""}</p></div><div><b>${dados.length}</b> registros</div></div>
+  <div class="cards"><div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${dados.filter(i=>i.statusPgto==="Em Aberto").length}</div></div><div class="card" style="background:#fef3c7;border-color:#d97706"><div class="cl">Pago Parcial</div><div class="cv" style="color:#d97706">${dados.filter(i=>i.statusPgto==="Pago Parcial").length}</div></div><div class="card" style="background:#dcfce7;border-color:#16a34a"><div class="cl">Pago Total</div><div class="cv" style="color:#16a34a">${dados.filter(i=>i.statusPgto==="Pago Total").length}</div></div><div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div></div>
+  <table><thead><tr><th>Nº Invoice</th><th>Fornecedor</th><th>Cidade</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Vencimento</th><th>Cond.</th><th>Status</th><th>Dt.Pgto</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="tot"><span><b>Total R$:</b> ${fmtBRL(totR)}</span><span><b>Pago:</b> <span style="color:#16a34a">${fmtBRL(totPgR)}</span></span><span><b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(totAbR)}</span></span></div>
   <div class="tot" style="margin-top:6px"><b>Total Moeda Estrangeira:</b> ${totME||"—"}</div>
   <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado automaticamente</span></div>
   <script>window.print()<\/script></body></html>`);
+  w.document.close();
 }
 
 function exportPDFForn(forn){
@@ -1078,15 +1118,16 @@ function exportPDFForn(forn){
   const totMoeda2={};MOEDAS.forEach(m=>{totMoeda2[m]=invs.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);});
   const totR=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const mStr=MOEDAS.map(m=>totMoeda2[m]>0?`<b>${m}:</b> ${fmtM(totMoeda2[m],m)}`:"").filter(Boolean).join(" | ");
-  const rows=invs.map((i,idx)=>{const cor=i.statusPgto==="Pago Total"?"#16a34a":i.statusPgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.nFatura||""}</td><td>${fmtD(i.emissaoFatura)}</td><td>${fmtD(i.vencimento)}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td><td>${i.taxa?`R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}`:"—"}</td><td>${fmtBRL(i.reais)}</td><td>${i.condPgto||""}</td><td><span style="color:${cor};font-weight:600">${i.statusPgto||""}</span></td></tr>`;}).join("");
+  const rows=invs.map((i,idx)=>{const cor=i.statusPgto==="Pago Total"?"#16a34a":i.statusPgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.nFatura||""}</td><td>${i.cidade||""}</td><td>${fmtD(i.emissaoFatura)}</td><td>${fmtD(i.vencimento)}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td><td>${i.taxa?`R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}`:"—"}</td><td>${fmtBRL(i.reais)}</td><td>${i.condPgto||""}</td><td><span style="color:${cor};font-weight:700">${i.statusPgto||""}</span></td></tr>`;}).join("");
   const w=window.open("","_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${forn}</title><style>${pdfStyles()}</style></head><body>
   <div class="hdr"><h1>🏢 Relatório — ${forn}</h1><p>Gerado em ${new Date().toLocaleDateString("pt-BR")}</p></div>
-  <table><thead><tr><th>Nº Fatura</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor na Moeda</th><th>Taxa R$</th><th>Valor R$</th><th>Cond.</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
+  <table><thead><tr><th>Nº Invoice</th><th>Cidade</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor na Moeda</th><th>Taxa R$</th><th>Valor R$</th><th>Cond.</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="tot"><b>Totais por moeda:</b> ${mStr||"—"}</div>
   <div class="tot" style="margin-top:6px"><b>Total Geral em R$:</b> <span style="color:#16a34a">${fmtBRL(totR)}</span></div>
   <div class="footer"><span>Sistema Controle de Invoices</span><span>Gerado automaticamente</span></div>
   <script>window.print()<\/script></body></html>`);
+  w.document.close();
 }
 
 function exportPDFCambial(){
@@ -1104,11 +1145,12 @@ function exportPDFCambial(){
   const w=window.open("","_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Análise Cambial</title><style>${pdfStyles()}</style></head><body>
   <div class="hdr"><div><h1>📈 Análise Cambial — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${dados.length}</b> pagamentos</div></div>
-  <table><thead><tr><th>Fornecedor</th><th>Data Pgto</th><th>Moeda</th><th>Taxa Câmbio</th><th>Valor na Moeda</th><th>Valor R$</th><th>Nº Fatura</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
+  <table><thead><tr><th>Fornecedor</th><th>Data Pgto</th><th>Moeda</th><th>Taxa Câmbio</th><th>Valor na Moeda</th><th>Valor R$</th><th>Nº Invoice</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="tot"><b>Total por moeda:</b> ${mStr||"—"}</div>
   <div class="tot" style="margin-top:6px"><b>Total Geral R$:</b> <span style="color:#16a34a">${fmtBRL(totR)}</span></div>
   <div class="footer"><span>Análise Cambial — Importação</span><span>Gerado automaticamente</span></div>
   <script>window.print()<\/script></body></html>`);
+  w.document.close();
 }
 
 // ===== PWA =====
@@ -1123,10 +1165,10 @@ function setupPWA(){
 
 // ===== DEMO =====
 function getDemoData(){return[
-  {pasta:"2024-001",cidade:"Milão",fornecedor:"Gucci SRL",marca:"Gucci",dtPedido:"2024-01-10",nProforma:"PRF-001",nFatura:"INV-2024-001",dtEmbarque:"2024-01-20",emissaoFatura:"2024-01-15",dtAntecipado:"",condPgto:"30 dias",vencimento:"2024-02-19",dtPgto:"2024-02-14",banco:"Itaú",taxa:"5.42",moeda:"EUR",valorMoeda:"15.000,00",reais:"81300",statusCambio:"Fechado",statusPgto:"Pago Total",awbBl:"AWB-12345",obs:""},
+  {pasta:"2024-001",cidade:"Milão",fornecedor:"Gucci SRL",marca:"Gucci",dtPedido:"2024-01-10",nProforma:"PRF-001",nFatura:"INV-2024-001",dtEmbarque:"2024-01-20",emissaoFatura:"2024-01-15",dtAntecipado:"",condPgto:"30 dias",vencimento:"2024-02-19",dtPgto:"2024-02-14",banco:"Itaú",taxa:"5.42",moeda:"EUR",valorMoeda:"15.000,00",reais:"81300",statusCambio:"Fechado",statusPgto:"Pago Total",awbBl:"AWB-12345",obs:"Entrega prioritária"},
   {pasta:"2024-002",cidade:"Nova York",fornecedor:"Nike Inc",marca:"Nike",dtPedido:"2024-02-05",nProforma:"PRF-002",nFatura:"INV-2024-002",dtEmbarque:"2024-02-20",emissaoFatura:"2024-02-10",dtAntecipado:"",condPgto:"60 dias",vencimento:"2026-06-10",dtPgto:"",banco:"",taxa:"",moeda:"USD",valorMoeda:"22.000,00",reais:"",statusCambio:"Pendente",statusPgto:"Em Aberto",awbBl:"BL-67890",obs:""},
   {pasta:"2024-003",cidade:"Zurique",fornecedor:"Rolex AG",marca:"Rolex",dtPedido:"2024-03-01",nProforma:"PRF-003",nFatura:"INV-2024-003",dtEmbarque:"2024-03-10",emissaoFatura:"2024-03-05",dtAntecipado:"2024-02-28",condPgto:"Antecipado",vencimento:"",dtPgto:"2024-02-28",banco:"Bradesco",taxa:"5.85",moeda:"CHF",valorMoeda:"45.000,00",reais:"263250",statusCambio:"Fechado",statusPgto:"Pago Total",awbBl:"AWB-99001",obs:""},
-  {pasta:"2024-004",cidade:"Londres",fornecedor:"Burberry Ltd",marca:"Burberry",dtPedido:"2024-04-01",nProforma:"PRF-004",nFatura:"INV-2024-004",dtEmbarque:"2024-04-15",emissaoFatura:"2024-04-10",dtAntecipado:"",condPgto:"45 dias",vencimento:"2026-05-30",dtPgto:"",banco:"",taxa:"",moeda:"GBP",valorMoeda:"18.500,00",reais:"",statusCambio:"Pendente",statusPgto:"Em Aberto",awbBl:"BL-44321",obs:""},
+  {pasta:"2024-004",cidade:"Londres",fornecedor:"Burberry Ltd",marca:"Burberry",dtPedido:"2024-04-01",nProforma:"PRF-004",nFatura:"INV-2024-004",dtEmbarque:"2024-04-15",emissaoFatura:"2024-04-10",dtAntecipado:"",condPgto:"45 dias",vencimento:"2026-05-30",dtPgto:"",banco:"",taxa:"",moeda:"GBP",valorMoeda:"18.500,00",reais:"",statusCambio:"Pendente",statusPgto:"Em Aberto",awbBl:"BL-44321",obs:"Aguardando liberação aduaneira"},
 ];}
 
 window.onload=()=>{if(!checkAuth()){}};
