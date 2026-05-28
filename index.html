@@ -932,6 +932,7 @@ function renderPagamentos(){
   ${resumoBancos}
   <div class="table-wrap"><table>
     <thead><tr>
+      <th class="col-pasta">Pasta</th>
       <th class="col-invoice">Nº Invoice</th>
       <th class="col-fornecedor">Fornecedor</th>
       <th class="col-cidade">Cidade</th>
@@ -946,9 +947,10 @@ function renderPagamentos(){
       <th class="col-awb">Banco</th>
       <th class="col-acoes">Ação</th>
     </tr></thead>
-    <tbody>${dados.length===0?`<tr><td colspan="13" style="text-align:center;padding:20px;color:#94a3b8">Nenhum registro encontrado</td></tr>`:dados.map(i=>{
+    <tbody>${dados.length===0?`<tr><td colspan="14" style="text-align:center;padding:20px;color:#94a3b8">Nenhum registro encontrado</td></tr>`:dados.map(i=>{
       const ri=invoices.indexOf(i),vm=parseCurrency(i.valorMoeda);
       return`<tr>
+        <td class="col-pasta" style="font-weight:600;color:#1e3a5f">${i.pasta||""}</td>
         <td class="col-invoice">${i.nFatura||""}</td>
         <td class="col-fornecedor">${i.fornecedor||""}</td>
         <td class="col-cidade">${i.cidade||""}</td>
@@ -1147,15 +1149,90 @@ function renderAnaliseCambial(){
 // ===== PDF STYLES =====
 function pdfStyles(){return`*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;background:#fff;color:#1e293b;padding:24px}.hdr{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:18px 24px;border-radius:10px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}.hdr h1{font-size:16px;margin-bottom:3px}.hdr p{font-size:11px;opacity:.8}.cards{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}.card{flex:1;min-width:110px;border-radius:8px;padding:10px 14px;border-left:4px solid}.cl{font-size:10px;color:#64748b;margin-bottom:2px;font-weight:700;text-transform:uppercase}.cv{font-size:15px;font-weight:700}table{width:100%;border-collapse:collapse;font-size:10.5px}thead tr{background:#1e3a5f;color:#fff}th{padding:7px 8px;text-align:left;font-weight:700;white-space:nowrap}td{padding:5px 8px;border-bottom:1px solid #f1f5f9;vertical-align:middle}.tot{background:#f8fafc;border-radius:8px;padding:10px 14px;margin-top:12px;display:flex;gap:20px;flex-wrap:wrap;font-size:11px}.footer{margin-top:14px;display:flex;justify-content:space-between;border-top:2px solid #e2e8f0;padding-top:10px;font-size:10px;color:#94a3b8}@media print{.hdr,.cards,thead tr{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`;}
 
-// ===== EXPORTAÇÕES =====
+// ===== EXPORTAÇÕES CSV — ENGINE UNIFICADO =====
+
+// Utilitários de formatação limpa para CSV
+function csvEsc(v){
+  // Remove aspas duplas internas, retorna como campo entre aspas duplas
+  if(v===null||v===undefined)return'""';
+  return'"'+String(v).replace(/"/g,'""')+'"';
+}
+function csvDate(d){
+  // ISO date string YYYY-MM-DD → DD/MM/YYYY
+  if(!d||!String(d).match(/^\d{4}-\d{2}-\d{2}/))return'""';
+  const[y,m,day]=String(d).split("T")[0].split("-");
+  return csvEsc(`${day}/${m}/${y}`);
+}
+function csvNum(v){
+  // Número puro sem símbolos monetários, ponto como separador decimal
+  if(v===null||v===undefined||v==="")return'""';
+  const n=parseCurrency(v);
+  return isNaN(n)?'""':String(n.toFixed(2));
+}
+function csvTaxa(v){
+  // Taxa com 4 casas decimais
+  if(!v)return'""';
+  const n=parseFloat(v);
+  return isNaN(n)?'""':String(n.toFixed(4));
+}
+function csvInt(v){
+  const n=parseInt(v,10);
+  return isNaN(n)?'""':String(n);
+}
+function csvPct(v,t){
+  if(!t||t===0)return'"0,00%"';
+  return csvEsc(((v/t)*100).toFixed(2).replace(".",",")+"%");
+}
+function buildCSV(headerRow,dataRows,summaryBlocks){
+  // headerRow: array of strings (labels)
+  // dataRows: array of arrays of already-escaped csv values
+  // summaryBlocks: array of {title, headers, rows} — each appended after blank line
+  const lines=[];
+  lines.push(headerRow.map(h=>csvEsc(h)).join(","));
+  dataRows.forEach(r=>lines.push(r.join(",")));
+  if(summaryBlocks&&summaryBlocks.length){
+    summaryBlocks.forEach(block=>{
+      lines.push(""); // blank separator
+      lines.push(csvEsc("=== "+block.title+" ==="));
+      lines.push(block.headers.map(h=>csvEsc(h)).join(","));
+      block.rows.forEach(r=>lines.push(r.join(",")));
+    });
+  }
+  return lines.join("\n");
+}
+function dlCSV(content,filename){
+  const a=document.createElement("a");
+  a.href="data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent(content);
+  a.download=filename.endsWith(".csv")?filename:filename+".csv";
+  a.click();
+}
+// legacy dl kept for any other use
 function dl(href,name){const a=document.createElement("a");a.href=href;a.download=name;a.click();}
 
+// ----- 1. Invoices -----
 function exportCSV(){
   const filtradas=getInvFiltradas();
-  const cols=["pasta","cidade","fornecedor","marca","dtPedido","nProforma","nFatura","dtEmbarque","emissaoFatura","dtAntecipado","condPgto","vencimento","dtPgto","banco","taxa","moeda","valorMoeda","reais","statusCambio","statusPgto","awbBl","obs"];
-  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...filtradas.map(i=>cols.map(c=>`"${i[c]||""}"`).join(","))].join("\n")),"invoices.csv");
-  showToast("CSV exportado!");
+  const headers=[
+    "Pasta","Cidade","Fornecedor","Marca",
+    "Data Pedido Fornecedor","Nº Proforma","Nº Invoice",
+    "Data Embarque","Emissão da Fatura","Data Antecipado",
+    "Condição de Pagamento","Vencimento","Data Pagamento","Banco",
+    "Taxa de Câmbio (R$)","Moeda","Valor na Moeda (Moeda)","Valor em R$",
+    "Status Câmbio","Status Pagamento","AWB / BL","Observações"
+  ];
+  const dataRows=filtradas.map(i=>[
+    csvEsc(i.pasta),csvEsc(i.cidade),csvEsc(i.fornecedor),csvEsc(i.marca),
+    csvDate(i.dtPedido),csvEsc(i.nProforma),csvEsc(i.nFatura),
+    csvDate(i.dtEmbarque),csvDate(i.emissaoFatura),csvDate(i.dtAntecipado),
+    csvEsc(i.condPgto),csvDate(i.vencimento),csvDate(i.dtPgto),csvEsc(i.banco),
+    csvTaxa(i.taxa),csvEsc(i.moeda),csvNum(i.valorMoeda),csvNum(i.reais),
+    csvEsc(i.statusCambio),csvEsc(i.statusPgto),csvEsc(i.awbBl),csvEsc(i.obs)
+  ]);
+  dlCSV(buildCSV(headers,dataRows),"invoices.csv");
+  showToast("CSV Invoices exportado!");
 }
+
+// ----- 2. Pagamentos -----
 function exportCSVPgto(){
   const f=filtros.pgto;
   let dados=invoices;
@@ -1164,41 +1241,77 @@ function exportCSVPgto(){
   if(f.dtFim)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto<=f.dtFim)||(i.emissaoFatura&&i.emissaoFatura<=f.dtFim));
   if(f.bancos&&f.bancos.length>0)dados=dados.filter(i=>f.bancos.includes(i.banco));
 
-  const cols=["nFatura","fornecedor","cidade","moeda","valorMoeda","taxa","reais","vencimento","condPgto","statusPgto","dtPgto","banco"];
-  const header=cols.join(",");
-  const dataRows=dados.map(i=>cols.map(c=>`"${i[c]||""}"`).join(","));
+  const headers=[
+    "Pasta","Nº Invoice","Fornecedor","Cidade",
+    "Moeda","Valor na Moeda (Moeda)","Taxa de Câmbio (R$)","Valor em R$",
+    "Vencimento","Condição de Pagamento","Status Pagamento",
+    "Data Pagamento","Banco"
+  ];
+  const dataRows=dados.map(i=>[
+    csvEsc(i.pasta),csvEsc(i.nFatura),csvEsc(i.fornecedor),csvEsc(i.cidade),
+    csvEsc(i.moeda),csvNum(i.valorMoeda),csvTaxa(i.taxa),csvNum(i.reais),
+    csvDate(i.vencimento),csvEsc(i.condPgto),csvEsc(i.statusPgto),
+    csvDate(i.dtPgto),csvEsc(i.banco)
+  ]);
 
-  // Bank summary at the bottom
-  const bancosNoRelatorio=[...new Set(dados.filter(i=>i.banco&&(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial")).map(i=>i.banco))].sort();
+  // Resumo por banco
+  const bancosNoRel=[...new Set(dados.filter(i=>i.banco&&(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial")).map(i=>i.banco))].sort();
   const totPgR=dados.filter(i=>i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const summaryRows=bancosNoRelatorio.length>0?[
-    ["","","","","","","","","","","",""].join(","),
-    ['"=== RESUMO POR BANCO ==="',"","","","","","","","","","",""].join(","),
-    ['"Banco"','"Qtd. Pagamentos"','"Total Pago (R$)"','"% do Total"',"","","","","","","",""].join(","),
-    ...bancosNoRelatorio.map(b=>{
-      const pagos=dados.filter(i=>i.banco===b&&(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial"));
-      const tot=pagos.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-      const perc=totPgR>0?((tot/totPgR)*100).toFixed(1)+"%":"—";
-      return[`"${b}"`,`"${pagos.length}"`,`"${fmtBRL(tot)}"`,`"${perc}"`,`""`,`""`,`""`,`""`,`""`,`""`,`""`,`""`].join(",");
-    }),
-    ['"TOTAL GERAL PAGO"',`"${dados.filter(i=>i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial").length}"`,`"${fmtBRL(totPgR)}"`,`"100%"`,`""`,`""`,`""`,`""`,`""`,`""`,`""`,`""`].join(",")
-  ]:[];
+  const summaryBlocks=bancosNoRel.length>0?[{
+    title:"RESUMO DE PAGAMENTOS POR BANCO",
+    headers:["Banco","Quantidade de Pagamentos","Total Pago (R$)","Participação (%)"],
+    rows:[
+      ...bancosNoRel.map(b=>{
+        const pagos=dados.filter(i=>i.banco===b&&(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial"));
+        const tot=pagos.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+        return[csvEsc(b),csvInt(pagos.length),csvNum(tot),csvPct(tot,totPgR)];
+      }),
+      [csvEsc("TOTAL GERAL PAGO"),csvInt(dados.filter(i=>i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial").length),csvNum(totPgR),csvEsc("100,00%")]
+    ]
+  }]:[];
 
-  const csvContent=[header,...dataRows,...summaryRows].join("\n");
-  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent(csvContent),"pagamentos.csv");
-  showToast("CSV exportado!");
+  dlCSV(buildCSV(headers,dataRows,summaryBlocks),"pagamentos.csv");
+  showToast("CSV Pagamentos exportado!");
 }
+
+// ----- 3. Ranking Fornecedores -----
 function exportCSVRanking(){
   const forn=[...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
-  const cols=["Fornecedor","Moeda","Valor Moeda","Em Aberto","Pago Total","Total R$"];
-  const rows=forn.map(fn=>{
+  const totGeralR=invoices.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const headers=[
+    "Fornecedor","Moedas Utilizadas",
+    "Qtd. Invoices Total","Qtd. Em Aberto","Qtd. Pago Parcial","Qtd. Pago Total",
+    "Valor Total em R$","Valor Em Aberto (R$)","Valor Pago (R$)","Participação no Total (%)"
+  ];
+  const dataRows=forn.map(fn=>{
     const invs=invoices.filter(i=>i.fornecedor===fn);
     const totR=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-    const pm={};invs.forEach(i=>{if(i.moeda)pm[i.moeda]=(pm[i.moeda]||0)+parseCurrency(i.valorMoeda);});
-    const mStr=Object.entries(pm).map(([m,v])=>`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
-    return[fn,Object.keys(pm).join("/"),mStr,invs.filter(i=>i.statusPgto==="Em Aberto").length,invs.filter(i=>i.statusPgto==="Pago Total").length,fmtBRL(totR)].map(v=>`"${v}"`).join(",");
+    const aberto=invs.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+    const pago=invs.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+    const moedas=[...new Set(invs.map(i=>i.moeda).filter(Boolean))].join(", ");
+    return[
+      csvEsc(fn),csvEsc(moedas),
+      csvInt(invs.length),
+      csvInt(invs.filter(i=>i.statusPgto==="Em Aberto").length),
+      csvInt(invs.filter(i=>i.statusPgto==="Pago Parcial").length),
+      csvInt(invs.filter(i=>i.statusPgto==="Pago Total").length),
+      csvNum(totR),csvNum(aberto),csvNum(pago),
+      csvPct(totR,totGeralR)
+    ];
   });
-  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...rows].join("\n")),"ranking_fornecedores.csv");
+  // Totalizador final
+  const totAberto=invoices.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const totPago=invoices.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  dataRows.push([
+    csvEsc("TOTAL GERAL"),csvEsc(""),
+    csvInt(invoices.length),
+    csvInt(invoices.filter(i=>i.statusPgto==="Em Aberto").length),
+    csvInt(invoices.filter(i=>i.statusPgto==="Pago Parcial").length),
+    csvInt(invoices.filter(i=>i.statusPgto==="Pago Total").length),
+    csvNum(totGeralR),csvNum(totAberto),csvNum(totPago),
+    csvEsc("100,00%")
+  ]);
+  dlCSV(buildCSV(headers,dataRows),"ranking_fornecedores.csv");
   showToast("CSV Ranking exportado!");
 }
 
@@ -1222,12 +1335,56 @@ function exportPDFRanking(){
   w.document.close();
 }
 
+// ----- 4. Fornecedor Individual -----
 function exportCSVForn(forn){
-  const invs=invoices.filter(i=>i.fornecedor===forn);
-  const cols=["nFatura","emissaoFatura","vencimento","moeda","valorMoeda","taxa","reais","statusPgto","condPgto","cidade","obs"];
-  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...invs.map(i=>cols.map(c=>`"${i[c]||""}"`).join(","))].join("\n")),`${forn}.csv`);
+  const f=filtros.forn;
+  let invs=invoices.filter(i=>i.fornecedor===forn);
+  if(f.dtIni)invs=invs.filter(i=>i.emissaoFatura>=f.dtIni);
+  if(f.dtFim)invs=invs.filter(i=>i.emissaoFatura<=f.dtFim);
+
+  const headers=[
+    "Fornecedor","Nº Invoice","Pasta","Cidade",
+    "Emissão da Fatura","Vencimento","Data Pagamento",
+    "Moeda","Valor na Moeda (Moeda)","Taxa de Câmbio (R$)","Valor em R$",
+    "Condição de Pagamento","Status Pagamento","Status Câmbio",
+    "Banco","AWB / BL","Observações"
+  ];
+  const dataRows=invs.map(i=>[
+    csvEsc(i.fornecedor),csvEsc(i.nFatura),csvEsc(i.pasta),csvEsc(i.cidade),
+    csvDate(i.emissaoFatura),csvDate(i.vencimento),csvDate(i.dtPgto),
+    csvEsc(i.moeda),csvNum(i.valorMoeda),csvTaxa(i.taxa),csvNum(i.reais),
+    csvEsc(i.condPgto),csvEsc(i.statusPgto),csvEsc(i.statusCambio),
+    csvEsc(i.banco),csvEsc(i.awbBl),csvEsc(i.obs)
+  ]);
+
+  // Resumo por moeda
+  const moedaHeaders=["Moeda","Qtd. Invoices","Valor Total na Moeda","Valor Total em R$","Taxa Média (R$)"];
+  const moedaRows=MOEDAS.map(m=>{
+    const arr=invs.filter(i=>i.moeda===m);
+    if(!arr.length)return null;
+    const totM=arr.reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
+    const totR=arr.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+    const taxas=arr.filter(i=>i.taxa&&parseFloat(i.taxa)>0);
+    const taxaMedia=taxas.length?(taxas.reduce((s,i)=>s+(parseFloat(i.taxa)||0),0)/taxas.length):0;
+    return[csvEsc(m),csvInt(arr.length),csvNum(totM),csvNum(totR),csvTaxa(taxaMedia)];
+  }).filter(Boolean);
+
+  const totR=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  if(moedaRows.length){
+    moedaRows.push([csvEsc("TOTAL GERAL"),csvInt(invs.length),csvEsc(""),csvNum(totR),csvEsc("")]);
+  }
+
+  const summaryBlocks=moedaRows.length?[{
+    title:`RESUMO POR MOEDA — ${forn}`,
+    headers:moedaHeaders,
+    rows:moedaRows
+  }]:[];
+
+  dlCSV(buildCSV(headers,dataRows,summaryBlocks),`fornecedor_${forn.replace(/[^a-zA-Z0-9]/g,"_")}.csv`);
   showToast("CSV exportado!");
 }
+
+// ----- 5. Análise Cambial -----
 function exportCSVCambial(){
   const f=filtros.cambial;
   let dados=invoices.filter(i=>i.dtPgto&&i.taxa&&parseFloat(i.taxa)>0);
@@ -1235,9 +1392,39 @@ function exportCSVCambial(){
   if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
   if(f.dtIni)dados=dados.filter(i=>i.dtPgto>=f.dtIni);
   if(f.dtFim)dados=dados.filter(i=>i.dtPgto<=f.dtFim);
-  const cols=["fornecedor","dtPgto","moeda","taxa","valorMoeda","reais","nFatura","banco","statusPgto"];
-  dl("data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent([cols.join(","),...dados.map(i=>cols.map(c=>`"${i[c]||""}"`).join(","))].join("\n")),"analise_cambial.csv");
-  showToast("CSV exportado!");
+
+  const headers=[
+    "Fornecedor","Nº Invoice","Data Pagamento","Banco",
+    "Moeda","Taxa de Câmbio (R$)","Valor na Moeda (Moeda)","Valor em R$",
+    "Status Pagamento","Pasta","Cidade"
+  ];
+  const dataRows=dados.map(i=>[
+    csvEsc(i.fornecedor),csvEsc(i.nFatura),csvDate(i.dtPgto),csvEsc(i.banco),
+    csvEsc(i.moeda),csvTaxa(i.taxa),csvNum(i.valorMoeda),csvNum(i.reais),
+    csvEsc(i.statusPgto),csvEsc(i.pasta),csvEsc(i.cidade)
+  ]);
+
+  // Resumo por moeda
+  const totGeralR=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const moedaRows=MOEDAS.map(m=>{
+    const arr=dados.filter(i=>i.moeda===m);
+    if(!arr.length)return null;
+    const totM=arr.reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
+    const totR=arr.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+    const taxaMedia=arr.reduce((s,i)=>s+(parseFloat(i.taxa)||0),0)/arr.length;
+    const taxaMin=Math.min(...arr.map(i=>parseFloat(i.taxa)||0));
+    const taxaMax=Math.max(...arr.map(i=>parseFloat(i.taxa)||0));
+    return[csvEsc(m),csvInt(arr.length),csvNum(totM),csvNum(totR),csvTaxa(taxaMedia),csvTaxa(taxaMin),csvTaxa(taxaMax),csvPct(totR,totGeralR)];
+  }).filter(Boolean);
+
+  const summaryBlocks=moedaRows.length?[{
+    title:"RESUMO CAMBIAL POR MOEDA",
+    headers:["Moeda","Qtd. Pagamentos","Volume na Moeda","Volume em R$","Taxa Média (R$)","Taxa Mínima (R$)","Taxa Máxima (R$)","Participação (%)"],
+    rows:moedaRows
+  }]:[];
+
+  dlCSV(buildCSV(headers,dataRows,summaryBlocks),"analise_cambial.csv");
+  showToast("CSV Análise Cambial exportado!");
 }
 
 function exportPDF(){
@@ -1312,14 +1499,23 @@ function exportPDFPgto(){
 
   const rows=dados.map((i,idx)=>{
     const cor=i.statusPgto==="Pago Total"?"#16a34a":i.statusPgto==="Em Aberto"?"#dc2626":"#d97706";
-    return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.nFatura||""}</td><td>${i.fornecedor||""}</td><td>${i.cidade||""}</td><td>${i.moeda||""}</td><td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${fmtD(i.vencimento)}</td><td>${i.condPgto||""}</td><td><span style="color:${cor};font-weight:700">${i.statusPgto||""}</span></td><td>${fmtD(i.dtPgto)}</td><td>${i.banco||"—"}</td></tr>`;
+    const pastaStyle=`font-weight:700;color:#1e3a5f;background:${idx%2===0?"#eef2ff":"#e0e7ff"};border-left:3px solid #3b82f6`;
+    return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}">
+      <td style="${pastaStyle}">${i.pasta||"—"}</td>
+      <td>${i.nFatura||""}</td><td>${i.fornecedor||""}</td><td>${i.cidade||""}</td>
+      <td>${i.moeda||""}</td><td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td>
+      <td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td>
+      <td>${fmtD(i.vencimento)}</td><td>${i.condPgto||""}</td>
+      <td><span style="color:${cor};font-weight:700">${i.statusPgto||""}</span></td>
+      <td>${fmtD(i.dtPgto)}</td><td>${i.banco||"—"}</td>
+    </tr>`;
   }).join("");
 
   const w=window.open("","_blank");
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pagamentos</title><style>${pdfStyles()}</style></head><body>
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pagamentos</title><style>${pdfStyles()}.col-pasta-pdf{background:#eef2ff;font-weight:700;color:#1e3a5f;border-left:3px solid #1e3a5f}</style></head><body>
   <div class="hdr"><div><h1>💰 Relatório de Pagamentos — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} | Filtro: ${filtroDesc}${f.dtIni?" | De: "+fmtD(f.dtIni):""}${f.dtFim?" | Até: "+fmtD(f.dtFim):""}</p></div><div><b>${dados.length}</b> registros</div></div>
   <div class="cards"><div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${dados.filter(i=>i.statusPgto==="Em Aberto").length}</div></div><div class="card" style="background:#fef3c7;border-color:#d97706"><div class="cl">Pago Parcial</div><div class="cv" style="color:#d97706">${dados.filter(i=>i.statusPgto==="Pago Parcial").length}</div></div><div class="card" style="background:#dcfce7;border-color:#16a34a"><div class="cl">Pago Total</div><div class="cv" style="color:#16a34a">${dados.filter(i=>i.statusPgto==="Pago Total").length}</div></div><div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div></div>
-  <table><thead><tr><th>Nº Invoice</th><th>Fornecedor</th><th>Cidade</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Vencimento</th><th>Cond.</th><th>Status</th><th>Dt.Pgto</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
+  <table><thead><tr><th style="background:#0f2044;border-right:2px solid #3b82f6">Pasta</th><th>Nº Invoice</th><th>Fornecedor</th><th>Cidade</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Vencimento</th><th>Cond.</th><th>Status</th><th>Dt.Pgto</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="tot"><span><b>Total R$:</b> ${fmtBRL(totR)}</span><span><b>Pago:</b> <span style="color:#16a34a">${fmtBRL(totPgR)}</span></span><span><b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(totAbR)}</span></span></div>
   <div class="tot" style="margin-top:6px"><b>Total Moeda Estrangeira:</b> ${totME||"—"}</div>
   ${resumoBancosHTML}
