@@ -327,9 +327,16 @@ function parseCurrency(s){
 }
 
 // ===== UTILITÁRIOS XLSX NATIVO (padrão brasileiro) =====
-// Datas usam formato de exibição dd/mm/aaaa. Os campos numéricos (taxa, reais,
-// valorMoeda, valorPago) são gravados como TEXTO no padrão BR (vírgula decimal),
-// preservando exatamente o valor — por isso não recebem código de formato numérico.
+// Formatos de número aplicados às células do Excel (separador decimal vírgula,
+// milhar ponto). O Excel exibe conforme as configurações regionais do usuário;
+// o código de formato abaixo é o padrão usado em planilhas BR.
+// Observação sobre a sintaxe de código de formato do Excel: o "," representa o
+// separador de milhar e o "." o separador decimal; em um Office configurado em
+// pt-BR eles são exibidos como ponto (milhar) e vírgula (centavos),
+// respectivamente — ex.: 81.300,00.
+const XLSX_FMT_MOEDA="#,##0.00";           // valor estrangeiro: número com 2 casas (sem símbolo)
+const XLSX_FMT_REAIS='"R$" #,##0.00';      // Valor em R$: formato monetário, símbolo à esquerda
+const XLSX_FMT_TAXA="#,##0.0000";          // taxa com 4 casas
 const XLSX_FMT_DATA="dd/mm/yyyy";          // data brasileira
 
 // Converte uma string de data ISO ("YYYY-MM-DD") em objeto Date (meia-noite local).
@@ -363,27 +370,10 @@ function numDePlanilha(v){
   const n=parseFloat(s);
   return isNaN(n)?null:n;
 }
-// Converte um valor numérico em TEXTO no padrão brasileiro: vírgula decimal,
-// sem separador de milhar e sem zeros à direita forçados.
-//   origemBR: false (padrão) interpreta string com ponto decimal estilo JS
-//             ("5.8555","146387.50"); true interpreta string já BR ("68.850,00").
-//   casas:    nº máximo de casas decimais para arredondar (remove ruído de float).
-//             Use 2 para valores monetários e 4 para taxa. Padrão 2.
-// Ex.: numParaTextoBR("146387.50") -> "146387,5"; numParaTextoBR("5.8555",false,4) -> "5,8555".
-function numParaTextoBR(v,origemBR,casas){
-  if(v===null||v===undefined||v==="")return"";
-  let n;
-  if(typeof v==="number")n=v;
-  else n=origemBR?parseCurrency(v):parseFloat(v);
-  if(isNaN(n))return"";
-  const d=(casas===undefined)?2:casas;
-  const f=Math.pow(10,d);
-  const arred=Math.round(n*f)/f;
-  return String(arred).replace(".",",");
-}
 // Conjuntos de campos por tipo, usados na (re)serialização do xlsx.
 const CAMPOS_DATA=["dtPedido","dtEmbarque","emissaoFatura","dtAntecipado","vencimento","dtPgto"];
-const CAMPOS_MOEDA=["valorMoeda","reais","valorPago"]; // numéricos (gravados como texto BR)
+const CAMPOS_MOEDA=["valorMoeda","reais","valorPago"]; // todos numéricos
+const CAMPOS_REAIS=["reais","valorPago"];              // exibidos como moeda R$
 const CAMPOS_TAXA=["taxa"];
 function fmtCurrencyDisplay(v){
   if(!v&&v!==0)return"";
@@ -509,45 +499,28 @@ async function salvarDados(){
   try{
     document.getElementById("syncStatus").textContent="● Salvando...";
     const cols=["pasta","cidade","fornecedor","marca","dtPedido","nProforma","nFatura","dtEmbarque","emissaoFatura","dtAntecipado","condPgto","vencimento","dtPgto","banco","taxa","moeda","valorMoeda","reais","statusCambio","statusPgto","awbBl","valorPago","obs"];
-    // Monta a planilha como matriz de linhas.
-    // - Datas → Date real (formato dd/mm/aaaa).
-    // - taxa, reais, valorPago → TEXTO no padrão BR (vírgula decimal, sem milhar,
-    //   sem zeros à direita forçados): ex. 146387.50 -> "146387,5", 5.8555 -> "5,8555".
-    // - valorMoeda → preserva a string já existente no app (formato BR com milhar,
-    //   ex. "68.850,00"), apenas normalizando inteiros (ex. "25000").
+    // Monta a planilha como matriz de linhas, gravando datas como Date e valores
+    // como Number (células numéricas reais) — o que mantém fórmulas e somas no Excel.
     const aoa=[cols];
     invoices.forEach(i=>{
       aoa.push(cols.map(c=>{
         if(CAMPOS_DATA.includes(c)){const d=isoParaData(i[c]);return d||"";}
-        if(c==="valorMoeda"){
-          if(i[c]===""||i[c]==null)return "";
-          // Se já vier formatado em BR (contém vírgula), mantém; senão é inteiro puro.
-          return /,/.test(String(i[c]))?String(i[c]):numParaTextoBR(i[c],false,2);
-        }
-        if(CAMPOS_TAXA.includes(c)){
-          // Taxa: até 4 casas decimais (ex.: "5.8555" -> "5,8555").
-          return numParaTextoBR(i[c],false,4);
-        }
-        if(c==="reais"||c==="valorPago"){
-          // Valor em R$: até 2 casas (ex.: "146387.50" -> "146387,5").
-          return numParaTextoBR(i[c],false,2);
-        }
+        if(CAMPOS_MOEDA.includes(c)){const n=parseCurrency(i[c]);return (i[c]===""||i[c]==null)?"":n;}
+        if(CAMPOS_TAXA.includes(c)){const n=parseFloat(i[c]);return isNaN(n)?"":n;}
         return i[c]||"";
       }));
     });
     const ws=XLSX.utils.aoa_to_sheet(aoa,{cellDates:true});
-    // Aplica formato de data brasileira nas células de data. Os campos numéricos
-    // ficam como texto (não recebem formato numérico), exibindo exatamente o valor BR.
+    // Aplica o formato de exibição brasileiro célula a célula (vírgula decimal / dd/mm/aaaa).
     const range=XLSX.utils.decode_range(ws["!ref"]);
     for(let R=1;R<=range.e.r;R++){
       cols.forEach((c,C)=>{
         const cell=ws[XLSX.utils.encode_cell({r:R,c:C})];
         if(!cell||cell.v===""||cell.v==null)return;
         if(CAMPOS_DATA.includes(c))cell.z=XLSX_FMT_DATA;
-        else if(c==="taxa"||c==="reais"||c==="valorPago"||c==="valorMoeda"){
-          // Força tipo texto para preservar exatamente "146387,5" / "68.850,00".
-          cell.t="s";cell.v=String(cell.v);
-        }
+        else if(CAMPOS_REAIS.includes(c))cell.z=XLSX_FMT_REAIS;
+        else if(CAMPOS_MOEDA.includes(c))cell.z=XLSX_FMT_MOEDA;
+        else if(CAMPOS_TAXA.includes(c))cell.z=XLSX_FMT_TAXA;
       });
     }
     const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Invoices");
@@ -1281,27 +1254,17 @@ function csvDate(d){
   return csvEsc(`${day}/${m}/${y}`);
 }
 function csvNum(v){
-  // Número no padrão brasileiro: vírgula como separador decimal.
-  // Valores monetários: arredonda a no máx. 2 casas (elimina ruído de ponto
-  // flutuante de somatórios) e remove zeros à direita — ex.: 146387.50 -> "146387,5",
-  // 1605398.109999 -> "1605398,11", 25000 -> "25000". Sem milhar, sem aspas.
-  // Detecta a origem: string com vírgula = formato BR ("68.850,00"); caso
-  // contrário, número JS com ponto decimal ("146387.50") ou number puro.
+  // Número no padrão brasileiro: vírgula como separador decimal, 2 casas.
+  // Sem símbolo monetário e sem aspas, para o Excel BR reconhecer como número.
   if(v===null||v===undefined||v==="")return'""';
-  let n;
-  if(typeof v==="number")n=v;
-  else n=/,/.test(String(v))?parseCurrency(v):parseFloat(v);
-  if(isNaN(n))return'""';
-  // Arredonda a 2 casas e remove zeros decimais à direita.
-  const arred=Math.round(n*100)/100;
-  return String(arred).replace(".",",");
+  const n=parseCurrency(v);
+  return isNaN(n)?'""':n.toFixed(2).replace(".",",");
 }
 function csvTaxa(v){
-  // Taxa no padrão brasileiro (vírgula decimal), mantendo a precisão natural.
-  // Ex.: 5.8555 -> "5,8555", 9.9999 -> "9,9999".
-  if(v===null||v===undefined||v==="")return'""';
+  // Taxa com 4 casas decimais no padrão brasileiro (vírgula decimal).
+  if(!v)return'""';
   const n=parseFloat(v);
-  return isNaN(n)?'""':String(n).replace(".",",");
+  return isNaN(n)?'""':n.toFixed(4).replace(".",",");
 }
 function csvInt(v){
   const n=parseInt(v,10);
