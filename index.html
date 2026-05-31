@@ -330,9 +330,14 @@ function parseCurrency(s){
 // Formatos de número aplicados às células do Excel (separador decimal vírgula,
 // milhar ponto). O Excel exibe conforme as configurações regionais do usuário;
 // o código de formato abaixo é o padrão usado em planilhas BR.
-const XLSX_FMT_MOEDA="#,##0.00";   // valor com 2 casas
-const XLSX_FMT_TAXA="#,##0.0000";  // taxa com 4 casas
-const XLSX_FMT_DATA="dd/mm/yyyy";  // data brasileira
+// Observação sobre a sintaxe de código de formato do Excel: o "," representa o
+// separador de milhar e o "." o separador decimal; em um Office configurado em
+// pt-BR eles são exibidos como ponto (milhar) e vírgula (centavos),
+// respectivamente — ex.: 81.300,00.
+const XLSX_FMT_MOEDA="#,##0.00";           // valor estrangeiro: número com 2 casas (sem símbolo)
+const XLSX_FMT_REAIS='"R$" #,##0.00';      // Valor em R$: formato monetário, símbolo à esquerda
+const XLSX_FMT_TAXA="#,##0.0000";          // taxa com 4 casas
+const XLSX_FMT_DATA="dd/mm/yyyy";          // data brasileira
 
 // Converte uma string de data ISO ("YYYY-MM-DD") em objeto Date (meia-noite local).
 function isoParaData(s){
@@ -367,7 +372,8 @@ function numDePlanilha(v){
 }
 // Conjuntos de campos por tipo, usados na (re)serialização do xlsx.
 const CAMPOS_DATA=["dtPedido","dtEmbarque","emissaoFatura","dtAntecipado","vencimento","dtPgto"];
-const CAMPOS_MOEDA=["valorMoeda","reais","valorPago"];
+const CAMPOS_MOEDA=["valorMoeda","reais","valorPago"]; // todos numéricos
+const CAMPOS_REAIS=["reais","valorPago"];              // exibidos como moeda R$
 const CAMPOS_TAXA=["taxa"];
 function fmtCurrencyDisplay(v){
   if(!v&&v!==0)return"";
@@ -512,6 +518,7 @@ async function salvarDados(){
         const cell=ws[XLSX.utils.encode_cell({r:R,c:C})];
         if(!cell||cell.v===""||cell.v==null)return;
         if(CAMPOS_DATA.includes(c))cell.z=XLSX_FMT_DATA;
+        else if(CAMPOS_REAIS.includes(c))cell.z=XLSX_FMT_REAIS;
         else if(CAMPOS_MOEDA.includes(c))cell.z=XLSX_FMT_MOEDA;
         else if(CAMPOS_TAXA.includes(c))cell.z=XLSX_FMT_TAXA;
       });
