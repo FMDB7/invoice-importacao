@@ -138,6 +138,17 @@ input:read-only{background:#f8fafc;cursor:default}
 .col-acoes{width:110px;min-width:100px;white-space:nowrap}
 
 /* ── PDF STYLES (injected into popup) ── */
+
+/* ── EDIÇÃO INLINE NA TABELA ── */
+.cell-edit{position:relative;cursor:pointer}
+.cell-edit:hover .edit-hint{opacity:1}
+.edit-hint{opacity:0;position:absolute;top:-18px;left:0;background:#1e3a5f;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;white-space:nowrap;pointer-events:none;transition:opacity .2s;z-index:20}
+.inline-input{width:100%;padding:3px 6px;border:1.5px solid #2563eb;border-radius:4px;font-size:12px;outline:none;background:#eff6ff}
+.inline-select{width:100%;padding:3px 6px;border:1.5px solid #2563eb;border-radius:4px;font-size:12px;outline:none;background:#eff6ff}
+.row-editing td{background:#eff6ff!important}
+.save-row-btn{background:#16a34a;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;font-weight:700;white-space:nowrap}
+.cancel-row-btn{background:#f1f5f9;color:#64748b;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;margin-left:3px}
+
 </style>
 </head>
 <body>
@@ -286,9 +297,9 @@ const PERFIS       = ["admin","diretoria","financeiro","gerencia","visualizador"
 const TABS_POR_PERFIL = {
   admin:        ["Dashboard","Nova Invoice","Invoices","Pagamentos","Fornecedores","Análise Cambial","Usuários"],
   diretoria:    ["Dashboard","Nova Invoice","Invoices","Pagamentos","Fornecedores","Análise Cambial","Usuários"],
-  financeiro:   ["Dashboard","Invoices","Pagamentos","Fornecedores","Análise Cambial"],
-  gerencia:     ["Dashboard","Invoices","Pagamentos","Fornecedores","Análise Cambial"],
-  visualizador: ["Dashboard","Invoices","Fornecedores","Análise Cambial"]
+  financeiro:   ["Dashboard","Nova Invoice","Invoices","Pagamentos","Fornecedores","Análise Cambial"],
+  gerencia:     ["Dashboard","Nova Invoice","Invoices","Pagamentos","Fornecedores","Análise Cambial"],
+  visualizador: ["Dashboard","Nova Invoice","Invoices","Fornecedores","Análise Cambial"]
 };
 
 // ════════════════════════════════════════════════════════
@@ -534,12 +545,12 @@ function iniciarApp() {
 // ════════════════════════════════════════════════════════
 function pode(acao) {
   const p = currentUser?.perfil;
-  if (acao === "editar")    return ["admin","diretoria","financeiro","gerencia"].includes(p);
-  if (acao === "excluir")   return ["admin","diretoria"].includes(p);
+  if (acao === "editar")    return true; // todos os perfis podem editar invoice
+  if (acao === "excluir")   return true; // todos os perfis podem excluir
   if (acao === "pagamento") return ["admin","diretoria","financeiro","gerencia"].includes(p);
   if (acao === "taxa")      return ["admin","diretoria","financeiro","gerencia"].includes(p);
   if (acao === "usuarios")  return ["admin","diretoria"].includes(p);
-  if (acao === "nova")      return ["admin","diretoria","financeiro","gerencia"].includes(p);
+  if (acao === "nova")      return true; // todos os perfis podem criar invoice
   return true;
 }
 
@@ -1177,7 +1188,7 @@ function renderUsuarios() {
     <div style="font-weight:700;color:#d97706;margin-bottom:10px">📋 Permissões por Perfil</div>
     <div class="table-wrap"><table style="font-size:12px">
       <thead><tr style="background:#fef3c7"><th style="padding:8px 10px;text-align:left">Funcionalidade</th><th style="padding:8px 10px;text-align:center">👑 Admin/Diretoria</th><th style="padding:8px 10px;text-align:center">💼 Financeiro/Gerência</th><th style="padding:8px 10px;text-align:center">👁 Visualizador</th></tr></thead>
-      <tbody>${[["Visualizar e Exportar","✅","✅","✅"],["Criar/Editar Invoice","✅","✅","❌"],["Registrar Pagamento","✅","✅","❌"],["Alterar Taxas","✅","✅","❌"],["Excluir Invoice","✅","❌","❌"],["Gerenciar Usuários","✅","❌","❌"],["Excluir Usuários","✅","❌","❌"]].map(([a,...v],i)=>`<tr style="border-bottom:1px solid #fde68a;background:${i%2===0?"#fffbeb":"#fefce8"}"><td style="padding:6px 10px;font-weight:600">${a}</td>${v.map(x=>`<td style="padding:6px 10px;text-align:center;font-size:14px">${x}</td>`).join("")}</tr>`).join("")}</tbody>
+      <tbody>${[["Visualizar e Exportar","✅","✅","✅"],["Criar/Editar Invoice","✅","✅","✅"],["Registrar Pagamento","✅","✅","❌"],["Alterar Taxas","✅","✅","❌"],["Excluir Invoice","✅","✅","✅"],["Gerenciar Usuários","✅","❌","❌"],["Excluir Usuários","✅","❌","❌"]].map(([a,...v],i)=>`<tr style="border-bottom:1px solid #fde68a;background:${i%2===0?"#fffbeb":"#fefce8"}"><td style="padding:6px 10px;font-weight:600">${a}</td>${v.map(x=>`<td style="padding:6px 10px;text-align:center;font-size:14px">${x}</td>`).join("")}</tr>`).join("")}</tbody>
     </table></div>
   </div>`;
 }
@@ -1350,11 +1361,14 @@ function renderInvoices() {
     <button class="btn btn-primary" onclick="exportPDF()">🖨️ PDF</button>
     ${pode("nova") ? `<button class="btn btn-green" onclick="editIndex=null;abrirFormInvoice()">+ Nova Invoice</button>` : ""}
   </div>
-  <div class="table-wrap"><table>
+  ${podeEditarInline()?`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:12px;color:#1d4ed8;display:flex;align-items:center;gap:8px">
+    ✏️ <b>Edição inline ativa:</b> clique em qualquer célula da tabela para editar diretamente. Clique em ✅ para salvar a linha.
+  </div>`:""}
+  <div class="table-wrap"><table id="tbl-invoices">
     <thead><tr>
       <th class="col-pasta">Pasta</th>
       <th class="col-cidade">Cidade</th>
-      <th class="col-fornecedor">Fornecedor</th>
+      <th class="col-fornecedor">Fornecedor / Marca</th>
       <th class="col-invoice">Nº Invoice</th>
       <th class="col-data">Emissão</th>
       <th class="col-data">Vencto</th>
@@ -1363,43 +1377,174 @@ function renderInvoices() {
       <th class="col-taxa">Taxa</th>
       <th class="col-valor">Valor R$</th>
       <th class="col-cond">Cond.</th>
-      <th class="col-status">Status</th>
+      <th class="col-status">Status Pgto</th>
       <th class="col-cambio">Câmbio</th>
       <th class="col-awb">AWB/BL</th>
-      ${hasObs ? `<th class="col-obs">Obs.</th>` : ""}
+      <th class="col-obs">Obs.</th>
       <th class="col-acoes">Ações</th>
     </tr></thead>
     <tbody>${filtradas.length===0
-      ? `<tr><td colspan="${hasObs?16:15}" style="text-align:center;padding:24px;color:#94a3b8">Nenhuma invoice encontrada</td></tr>`
-      : filtradas.map(i => {
-          const a  = alertaVcto(i.vencimento, i.status_pgto);
-          const vm = parseCurrency(i.valor_moeda);
-          const obsCell = hasObs ? `<td style="max-width:200px;font-size:11px;color:#475569">${i.obs&&i.obs.trim()?`<span title="${i.obs}">${i.obs.length>40?i.obs.substring(0,38)+"…":i.obs}</span>`:"—"}</td>` : "";
-          return `<tr>
-            <td class="col-pasta">${i.pasta||""}</td>
-            <td class="col-cidade">${i.cidade||""}</td>
-            <td class="col-fornecedor">${i.fornecedor||""}<br><span style="color:#94a3b8;font-size:10px">${i.marca||""}</span></td>
-            <td class="col-invoice">${i.n_fatura||""}</td>
-            <td class="col-data">${fmtD(i.emissao_fatura)}</td>
-            <td class="col-data">${a==="vencido"?'<span style="color:#dc2626">⛔</span> ':a==="urgente"?'<span style="color:#d97706">🚨</span> ':a==="alerta"?'<span>⚠️</span> ':""}${fmtD(i.vencimento)}</td>
-            <td class="col-moeda"><span class="badge badge-blue">${i.moeda||""}</span></td>
-            <td class="col-valor" style="font-weight:600">${fmtM(vm,i.moeda)}</td>
-            <td class="col-taxa">${i.taxa||"—"}</td>
-            <td class="col-valor" style="font-weight:700;color:#1e3a5f">${fmtBRL(i.reais)}</td>
-            <td class="col-cond">${i.cond_pgto||""}</td>
-            <td class="col-status">${statusBadge(i.status_pgto)}</td>
-            <td class="col-cambio"><span class="badge ${i.status_cambio==="Fechado"?"badge-green":"badge-yellow"}">${i.status_cambio||"Pendente"}</span></td>
-            <td class="col-awb">${i.awb_bl||""}</td>
-            ${obsCell}
-            <td class="col-acoes">
-              ${pode("editar")  ? `<button class="btn-sm" style="background:#f1f5f9" onclick="editarInvoice('${i.id}')">✏️</button>` : ""}
-              ${pode("pagamento") && i.status_pgto!=="Pago Total" ? `<button class="btn-sm" style="background:#dcfce7;color:#16a34a" onclick="abrirPgto('${i.id}')">💰</button>` : ""}
-              ${pode("excluir") ? `<button class="btn-sm" style="background:#fee2e2;color:#dc2626" onclick="excluirInvoice('${i.id}')">🗑️</button>` : ""}
-            </td>
-          </tr>`;
-        }).join("")
+      ? `<tr><td colspan="16" style="text-align:center;padding:24px;color:#94a3b8">Nenhuma invoice encontrada</td></tr>`
+      : filtradas.map(i => renderInvoiceRow(i)).join("")
     }</tbody>
   </table></div>`;
+}
+
+// Verifica se o perfil pode editar inline
+function podeEditarInline() {
+  return ["admin","diretoria"].includes(currentUser?.perfil);
+}
+
+// Renderiza uma linha da tabela (normal ou em modo edição)
+let invoiceEditId = null;
+
+function renderInvoiceRow(i) {
+  const a   = alertaVcto(i.vencimento, i.status_pgto);
+  const vm  = parseCurrency(i.valor_moeda);
+  const sid = i.id;
+  const isEdit = podeEditarInline() && invoiceEditId === sid;
+
+  if (isEdit) {
+    // ── LINHA EM MODO EDIÇÃO INLINE ──
+    const vmFmt = vm ? vm.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}) : "";
+    const taxaFmt = i.taxa ? parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4}) : "";
+    return `<tr class="row-editing" id="row-${sid}">
+      <td><input class="inline-input" id="ie_pasta_${sid}" value="${i.pasta||""}" style="width:72px"></td>
+      <td><input class="inline-input" id="ie_cidade_${sid}" value="${i.cidade||""}" style="width:82px"></td>
+      <td>
+        <input class="inline-input" id="ie_fornecedor_${sid}" value="${i.fornecedor||""}" placeholder="Fornecedor" style="width:120px;margin-bottom:3px">
+        <input class="inline-input" id="ie_marca_${sid}" value="${i.marca||""}" placeholder="Marca" style="width:120px;font-size:11px">
+      </td>
+      <td><input class="inline-input" id="ie_n_fatura_${sid}" value="${i.n_fatura||""}" style="width:100px"></td>
+      <td><input type="date" class="inline-input" id="ie_emissao_${sid}" value="${i.emissao_fatura||""}" style="width:130px"></td>
+      <td><input type="date" class="inline-input" id="ie_vencimento_${sid}" value="${i.vencimento||""}" style="width:130px"></td>
+      <td>
+        <select class="inline-select" id="ie_moeda_${sid}" style="width:70px" onchange="recalcInline('${sid}')">
+          ${MOEDAS.map(m=>`<option value="${m}"${i.moeda===m?" selected":""}>${m}</option>`).join("")}
+        </select>
+      </td>
+      <td><input class="inline-input" id="ie_valor_moeda_${sid}" value="${vmFmt}" placeholder="0,00" oninput="recalcInline('${sid}')" style="width:120px" inputmode="numeric"></td>
+      <td><input class="inline-input" id="ie_taxa_${sid}" value="${taxaFmt}" placeholder="5,4585" oninput="recalcInline('${sid}')" style="width:68px" inputmode="numeric"></td>
+      <td><input class="inline-input" id="ie_reais_${sid}" value="${i.reais?fmtBRL(i.reais):""}" readonly style="background:#f0fdf4;color:#16a34a;font-weight:700;width:120px"></td>
+      <td>
+        <select class="inline-select" id="ie_cond_${sid}" style="width:88px">
+          ${COND_PGTO.map(c=>`<option value="${c}"${i.cond_pgto===c?" selected":""}>${c}</option>`).join("")}
+        </select>
+      </td>
+      <td>
+        <select class="inline-select" id="ie_status_pgto_${sid}" style="width:96px">
+          ${STATUS_PGTO.map(s=>`<option value="${s}"${i.status_pgto===s?" selected":""}>${s}</option>`).join("")}
+        </select>
+      </td>
+      <td>
+        <select class="inline-select" id="ie_status_cambio_${sid}" style="width:80px">
+          ${STATUS_CAM.map(s=>`<option value="${s}"${i.status_cambio===s?" selected":""}>${s}</option>`).join("")}
+        </select>
+      </td>
+      <td><input class="inline-input" id="ie_awb_${sid}" value="${i.awb_bl||""}" style="width:90px"></td>
+      <td><input class="inline-input" id="ie_obs_${sid}" value="${i.obs||""}" placeholder="Obs..." style="width:120px"></td>
+      <td style="white-space:nowrap">
+        <button class="save-row-btn" onclick="salvarLinhaInline('${sid}')">✅ Salvar</button>
+        <button class="cancel-row-btn" onclick="invoiceEditId=null;renderTab('Invoices')">✖</button>
+      </td>
+    </tr>`;
+  }
+
+  // ── LINHA NORMAL (visualização) ──
+  const canInline = podeEditarInline();
+  const cellAttr  = canInline ? `class="cell-edit" onclick="ativarEdicaoInline('${sid}')"` : "";
+  const hint      = canInline ? `<span class="edit-hint">✏️ Clique para editar</span>` : "";
+
+  return `<tr id="row-${sid}">
+    <td ${cellAttr} style="position:relative">${hint}${i.pasta||"—"}</td>
+    <td ${cellAttr} style="position:relative">${hint}${i.cidade||"—"}</td>
+    <td ${cellAttr} style="position:relative">${hint}<b>${i.fornecedor||""}</b><br><span style="color:#94a3b8;font-size:10px">${i.marca||""}</span></td>
+    <td ${cellAttr} style="position:relative">${hint}${i.n_fatura||""}</td>
+    <td ${cellAttr} style="position:relative">${hint}${fmtD(i.emissao_fatura)}</td>
+    <td ${cellAttr} style="position:relative">${hint}${a==="vencido"?'<span style="color:#dc2626">⛔</span> ':a==="urgente"?'<span style="color:#d97706">🚨</span> ':a==="alerta"?'<span>⚠️</span> ':""}${fmtD(i.vencimento)}</td>
+    <td ${cellAttr} style="position:relative">${hint}<span class="badge badge-blue">${i.moeda||""}</span></td>
+    <td ${cellAttr} style="position:relative;font-weight:600">${hint}${fmtM(vm,i.moeda)}</td>
+    <td ${cellAttr} style="position:relative">${hint}${i.taxa?parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4}):"—"}</td>
+    <td ${cellAttr} style="position:relative;font-weight:700;color:#1e3a5f">${hint}${fmtBRL(i.reais)}</td>
+    <td ${cellAttr} style="position:relative">${hint}${i.cond_pgto||""}</td>
+    <td ${cellAttr} style="position:relative">${hint}${statusBadge(i.status_pgto)}</td>
+    <td ${cellAttr} style="position:relative">${hint}<span class="badge ${i.status_cambio==="Fechado"?"badge-green":"badge-yellow"}">${i.status_cambio||"Pendente"}</span></td>
+    <td ${cellAttr} style="position:relative">${hint}${i.awb_bl||"—"}</td>
+    <td ${cellAttr} style="position:relative;max-width:160px;font-size:11px;color:#475569">${hint}${i.obs&&i.obs.trim()?`<span title="${i.obs}">${i.obs.length>35?i.obs.substring(0,33)+"…":i.obs}</span>`:"—"}</td>
+    <td style="white-space:nowrap">
+      ${canInline?`<button class="btn-sm" style="background:#dbeafe;color:#1d4ed8;font-weight:600" onclick="ativarEdicaoInline('${sid}')">✏️ Editar</button>`:`<button class="btn-sm" style="background:#f1f5f9" onclick="editarInvoice('${sid}')">✏️</button>`}
+      ${pode("pagamento") && i.status_pgto!=="Pago Total" ? `<button class="btn-sm" style="background:#dcfce7;color:#16a34a" onclick="abrirPgto('${sid}')">💰</button>` : ""}
+      ${pode("excluir") ? `<button class="btn-sm" style="background:#fee2e2;color:#dc2626" onclick="excluirInvoice('${sid}')">🗑️</button>` : ""}
+    </td>
+  </tr>`;
+}
+
+// Ativa edição inline de uma linha
+function ativarEdicaoInline(id) {
+  if (!podeEditarInline()) { editarInvoice(id); return; }
+  invoiceEditId = id;
+  renderTab("Invoices");
+  setTimeout(()=>{
+    const el = document.getElementById(`ie_pasta_${id}`);
+    if (el) el.focus();
+    const row = document.getElementById(`row-${id}`);
+    if (row) row.scrollIntoView({behavior:"smooth", block:"center"});
+  }, 80);
+}
+
+// Recalcula valor em R$ ao mudar taxa ou valor moeda na edição inline
+function recalcInline(sid) {
+  const taxaEl = document.getElementById(`ie_taxa_${sid}`);
+  const vmEl   = document.getElementById(`ie_valor_moeda_${sid}`);
+  const reaisEl= document.getElementById(`ie_reais_${sid}`);
+  if (!taxaEl||!vmEl||!reaisEl) return;
+  const taxa = parseFloat(taxaEl.value.replace(/\./g,"").replace(",",".")) || 0;
+  const vm   = parseCurrency(vmEl.value) || 0;
+  reaisEl.value = (taxa && vm) ? fmtBRL((taxa*vm).toFixed(2)) : "";
+}
+
+// Salva a linha editada inline
+async function salvarLinhaInline(sid) {
+  const get = id => document.getElementById(id)?.value?.trim()||null;
+  const taxa    = parseFloat((get(`ie_taxa_${sid}`)||"").replace(/\./g,"").replace(",",".")) || null;
+  const vm      = parseCurrency(get(`ie_valor_moeda_${sid}`)) || null;
+  const reaisRaw= get(`ie_reais_${sid}`);
+  const reais   = reaisRaw ? parseCurrency(reaisRaw) : (taxa&&vm ? parseFloat((taxa*vm).toFixed(2)) : null);
+
+  const update = {
+    pasta:          get(`ie_pasta_${sid}`),
+    cidade:         get(`ie_cidade_${sid}`),
+    fornecedor:     get(`ie_fornecedor_${sid}`),
+    marca:          get(`ie_marca_${sid}`),
+    n_fatura:       get(`ie_n_fatura_${sid}`),
+    emissao_fatura: get(`ie_emissao_${sid}`),
+    vencimento:     get(`ie_vencimento_${sid}`),
+    moeda:          get(`ie_moeda_${sid}`)||"USD",
+    valor_moeda:    vm,
+    taxa,
+    reais,
+    cond_pgto:      get(`ie_cond_${sid}`),
+    status_pgto:    get(`ie_status_pgto_${sid}`)||"Em Aberto",
+    status_cambio:  get(`ie_status_cambio_${sid}`)||"Pendente",
+    awb_bl:         get(`ie_awb_${sid}`),
+    obs:            get(`ie_obs_${sid}`)
+  };
+
+  if (!update.fornecedor || !update.n_fatura) { showToast("Fornecedor e Nº Invoice são obrigatórios","err"); return; }
+
+  if (!supabaseClient) {
+    const idx = invoices.findIndex(i=>i.id===sid);
+    if (idx!==-1) invoices[idx]={...invoices[idx],...update};
+    invoiceEditId=null; renderTab("Invoices"); showToast("✅ Invoice salva!"); return;
+  }
+
+  mostrarLoading("Salvando...");
+  const {error} = await supabaseClient.from("invoices").update(update).eq("id",sid);
+  esconderLoading();
+  if (error) { showToast("Erro: "+error.message,"err"); return; }
+  const idx = invoices.findIndex(i=>i.id===sid);
+  if (idx!==-1) invoices[idx]={...invoices[idx],...update};
+  invoiceEditId=null; renderTab("Invoices"); showToast("✅ Invoice atualizada!");
 }
 
 // ════════════════════════════════════════════════════════
