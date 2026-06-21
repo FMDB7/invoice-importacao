@@ -1077,86 +1077,179 @@ async function desfazerPagamento(id) {
 }
 
 // ════════════════════════════════════════════════════════
-//  GERENCIAR USUÁRIOS (Admin)
+//  GERENCIAR USUÁRIOS (Admin) — com pré-cadastro e edição inline
 // ════════════════════════════════════════════════════════
+
+let usuarioEditId = null;
+
 function renderUsuarios() {
   if (!pode("usuarios")) return `<div class="card" style="text-align:center;padding:40px;color:#94a3b8">🔒 Acesso restrito a Admins</div>`;
-  const perfilBg = { admin:"#ede9fe;color:#7c3aed", financeiro:"#dbeafe;color:#1d4ed8", visualizador:"#f1f5f9;color:#475569" };
-  const rows = usuarios.map(u => `<tr>
-    <td><b>${u.nome||"—"}</b></td>
-    <td style="color:#64748b">${u.email}</td>
-    <td><span style="padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;background:${perfilBg[u.perfil]||"#f1f5f9;color:#475569"}">${u.perfil||"visualizador"}</span></td>
-    <td><span class="badge ${u.ativo?"badge-green":"badge-red"}">${u.ativo?"Ativo":"Inativo"}</span></td>
-    <td style="white-space:nowrap">
-      <select style="font-size:11px;padding:3px 6px;border-radius:4px;border:1px solid #e2e8f0;width:auto" onchange="alterarPerfil('${u.id}',this.value)">
-        ${PERFIS.map(p=>`<option value="${p}"${u.perfil===p?" selected":""}>${p.charAt(0).toUpperCase()+p.slice(1)}</option>`).join("")}
-      </select>
-      <button class="btn-sm" style="background:${u.ativo?"#fee2e2":"#dcfce7"};color:${u.ativo?"#dc2626":"#16a34a"};margin-left:4px" onclick="toggleUsuario('${u.id}',${!u.ativo})">${u.ativo?"Desativar":"Ativar"}</button>
-    </td>
-  </tr>`).join("");
+  const PS = {
+    admin:        { bg:"#ede9fe", c:"#7c3aed", ic:"👑" },
+    financeiro:   { bg:"#dbeafe", c:"#1d4ed8", ic:"💼" },
+    visualizador: { bg:"#f1f5f9", c:"#475569", ic:"👁"  }
+  };
+  const rows = usuarios.map(u => {
+    const ps = PS[u.perfil] || PS.visualizador;
+    const isMe   = u.id === currentUser?.id;
+    const isEdit = usuarioEditId === u.id;
+    const loginBadge = u.nome
+      ? `<span class="badge badge-green" style="font-size:10px">✅ Logou</span>`
+      : `<span class="badge badge-yellow" style="font-size:10px">⏳ Aguardando</span>`;
+    if (isEdit) {
+      return `<tr style="background:#eff6ff;border-left:3px solid #2563eb">
+        <td><input id="edit_nome_${u.id}" value="${u.nome||""}" placeholder="Nome completo" style="width:130px;padding:5px 7px;border:1.5px solid #2563eb;border-radius:5px;font-size:12px"></td>
+        <td><input id="edit_email_${u.id}" value="${u.email}" style="width:180px;padding:5px 7px;border:1.5px solid #2563eb;border-radius:5px;font-size:12px"></td>
+        <td><select id="edit_perfil_${u.id}" style="padding:5px 7px;border:1.5px solid #2563eb;border-radius:5px;font-size:12px">
+          ${PERFIS.map(p=>`<option value="${p}"${u.perfil===p?" selected":""}>${{admin:"👑 Admin",financeiro:"💼 Financeiro",visualizador:"👁 Visualizador"}[p]}</option>`).join("")}
+        </select></td>
+        <td><select id="edit_ativo_${u.id}" style="padding:5px 7px;border:1.5px solid #2563eb;border-radius:5px;font-size:12px">
+          <option value="true"${u.ativo?" selected":""}>✅ Ativo</option>
+          <option value="false"${!u.ativo?" selected":""}>❌ Inativo</option>
+        </select></td>
+        <td>${loginBadge}</td>
+        <td style="white-space:nowrap">
+          <button class="btn-sm" style="background:#dcfce7;color:#16a34a;font-weight:700" onclick="salvarEdicaoUsuario(\`${u.id}\`)">✅ Salvar</button>
+          <button class="btn-sm" style="background:#f1f5f9;color:#64748b" onclick="usuarioEditId=null;renderTab('Usuários')">✖</button>
+        </td>
+      </tr>`;
+    }
+    return `<tr style="${isMe?"background:#fefce8":""}">
+      <td style="font-weight:600">${u.nome||"<span style=\'color:#94a3b8;font-style:italic\'>Sem nome</span>"} ${isMe?"<span style=\'font-size:10px;background:#fef3c7;color:#d97706;padding:1px 6px;border-radius:8px;font-weight:700\'>VOCÊ</span>":""}</td>
+      <td style="color:#64748b;font-size:12px">${u.email}</td>
+      <td><span style="background:${ps.bg};color:${ps.c};padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700">${ps.ic} ${u.perfil}</span></td>
+      <td><span class="badge ${u.ativo?"badge-green":"badge-red"}">${u.ativo?"Ativo":"Inativo"}</span></td>
+      <td>${loginBadge}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-sm" style="background:#dbeafe;color:#1d4ed8;font-weight:600" onclick="editarUsuario(\`${u.id}\`)">✏️ Editar</button>
+        ${!isMe?`<button class="btn-sm" style="background:${u.ativo?"#fee2e2":"#dcfce7"};color:${u.ativo?"#dc2626":"#16a34a"}" onclick="toggleUsuario(\`${u.id}\`,${!u.ativo})">${u.ativo?"🔒 Desativar":"🔓 Ativar"}</button>`:""}
+        ${!isMe?`<button class="btn-sm" style="background:#fee2e2;color:#dc2626" onclick="excluirUsuario(\`${u.id}\`,\`${u.email}\`)">🗑️</button>`:""}
+      </td>
+    </tr>`;
+  }).join("");
 
   return `
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
     <div style="font-weight:700;font-size:15px;color:#1e3a5f">👥 Gerenciar Usuários</div>
-    <div style="background:#dbeafe;border-radius:8px;padding:8px 16px;font-size:12px;color:#1d4ed8;font-weight:600">
-      👑 Apenas o Admin pode alterar perfis e ativar/desativar usuários
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-green" onclick="abrirCadastroUsuario()">+ Cadastrar Novo Usuário</button>
+      <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportarUsuariosCSV()">⬇️ Exportar</button>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px">
+    ${["admin","financeiro","visualizador"].map(p=>{const ps2=PS[p];const qtd=usuarios.filter(u=>u.perfil===p).length;return `<div style="background:${ps2.bg};border-radius:10px;padding:12px 16px;border-left:4px solid ${ps2.c}"><div style="font-size:11px;font-weight:700;color:${ps2.c};text-transform:uppercase">${ps2.ic} ${p}</div><div style="font-size:26px;font-weight:700;color:${ps2.c}">${qtd}</div></div>`;}).join("")}
+    <div style="background:#dcfce7;border-radius:10px;padding:12px 16px;border-left:4px solid #16a34a"><div style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase">✅ Ativos</div><div style="font-size:26px;font-weight:700;color:#16a34a">${usuarios.filter(u=>u.ativo).length}</div></div>
+    <div style="background:#fef3c7;border-radius:10px;padding:12px 16px;border-left:4px solid #d97706"><div style="font-size:11px;font-weight:700;color:#d97706;text-transform:uppercase">⏳ Aguardando</div><div style="font-size:26px;font-weight:700;color:#d97706">${usuarios.filter(u=>!u.nome).length}</div></div>
+    <div style="background:#f1f5f9;border-radius:10px;padding:12px 16px;border-left:4px solid #64748b"><div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">👥 Total</div><div style="font-size:26px;font-weight:700;color:#64748b">${usuarios.length}</div></div>
+  </div>
+  <div id="formCadastroUsuario" style="display:none;background:#eff6ff;border:2px solid #2563eb;border-radius:10px;padding:16px;margin-bottom:14px">
+    <div style="font-weight:700;color:#1e3a5f;margin-bottom:12px;font-size:14px">➕ Cadastrar Novo Usuário</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:12px">
+      <div><label class="form-label">Nome completo</label><input id="novo_nome" placeholder="Ex: João Silva" style="border:1.5px solid #2563eb"></div>
+      <div><label class="form-label">E-mail corporativo ★</label><input id="novo_email" type="email" placeholder="joao@empresa.com.br" style="border:1.5px solid #2563eb"></div>
+      <div><label class="form-label">Perfil de Acesso</label>
+        <select id="novo_perfil" style="border:1.5px solid #2563eb">
+          <option value="visualizador">👁 Visualizador</option>
+          <option value="financeiro">💼 Financeiro</option>
+          <option value="admin">👑 Admin</option>
+        </select>
+      </div>
+    </div>
+    <div style="background:#dbeafe;border-radius:6px;padding:8px 12px;font-size:11px;color:#1d4ed8;margin-bottom:12px">ℹ️ O usuário receberá acesso ao fazer o primeiro login com a conta Microsoft 365 cadastrada acima.</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-green" onclick="salvarNovoUsuario()">✅ Cadastrar</button>
+      <button class="btn btn-ghost" onclick="fecharCadastroUsuario()">Cancelar</button>
     </div>
   </div>
   <div class="card">
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
-      ${["admin","financeiro","visualizador"].map(p=>{
-        const qtd = usuarios.filter(u=>u.perfil===p).length;
-        const bg  = {admin:"#ede9fe",financeiro:"#dbeafe",visualizador:"#f1f5f9"}[p];
-        const c   = {admin:"#7c3aed",financeiro:"#1d4ed8",visualizador:"#475569"}[p];
-        return `<div style="background:${bg};border-radius:8px;padding:10px 16px;border-left:4px solid ${c};min-width:120px">
-          <div style="font-size:11px;font-weight:700;color:${c};text-transform:uppercase">${p}</div>
-          <div style="font-size:22px;font-weight:700;color:${c}">${qtd}</div>
-        </div>`;
-      }).join("")}
-      <div style="background:#dcfce7;border-radius:8px;padding:10px 16px;border-left:4px solid #16a34a;min-width:120px">
-        <div style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase">Total Ativos</div>
-        <div style="font-size:22px;font-weight:700;color:#16a34a">${usuarios.filter(u=>u.ativo).length}</div>
-      </div>
+    <div style="font-weight:700;color:#1e3a5f;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+      <span>📋 Lista de Usuários (${usuarios.length})</span>
+      <span style="font-size:11px;color:#94a3b8;font-weight:400">Clique em ✏️ Editar para modificar qualquer campo</span>
     </div>
     <div class="table-wrap"><table>
-      <thead><tr>
-        <th>Nome</th><th>E-mail</th><th>Perfil</th><th>Status</th><th>Ações</th>
-      </tr></thead>
-      <tbody>${rows || `<tr><td colspan="5" style="text-align:center;padding:20px;color:#94a3b8">Nenhum usuário cadastrado ainda. Os usuários aparecem aqui após o primeiro login.</td></tr>`}</tbody>
+      <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Status</th><th>Login</th><th>Ações</th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="6" style="text-align:center;padding:24px;color:#94a3b8">Nenhum usuário cadastrado.<br><button class="btn btn-primary" style="margin-top:10px;font-size:12px" onclick="abrirCadastroUsuario()">+ Cadastrar primeiro usuário</button></td></tr>`}</tbody>
     </table></div>
   </div>
   <div class="card" style="background:#fffbeb;border:1px solid #fde68a">
-    <div style="font-weight:700;color:#d97706;margin-bottom:8px">📋 Perfis e Permissões</div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px">
-      <thead><tr style="background:#fef3c7"><th style="padding:6px 10px;text-align:left">Ação</th><th style="padding:6px 10px;text-align:center">👑 Admin</th><th style="padding:6px 10px;text-align:center">💼 Financeiro</th><th style="padding:6px 10px;text-align:center">👁 Visualizador</th></tr></thead>
-      <tbody>
-        ${[["Criar/Editar Invoices","✅","✅","❌"],["Registrar Pagamentos","✅","✅","❌"],["Alterar Taxas de Câmbio","✅","✅","❌"],["Excluir Invoices","✅","❌","❌"],["Gerenciar Usuários","✅","❌","❌"],["Visualizar Dashboard","✅","✅","✅"],["Exportar PDF/Excel","✅","✅","✅"]].map(([a,...v])=>`<tr style="border-bottom:1px solid #fde68a"><td style="padding:6px 10px;font-weight:600">${a}</td>${v.map(x=>`<td style="padding:6px 10px;text-align:center">${x}</td>`).join("")}</tr>`).join("")}
-      </tbody>
-    </table>
+    <div style="font-weight:700;color:#d97706;margin-bottom:10px">📋 Permissões por Perfil</div>
+    <div class="table-wrap"><table style="font-size:12px">
+      <thead><tr style="background:#fef3c7"><th style="padding:8px 10px;text-align:left">Funcionalidade</th><th style="padding:8px 10px;text-align:center">👑 Admin</th><th style="padding:8px 10px;text-align:center">💼 Financeiro</th><th style="padding:8px 10px;text-align:center">👁 Visualizador</th></tr></thead>
+      <tbody>${[["Visualizar e Exportar","✅","✅","✅"],["Criar/Editar Invoice","✅","✅","❌"],["Registrar Pagamento","✅","✅","❌"],["Alterar Taxas","✅","✅","❌"],["Excluir Invoice","✅","❌","❌"],["Gerenciar Usuários","✅","❌","❌"],["Excluir Usuários","✅","❌","❌"]].map(([a,...v],i)=>`<tr style="border-bottom:1px solid #fde68a;background:${i%2===0?"#fffbeb":"#fefce8"}"><td style="padding:6px 10px;font-weight:600">${a}</td>${v.map(x=>`<td style="padding:6px 10px;text-align:center;font-size:14px">${x}</td>`).join("")}</tr>`).join("")}</tbody>
+    </table></div>
   </div>`;
 }
 
-async function alterarPerfil(userId, novoPerfil) {
-  if (!pode("usuarios")) { showToast("Sem permissão","err"); return; }
-  if (userId === currentUser.id && novoPerfil !== "admin") {
-    if (!confirm("Você está alterando seu próprio perfil. Isso pode remover seu acesso admin. Continuar?")) return;
-  }
-  if (supabaseClient) await supabaseClient.from("usuarios").update({ perfil: novoPerfil }).eq("id", userId);
-  const idx = usuarios.findIndex(u => u.id === userId);
-  if (idx !== -1) usuarios[idx].perfil = novoPerfil;
-  renderTab("Usuários");
-  showToast(`✅ Perfil atualizado para ${novoPerfil}`);
+function abrirCadastroUsuario(){const f=document.getElementById("formCadastroUsuario");if(f){f.style.display="block";f.scrollIntoView({behavior:"smooth"});}}
+function fecharCadastroUsuario(){const f=document.getElementById("formCadastroUsuario");if(f)f.style.display="none";const n=document.getElementById("novo_nome");const e=document.getElementById("novo_email");const p=document.getElementById("novo_perfil");if(n)n.value="";if(e)e.value="";if(p)p.value="visualizador";}
+
+async function salvarNovoUsuario(){
+  const nome=document.getElementById("novo_nome")?.value.trim();
+  const email=document.getElementById("novo_email")?.value.trim().toLowerCase();
+  const perfil=document.getElementById("novo_perfil")?.value||"visualizador";
+  if(!email){showToast("E-mail é obrigatório","err");return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showToast("E-mail inválido","err");return;}
+  if(usuarios.find(u=>u.email.toLowerCase()===email)){showToast("E-mail já cadastrado","err");return;}
+  const novo={nome:nome||null,email,perfil,ativo:true};
+  if(!supabaseClient){usuarios.push({id:"demo-"+Date.now(),...novo});fecharCadastroUsuario();renderTab("Usuários");showToast(`✅ ${email} cadastrado como ${perfil}!`);return;}
+  mostrarLoading("Cadastrando...");
+  const{data,error}=await supabaseClient.from("usuarios").insert(novo).select().single();
+  esconderLoading();
+  if(error){showToast("Erro: "+error.message,"err");return;}
+  usuarios.push(data);fecharCadastroUsuario();renderTab("Usuários");showToast(`✅ ${email} cadastrado como ${perfil}!`);
 }
 
-async function toggleUsuario(userId, ativo) {
-  if (!pode("usuarios")) { showToast("Sem permissão","err"); return; }
-  if (userId === currentUser.id) { showToast("Não é possível desativar sua própria conta","err"); return; }
-  if (supabaseClient) await supabaseClient.from("usuarios").update({ ativo }).eq("id", userId);
-  const idx = usuarios.findIndex(u => u.id === userId);
-  if (idx !== -1) usuarios[idx].ativo = ativo;
-  renderTab("Usuários");
-  showToast(ativo ? "Usuário ativado" : "Usuário desativado");
+function editarUsuario(userId){usuarioEditId=userId;renderTab("Usuários");setTimeout(()=>{const el=document.getElementById(`edit_nome_${userId}`);if(el)el.focus();},100);}
+
+async function salvarEdicaoUsuario(userId){
+  const nome=document.getElementById(`edit_nome_${userId}`)?.value.trim()||null;
+  const email=document.getElementById(`edit_email_${userId}`)?.value.trim().toLowerCase();
+  const perfil=document.getElementById(`edit_perfil_${userId}`)?.value;
+  const ativo=document.getElementById(`edit_ativo_${userId}`)?.value==="true";
+  if(!email){showToast("E-mail obrigatório","err");return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showToast("E-mail inválido","err");return;}
+  if(usuarios.find(u=>u.email.toLowerCase()===email&&u.id!==userId)){showToast("E-mail já pertence a outro usuário","err");return;}
+  if(userId===currentUser?.id&&perfil!=="admin"){if(!confirm("Você está alterando seu próprio perfil de Admin. Perderá acesso a esta área. Confirmar?"))return;}
+  const update={nome,email,perfil,ativo};
+  if(!supabaseClient){const idx=usuarios.findIndex(u=>u.id===userId);if(idx!==-1)usuarios[idx]={...usuarios[idx],...update};usuarioEditId=null;renderTab("Usuários");showToast("✅ Atualizado!");return;}
+  mostrarLoading("Salvando...");
+  const{error}=await supabaseClient.from("usuarios").update(update).eq("id",userId);
+  esconderLoading();
+  if(error){showToast("Erro: "+error.message,"err");return;}
+  const idx=usuarios.findIndex(u=>u.id===userId);if(idx!==-1)usuarios[idx]={...usuarios[idx],...update};
+  usuarioEditId=null;renderTab("Usuários");showToast("✅ Usuário atualizado!");
 }
+
+async function alterarPerfil(userId,novoPerfil){
+  if(!pode("usuarios")){showToast("Sem permissão","err");return;}
+  if(userId===currentUser.id&&novoPerfil!=="admin"){if(!confirm("Alterar seu próprio perfil? Pode perder acesso admin."))return;}
+  if(supabaseClient)await supabaseClient.from("usuarios").update({perfil:novoPerfil}).eq("id",userId);
+  const idx=usuarios.findIndex(u=>u.id===userId);if(idx!==-1)usuarios[idx].perfil=novoPerfil;
+  renderTab("Usuários");showToast(`✅ Perfil → ${novoPerfil}`);
+}
+
+async function toggleUsuario(userId,ativo){
+  if(!pode("usuarios")){showToast("Sem permissão","err");return;}
+  if(userId===currentUser.id){showToast("Não é possível desativar sua própria conta","err");return;}
+  if(supabaseClient)await supabaseClient.from("usuarios").update({ativo}).eq("id",userId);
+  const idx=usuarios.findIndex(u=>u.id===userId);if(idx!==-1)usuarios[idx].ativo=ativo;
+  renderTab("Usuários");showToast(ativo?"🔓 Usuário ativado":"🔒 Usuário desativado");
+}
+
+async function excluirUsuario(userId,email){
+  if(!pode("usuarios")){showToast("Sem permissão","err");return;}
+  if(userId===currentUser?.id){showToast("Não é possível excluir sua própria conta","err");return;}
+  if(!confirm(`Excluir o usuário ${email}? Esta ação não pode ser desfeita.`))return;
+  if(supabaseClient)await supabaseClient.from("usuarios").delete().eq("id",userId);
+  usuarios=usuarios.filter(u=>u.id!==userId);renderTab("Usuários");showToast("Usuário excluído.");
+}
+
+function exportarUsuariosCSV(){
+  const headers=["Nome","E-mail","Perfil","Status","Primeiro Login"];
+  const rows=usuarios.map(u=>[csvEsc(u.nome||""),csvEsc(u.email),csvEsc(u.perfil),csvEsc(u.ativo?"Ativo":"Inativo"),csvEsc(u.nome?"Sim":"Aguardando")]);
+  dlCSV(buildCSV(headers,rows),"usuarios.csv");showToast("CSV exportado!");
+}
+
 
 // ════════════════════════════════════════════════════════
 //  DASHBOARD
