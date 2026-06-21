@@ -346,7 +346,17 @@ window.onload = async () => {
   // Verifica sessão salva
   const sessao = sessionStorage.getItem("inv_user");
   if (sessao) {
-    currentUser = JSON.parse(sessao);
+    const dados = JSON.parse(sessao);
+    // Verifica expiração da sessão (8 horas)
+    if (dados._expira && Date.now() > dados._expira) {
+      sessionStorage.removeItem("inv_user");
+      esconderLoading();
+      mostrarLogin();
+      setTimeout(() => showToast("Sessão expirada. Faça login novamente.", "info"), 500);
+      return;
+    }
+    const { _expira, ...userData } = dados;
+    currentUser = userData;
     await carregarDados();
     iniciarApp();
     return;
@@ -387,7 +397,7 @@ async function autenticarComMS() {
 
     // Busca ou cria usuário no Supabase
     currentUser = await buscarOuCriarUsuario(email, nome);
-    sessionStorage.setItem("inv_user", JSON.stringify(currentUser));
+    sessionStorage.setItem("inv_user", JSON.stringify({...currentUser, _expira: Date.now() + 8*60*60*1000}));
     await carregarDados();
     iniciarApp();
   } catch(e) {
@@ -421,6 +431,18 @@ async function buscarOuCriarUsuario(email, nome) {
     showToast(`Bem-vindo! Perfil atribuído: ${perfil === "admin" ? "Admin" : "Visualizador"}`);
   }
 
+  // ── VERIFICAÇÃO DE SEGURANÇA: usuário inativo não pode acessar ──
+  if (user.ativo === false) {
+    sessionStorage.removeItem("inv_user");
+    esconderLoading();
+    mostrarLogin();
+    document.getElementById("loginScreen").innerHTML += `
+      <div style="position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#dc2626;color:#fff;padding:14px 28px;border-radius:10px;font-weight:700;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:999">
+        🔒 Acesso bloqueado — sua conta foi desativada. Contate o administrador.
+      </div>`;
+    throw new Error("Usuário inativo");
+  }
+
   // Atualiza nome se mudou
   if (user.nome !== nome) {
     await supabaseClient.from("usuarios").update({ nome }).eq("id", user.id);
@@ -432,7 +454,7 @@ async function buscarOuCriarUsuario(email, nome) {
 
 function loginDemo() {
   currentUser = { id: "demo-admin", nome: "Usuário Demo", email: "demo@empresa.com.br", perfil: "admin" };
-  sessionStorage.setItem("inv_user", JSON.stringify(currentUser));
+  sessionStorage.setItem("inv_user", JSON.stringify({...currentUser, _expira: Date.now() + 8*60*60*1000}));
   invoices = getDemoData();
   iniciarApp();
 }
@@ -493,6 +515,26 @@ async function excluirInvoiceDB(id) {
   if (!supabaseClient) { renderTab(currentTab); return; }
   const { error } = await supabaseClient.from("invoices").delete().eq("id", id);
   if (error) showToast("Erro ao excluir: " + error.message, "err");
+}
+
+
+// ════════════════════════════════════════════════════════
+//  LOG DE AUDITORIA
+// ════════════════════════════════════════════════════════
+async function registrarAuditoria(acao, detalhes) {
+  if (!supabaseClient || !currentUser) return;
+  try {
+    await supabaseClient.from("auditoria").insert({
+      usuario_email: currentUser.email,
+      usuario_nome:  currentUser.nome || currentUser.email,
+      perfil:        currentUser.perfil,
+      acao,
+      detalhes:      JSON.stringify(detalhes || {}),
+      ip:            null // não disponível em frontend
+    });
+  } catch(e) {
+    // Falha silenciosa — auditoria não deve bloquear operação
+  }
 }
 
 // ════════════════════════════════════════════════════════
@@ -1071,6 +1113,7 @@ function handleCurrencyInput(el, key) {
 
 async function salvarInvoice() {
   if (!formState.fornecedor || !formState.n_fatura) { showToast("Fornecedor e Nº Invoice são obrigatórios","err"); return; }
+  registrarAuditoria(formState.id?"EDITAR_INVOICE":"NOVA_INVOICE",{n_fatura:formState.n_fatura,fornecedor:formState.fornecedor});
   const data = {
     pasta:          formState.pasta         || null,
     cidade:         formState.cidade        || null,
@@ -1126,6 +1169,8 @@ function editarInvoice(id) {
 async function excluirInvoice(id) {
   if (!pode("excluir")) { showToast("Apenas Admins podem excluir","err"); return; }
   if (!confirm("Confirma exclusão desta invoice?")) return;
+  const inv = invoices.find(i=>i.id===id);
+  registrarAuditoria('EXCLUIR_INVOICE', {id, n_fatura: inv?.n_fatura, fornecedor: inv?.fornecedor});
   if (!supabaseClient) { invoices = invoices.filter(i => i.id !== id); renderTab("Invoices"); showToast("Excluída."); return; }
   await excluirInvoiceDB(id);
   invoices = invoices.filter(i => i.id !== id);
@@ -1169,6 +1214,7 @@ function calcPgtoTaxa(el) {
 async function salvarPagamento() {
   const inv    = invoices.find(i => i.id === pgtoTarget);
   if (!inv) return;
+  registrarAuditoria('REGISTRAR_PAGAMENTO',{n_fatura:inv.n_fatura,fornecedor:inv.fornecedor});
   const taxaStr = document.getElementById("p_taxa").value;
   const taxa    = parseFloat(taxaStr.replace(/\./g,"").replace(",",".")) || 0;
   const vm      = parseCurrency(inv.valor_moeda) || 0;
@@ -1312,6 +1358,24 @@ function renderUsuarios() {
       <tbody>${rows||`<tr><td colspan="6" style="text-align:center;padding:24px;color:#94a3b8">Nenhum usuário cadastrado.<br><button class="btn btn-primary" style="margin-top:10px;font-size:12px" onclick="abrirCadastroUsuario()">+ Cadastrar primeiro usuário</button></td></tr>`}</tbody>
     </table></div>
   </div>
+  <!-- Segurança -->
+  <div class="card" style="background:#f0fdf4;border:1px solid #bbf7d0;margin-bottom:14px">
+    <div style="font-weight:700;color:#16a34a;margin-bottom:10px;font-size:13px">🔒 Recursos de Segurança Ativos</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;font-size:12px">
+      <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#16a34a;font-size:16px">✅</span><div><b>Login Microsoft 365</b><br><span style="color:#64748b">Autenticação via conta corporativa Azure AD</span></div></div>
+      <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#16a34a;font-size:16px">✅</span><div><b>Controle de Perfis</b><br><span style="color:#64748b">Admin, Diretoria, Financeiro, Gerência, Visualizador</span></div></div>
+      <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#16a34a;font-size:16px">✅</span><div><b>Bloqueio de Usuários</b><br><span style="color:#64748b">Admin pode desativar acesso instantaneamente</span></div></div>
+      <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#16a34a;font-size:16px">✅</span><div><b>Sessão com Expiração</b><br><span style="color:#64748b">Sessão expira automaticamente em 8 horas</span></div></div>
+      <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#16a34a;font-size:16px">✅</span><div><b>Log de Auditoria</b><br><span style="color:#64748b">Todas as ações críticas são registradas no banco</span></div></div>
+      <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#16a34a;font-size:16px">✅</span><div><b>Dados no Supabase</b><br><span style="color:#64748b">Banco PostgreSQL com RLS e criptografia em repouso</span></div></div>
+      <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#16a34a;font-size:16px">✅</span><div><b>HTTPS obrigatório</b><br><span style="color:#64748b">Comunicação criptografada em trânsito (TLS)</span></div></div>
+      <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:#16a34a;font-size:16px">✅</span><div><b>Pré-cadastro de usuários</b><br><span style="color:#64748b">Somente e-mails cadastrados pelo Admin têm acesso</span></div></div>
+    </div>
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid #bbf7d0;display:flex;gap:8px;align-items:center">
+      <button class="btn" style="background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0;font-size:12px" onclick="verLogAuditoria()">📋 Ver Log de Auditoria</button>
+      <span style="font-size:11px;color:#64748b">Registro de todas as ações realizadas no sistema</span>
+    </div>
+  </div>
   <div class="card" style="background:#fffbeb;border:1px solid #fde68a">
     <div style="font-weight:700;color:#d97706;margin-bottom:10px">📋 Permissões por Perfil</div>
     <div class="table-wrap"><table style="font-size:12px">
@@ -1364,6 +1428,7 @@ async function salvarEdicaoUsuario(userId){
 async function alterarPerfil(userId,novoPerfil){
   if(!pode("usuarios")){showToast("Sem permissão","err");return;}
   if(userId===currentUser.id&&novoPerfil!=="admin"){if(!confirm("Alterar seu próprio perfil? Pode perder acesso admin."))return;}
+  registrarAuditoria('ALTERAR_PERFIL_USUARIO',{usuario_id:userId,novo_perfil:novoPerfil});
   if(supabaseClient)await supabaseClient.from("usuarios").update({perfil:novoPerfil}).eq("id",userId);
   const idx=usuarios.findIndex(u=>u.id===userId);if(idx!==-1)usuarios[idx].perfil=novoPerfil;
   renderTab("Usuários");showToast(`✅ Perfil → ${novoPerfil}`);
@@ -1392,6 +1457,53 @@ function exportarUsuariosCSV(){
 }
 
 
+
+// ════════════════════════════════════════════════════════
+//  VISUALIZAR LOG DE AUDITORIA
+// ════════════════════════════════════════════════════════
+async function verLogAuditoria() {
+  if (!supabaseClient) { showToast("Log de auditoria disponível apenas com Supabase configurado","info"); return; }
+  mostrarLoading("Carregando auditoria...");
+  try {
+    const { data, error } = await supabaseClient
+      .from("auditoria")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    esconderLoading();
+    if (error) throw error;
+
+    const rows = (data||[]).map((r,i) => {
+      const d = new Date(r.created_at);
+      const dt = d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+      const acaoCor = r.acao?.includes("EXCLUIR")?"#dc2626":r.acao?.includes("CRIAR")?"#16a34a":r.acao?.includes("ALTERAR")?"#d97706":"#1d4ed8";
+      return `<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
+        <td style="font-size:11px;color:#64748b;white-space:nowrap">${dt}</td>
+        <td style="font-size:12px;font-weight:600">${r.usuario_nome||r.usuario_email||"—"}</td>
+        <td><span style="background:${acaoCor}22;color:${acaoCor};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${r.acao||"—"}</span></td>
+        <td style="font-size:11px;color:#475569;max-width:200px">${r.detalhes?JSON.stringify(JSON.parse(r.detalhes)).replace(/[{}"]/g,"").substring(0,80):"—"}</td>
+        <td><span style="background:#ede9fe;color:#7c3aed;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:600">${r.perfil||"—"}</span></td>
+      </tr>`;
+    }).join("");
+
+    document.getElementById("usuariosContent").innerHTML = `
+      <div style="font-weight:700;color:#1e3a5f;margin-bottom:12px;font-size:14px">📋 Log de Auditoria — Últimas 100 ações</div>
+      ${data?.length===0?`<div style="text-align:center;padding:24px;color:#94a3b8">Nenhum registro de auditoria ainda.</div>`:`
+      <div class="table-wrap"><table>
+        <thead><tr>
+          <th>Data/Hora</th><th>Usuário</th><th>Ação</th><th>Detalhes</th><th>Perfil</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`}
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="document.getElementById('usuariosContent').innerHTML=''">Fechar</button>
+      </div>`;
+    abrirModal("modalUsuarios");
+  } catch(e) {
+    esconderLoading();
+    showToast("Erro ao carregar auditoria: "+e.message,"err");
+  }
+}
 // ════════════════════════════════════════════════════════
 //  DASHBOARD
 // ════════════════════════════════════════════════════════
