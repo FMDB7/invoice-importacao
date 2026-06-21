@@ -318,7 +318,7 @@ let realtimeSub    = null;
 let taxasAtivas    = {USD:"",EUR:"",CHF:"",GBP:""};
 
 let filtros = {
-  inv:     {fornecedor:"",status:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_dtIni:"",_dtFim:""},
+  inv:     {fornecedor:"",status:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_dtIni:"",_dtFim:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
   pgto:    {status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:"",bancos:[],_bancos:[],_status:"Todos"},
   forn:    {fornecedor:"",dtIni:"",dtFim:"",_fornecedor:"",_dtIni:"",_dtFim:""},
   cambial: {fornecedor:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_moeda:"",_dtIni:"",_dtFim:""}
@@ -652,10 +652,22 @@ function limparFiltro(ns) {
   const f = filtros[ns];
   Object.keys(f).forEach(k => { if (Array.isArray(f[k])) f[k]=[]; else f[k]=""; });
   if (ns==="pgto") { filtros.pgto.status="Todos"; filtros.pgto._status="Todos"; filtros.pgto.bancos=[]; filtros.pgto._bancos=[]; }
+  if (ns==="inv")  { filtros.inv.fornecedores=[]; filtros.inv._fornecedores=[]; filtros.inv._busca_forn=""; }
   renderTab(currentTab);
 }
 
-function aplicarFiltroInv()     { Object.assign(filtros.inv, {fornecedor:filtros.inv._fornecedor,status:filtros.inv._status,moeda:filtros.inv._moeda,dtIni:filtros.inv._dtIni,dtFim:filtros.inv._dtFim}); renderTab("Invoices"); }
+function aplicarFiltroInv() {
+  filtros.inv.status   = document.getElementById("f_inv_status")?.value  || "";
+  filtros.inv.moeda    = document.getElementById("f_inv_moeda")?.value   || "";
+  filtros.inv.dtIni    = document.getElementById("f_inv_dtIni")?.value   || "";
+  filtros.inv.dtFim    = document.getElementById("f_inv_dtFim")?.value   || "";
+  filtros.inv._status  = filtros.inv.status;
+  filtros.inv._moeda   = filtros.inv.moeda;
+  filtros.inv._dtIni   = filtros.inv.dtIni;
+  filtros.inv._dtFim   = filtros.inv.dtFim;
+  filtros.inv.fornecedores = [...filtros.inv._fornecedores];
+  renderTab("Invoices");
+}
 function aplicarFiltroPgto()    {
   filtros.pgto.status=document.getElementById("f_pgto_status")?.value||"Todos";
   filtros.pgto.dtIni=document.getElementById("f_pgto_dtIni")?.value||"";
@@ -672,24 +684,118 @@ function aplicarFiltroCambial() { Object.assign(filtros.cambial, {fornecedor:fil
 function getInvFiltradas() {
   const f = filtros.inv;
   return invoices.filter(i => {
-    if (f.fornecedor && i.fornecedor !== f.fornecedor) return false;
-    if (f.status     && i.status_pgto !== f.status)   return false;
-    if (f.moeda      && i.moeda !== f.moeda)           return false;
-    if (f.dtIni      && i.emissao_fatura && i.emissao_fatura < f.dtIni) return false;
-    if (f.dtFim      && i.emissao_fatura && i.emissao_fatura > f.dtFim) return false;
+    // Multi-fornecedor tem prioridade; fallback para filtro simples
+    if (f.fornecedores && f.fornecedores.length > 0) {
+      if (!f.fornecedores.includes(i.fornecedor)) return false;
+    } else if (f.fornecedor && i.fornecedor !== f.fornecedor) {
+      return false;
+    }
+    if (f.status && i.status_pgto !== f.status)             return false;
+    if (f.moeda  && i.moeda !== f.moeda)                    return false;
+    if (f.dtIni  && i.emissao_fatura && i.emissao_fatura < f.dtIni) return false;
+    if (f.dtFim  && i.emissao_fatura && i.emissao_fatura > f.dtFim) return false;
     return true;
   });
 }
 
 function filtroAtivoTxt(ns) {
   const f = filtros[ns], p = [];
-  if (f.fornecedor)               p.push(`Fornecedor: ${f.fornecedor}`);
-  if (f.moeda)                    p.push(`Moeda: ${f.moeda}`);
+  if (f.fornecedores && f.fornecedores.length > 0)
+    p.push(`Fornecedor(es): ${f.fornecedores.join(", ")}`);
+  else if (f.fornecedor)
+    p.push(`Fornecedor: ${f.fornecedor}`);
+  if (f.moeda)                        p.push(`Moeda: ${f.moeda}`);
   if (f.status && f.status!=="Todos") p.push(`Status: ${f.status}`);
-  if (f.dtIni)                    p.push(`De: ${fmtD(f.dtIni)}`);
-  if (f.dtFim)                    p.push(`Até: ${fmtD(f.dtFim)}`);
+  if (f.dtIni)                        p.push(`De: ${fmtD(f.dtIni)}`);
+  if (f.dtFim)                        p.push(`Até: ${fmtD(f.dtFim)}`);
   return p.length ? `✅ Filtro ativo: ${p.join(" | ")}` : "";
 }
+
+
+// ════════════════════════════════════════════════════════
+//  MULTI-FORNECEDOR (Invoices)
+// ════════════════════════════════════════════════════════
+function toggleFornDropdown() {
+  const dd = document.getElementById("forn-dropdown");
+  const tr = document.getElementById("forn-trigger");
+  if (!dd) return;
+  const isOpen = dd.style.display === "flex";
+  dd.style.display = isOpen ? "none" : "flex";
+  if (tr) tr.style.borderColor = isOpen ? (filtros.inv._fornecedores.length?"#2563eb":"#e2e8f0") : "#2563eb";
+}
+
+function toggleFornSelec(forn) {
+  const arr = filtros.inv._fornecedores;
+  const idx = arr.indexOf(forn);
+  if (idx === -1) arr.push(forn); else arr.splice(idx, 1);
+  filtros.inv.fornecedores = [...arr];
+  renderTab("Invoices");
+  // Reopen dropdown after render
+  setTimeout(() => {
+    const dd = document.getElementById("forn-dropdown");
+    if (dd) { dd.style.display = "flex"; }
+    const el = document.getElementById("forn-busca");
+    if (el) { el.focus(); el.value = filtros.inv._busca_forn||""; }
+  }, 30);
+}
+
+function removerFornSelec(forn) {
+  filtros.inv._fornecedores = filtros.inv._fornecedores.filter(f=>f!==forn);
+  filtros.inv.fornecedores  = [...filtros.inv._fornecedores];
+  renderTab("Invoices");
+}
+
+function selecionarTodosForns() {
+  const todos = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
+  filtros.inv._fornecedores = [...todos];
+  filtros.inv.fornecedores  = [...todos];
+  renderTab("Invoices");
+  setTimeout(() => {
+    const dd = document.getElementById("forn-dropdown");
+    if (dd) dd.style.display = "flex";
+  }, 30);
+}
+
+function limparFornsSelec() {
+  filtros.inv._fornecedores = [];
+  filtros.inv.fornecedores  = [];
+  renderTab("Invoices");
+  setTimeout(() => {
+    const dd = document.getElementById("forn-dropdown");
+    if (dd) dd.style.display = "flex";
+  }, 30);
+}
+
+function renderFornDropdown() {
+  const busca = (filtros.inv._busca_forn||"").toLowerCase();
+  const todos = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
+  const lista = busca ? todos.filter(f=>f.toLowerCase().includes(busca)) : todos;
+  const selForns = filtros.inv._fornecedores;
+  const el = document.getElementById("forn-list");
+  if (!el) return;
+  el.innerHTML = lista.length === 0
+    ? `<div style="padding:12px;color:#94a3b8;font-size:12px;text-align:center">Nenhum resultado</div>`
+    : lista.map(fn => {
+        const sel = selForns.includes(fn);
+        const invsFn = invoices.filter(i=>i.fornecedor===fn);
+        const abertos = invsFn.filter(i=>i.status_pgto==="Em Aberto").length;
+        return `<div onclick="toggleFornSelec('${fn.replace(/'/g,"\'")}')"
+          style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;font-size:12px;background:${sel?"#eff6ff":"#fff"};border-bottom:1px solid #f8fafc"
+          onmouseover="this.style.background='${sel?"#dbeafe":"#f8fafc"}'"
+          onmouseout="this.style.background='${sel?"#eff6ff":"#fff"}'">
+          <input type="checkbox" ${sel?"checked":""} onclick="event.stopPropagation();toggleFornSelec('${fn.replace(/'/g,"\'")}');" style="width:14px;height:14px;accent-color:#2563eb;cursor:pointer;flex-shrink:0">
+          <span style="flex:1;font-weight:${sel?"700":"400"};color:${sel?"#1d4ed8":"#1e293b"}">${fn}</span>
+          <span style="font-size:10px;color:#94a3b8;flex-shrink:0">${invsFn.length} inv${abertos>0?` • <span style="color:#dc2626">${abertos} ab.</span>`:""}</span>
+        </div>`;
+      }).join("");
+}
+
+// Fecha dropdown ao clicar fora
+document.addEventListener("click", e => {
+  const wrap = document.getElementById("forn-filter-wrap");
+  const dd   = document.getElementById("forn-dropdown");
+  if (dd && wrap && !wrap.contains(e.target)) dd.style.display = "none";
+});
 
 // ════════════════════════════════════════════════════════
 //  BANCO MULTI-SELECT (Pagamentos)
@@ -1334,20 +1440,98 @@ function renderDashboard() {
 //  INVOICES
 // ════════════════════════════════════════════════════════
 function renderInvoices() {
-  const forn      = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
-  const filtradas = getInvFiltradas();
-  const hasObs    = filtradas.some(i=>i.obs&&i.obs.trim()!=="");
+  const todosForns = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
+  const filtradas  = getInvFiltradas();
+  const selForns   = filtros.inv._fornecedores || [];
+  const busca      = (filtros.inv._busca_forn||"").toLowerCase();
+  const fornsFiltrados = busca
+    ? todosForns.filter(f => f.toLowerCase().includes(busca))
+    : todosForns;
 
-  const barInv = filtroBar("inv",[
-    {label:"Fornecedor",key:"fornecedor",type:"select",options:[{val:"",txt:"Todos"},...forn.map(f=>({val:f,txt:f}))]},
-    {label:"Status",key:"status",type:"select",options:[{val:"",txt:"Todos"},...STATUS_PGTO.map(s=>({val:s,txt:s}))]},
-    {label:"Moeda",key:"moeda",type:"select",options:[{val:"",txt:"Todas"},...MOEDAS.map(m=>({val:m,txt:m}))]},
-    {label:"Emissão Inicial",key:"dtIni",type:"date"},
-    {label:"Emissão Final",key:"dtFim",type:"date"}
-  ],"aplicarFiltroInv()");
+  // ── Multi-fornecedor dropdown HTML ──
+  const fornTriggerTxt = selForns.length===0 ? "Todos os fornecedores"
+    : selForns.length===1 ? selForns[0]
+    : `${selForns.length} fornecedores selecionados`;
+
+  const fornDropdownHTML = `
+    <div id="forn-filter-wrap" style="position:relative;min-width:220px">
+      <label class="form-label">🏢 Fornecedor</label>
+      <button id="forn-trigger" style="width:100%;padding:8px 10px;border:1.5px solid ${selForns.length>0?"#2563eb":"#e2e8f0"};border-radius:6px;font-size:13px;background:#fff;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:6px;${selForns.length>0?"box-shadow:0 0 0 3px #dbeafe":""}" onclick="toggleFornDropdown()" type="button">
+        <span id="forn-trigger-txt" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fornTriggerTxt}</span>
+        <span style="color:#64748b;font-size:10px;flex-shrink:0">▼</span>
+      </button>
+      <div id="forn-dropdown" style="display:none;position:absolute;top:100%;left:0;z-index:60;background:#fff;border:1.5px solid #2563eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);min-width:260px;max-height:320px;overflow:hidden;margin-top:4px;flex-direction:column">
+        <!-- Busca interna -->
+        <div style="padding:8px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:6px">
+          <span style="color:#64748b;font-size:13px">🔍</span>
+          <input id="forn-busca" type="text" placeholder="Buscar fornecedor..." value="${filtros.inv._busca_forn||""}"
+            oninput="filtros.inv._busca_forn=this.value;renderFornDropdown()"
+            style="border:none;outline:none;font-size:12px;width:100%;background:transparent">
+        </div>
+        <!-- Controles -->
+        <div style="padding:6px 10px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;color:#64748b;font-weight:600">${todosForns.length} fornecedor(es)</span>
+          <div style="display:flex;gap:6px">
+            <button onclick="selecionarTodosForns()" style="font-size:10px;background:#dbeafe;color:#1d4ed8;border:none;border-radius:4px;padding:2px 7px;cursor:pointer;font-weight:600">✅ Todos</button>
+            ${selForns.length>0?`<button onclick="limparFornsSelec()" style="font-size:10px;background:#fee2e2;color:#dc2626;border:none;border-radius:4px;padding:2px 7px;cursor:pointer;font-weight:600">✖ Limpar</button>`:""}
+          </div>
+        </div>
+        <!-- Lista de fornecedores -->
+        <div id="forn-list" style="overflow-y:auto;max-height:220px">
+          ${fornsFiltrados.length===0
+            ? `<div style="padding:12px;color:#94a3b8;font-size:12px;text-align:center">Nenhum resultado</div>`
+            : fornsFiltrados.map(fn=>{
+                const sel = selForns.includes(fn);
+                const invsFn = invoices.filter(i=>i.fornecedor===fn);
+                const abertos = invsFn.filter(i=>i.status_pgto==="Em Aberto").length;
+                return `<div id="forn-opt-${fn.replace(/[^a-zA-Z0-9]/g,"_")}"
+                  onclick="toggleFornSelec('${fn.replace(/'/g,"\'")}')"
+                  style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;font-size:12px;background:${sel?"#eff6ff":"#fff"};border-bottom:1px solid #f8fafc;transition:background .1s"
+                  onmouseover="this.style.background='${sel?"#dbeafe":"#f8fafc"}'"
+                  onmouseout="this.style.background='${sel?"#eff6ff":"#fff"}'">
+                  <input type="checkbox" ${sel?"checked":""} onclick="event.stopPropagation();toggleFornSelec('${fn.replace(/'/g,"\'")}');" style="width:14px;height:14px;accent-color:#2563eb;cursor:pointer;flex-shrink:0">
+                  <span style="flex:1;font-weight:${sel?"700":"400"};color:${sel?"#1d4ed8":"#1e293b"}">${fn}</span>
+                  <span style="font-size:10px;color:#94a3b8;flex-shrink:0">${invsFn.length} inv${abertos>0?` • <span style="color:#dc2626">${abertos} aberto(s)</span>`:""}</span>
+                </div>`;
+              }).join("")
+          }
+        </div>
+      </div>
+      <!-- Chips -->
+      ${selForns.length>0?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${selForns.map(fn=>`<span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px">${fn.length>20?fn.substring(0,18)+"…":fn}<span onclick="removerFornSelec('${fn.replace(/'/g,"\'")}');event.stopPropagation()" style="cursor:pointer;font-size:13px;line-height:1;color:#2563eb;font-weight:700" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#2563eb'">×</span></span>`).join("")}</div>`:""}
+    </div>`;
 
   return `
-  ${barInv}
+  <!-- BARRA DE FILTROS INVOICES -->
+  <div class="filter-bar" style="align-items:flex-start">
+    ${fornDropdownHTML}
+    <div>
+      <label class="form-label">Status</label>
+      <select id="f_inv_status" onchange="filtros.inv._status=this.value">
+        <option value=""${!filtros.inv._status?" selected":""}>Todos</option>
+        ${STATUS_PGTO.map(s=>`<option value="${s}"${filtros.inv._status===s?" selected":""}>${s}</option>`).join("")}
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Moeda</label>
+      <select id="f_inv_moeda" onchange="filtros.inv._moeda=this.value">
+        <option value=""${!filtros.inv._moeda?" selected":""}>Todas</option>
+        ${MOEDAS.map(m=>`<option value="${m}"${filtros.inv._moeda===m?" selected":""}>${m}</option>`).join("")}
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Emissão Inicial</label>
+      <input type="date" id="f_inv_dtIni" value="${filtros.inv._dtIni||""}" onchange="filtros.inv._dtIni=this.value">
+    </div>
+    <div>
+      <label class="form-label">Emissão Final</label>
+      <input type="date" id="f_inv_dtFim" value="${filtros.inv._dtFim||""}" onchange="filtros.inv._dtFim=this.value">
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:2px;margin-top:auto">
+      <button class="btn-search" onclick="aplicarFiltroInv()">🔍 Buscar</button>
+      <button class="btn btn-ghost" onclick="limparFiltro('inv')">✖ Limpar</button>
+    </div>
+  </div>
   <div style="margin:-10px 0 12px 0;padding:0 4px"><span style="font-size:11px;color:#2563eb;font-weight:600">${filtroAtivoTxt("inv")}</span></div>
   <div class="card" style="display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;flex-wrap:wrap">
     ${pode("taxa") ? `<button class="btn" style="background:#fef3c7;color:#d97706;border:1px solid #fde68a;font-weight:700" onclick="abrirModalTaxa()">💱 Taxas de Câmbio</button>` : ""}
