@@ -1298,13 +1298,7 @@ function renderDashboard() {
   const usuariosAtivos = usuarios.filter(u=>u.ativo).length || 1;
 
   return `
-  <!-- Indicador Multi-usuário -->
-  <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
-    <span class="realtime-dot"></span>
-    <span style="font-size:12px;color:#16a34a;font-weight:600">Sistema em tempo real ativo</span>
-    <span style="font-size:11px;color:#64748b;margin-left:8px">• ${usuariosAtivos} usuário(s) cadastrado(s) • Dados sincronizados automaticamente</span>
-    <span style="margin-left:auto;font-size:11px;color:#94a3b8">Logado como: <b>${currentUser?.perfil}</b></span>
-  </div>
+
 
   <!-- KPIs por Moeda -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
