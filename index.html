@@ -1841,7 +1841,7 @@ function exportCSV(){
   const filtradas=getInvFiltradas();
   const headers=["Pasta","Cidade","Fornecedor","Marca","Data Pedido","Nº Proforma","Nº Invoice","Data Embarque","Emissão Fatura","Data Antecipado","Condição Pgto","Vencimento","Data Pagamento","Banco","Taxa Câmbio (R$)","Moeda","Valor Moeda","Valor R$","Status Câmbio","Status Pagamento","AWB/BL","Observações"];
   const dataRows=filtradas.map(i=>[csvEsc(i.pasta),csvEsc(i.cidade),csvEsc(i.fornecedor),csvEsc(i.marca),csvDate(i.dt_pedido),csvEsc(i.n_proforma),csvEsc(i.n_fatura),csvDate(i.dt_embarque),csvDate(i.emissao_fatura),csvDate(i.dt_antecipado),csvEsc(i.cond_pgto),csvDate(i.vencimento),csvDate(i.dt_pgto),csvEsc(i.banco),csvTaxa(i.taxa),csvEsc(i.moeda),csvNum(i.valor_moeda),csvNum(i.reais),csvEsc(i.status_cambio),csvEsc(i.status_pgto),csvEsc(i.awb_bl),csvEsc(i.obs)]);
-  dlCSV(buildCSV(headers,dataRows),"invoices.csv");
+  dlCSV(buildCSV(headers,dataRows,[csvResumMoedas(filtradas)]),"invoices.csv");
   showToast("CSV exportado!");
 }
 function exportCSVPgto(){
@@ -1853,7 +1853,7 @@ function exportCSVPgto(){
   if(f.bancos&&f.bancos.length>0)dados=dados.filter(i=>f.bancos.includes(i.banco));
   const headers=["Pasta","Nº Invoice","Fornecedor","Cidade","Moeda","Valor Moeda","Taxa Câmbio","Valor R$","Vencimento","Cond. Pgto","Status Pgto","Data Pgto","Banco"];
   const dataRows=dados.map(i=>[csvEsc(i.pasta),csvEsc(i.n_fatura),csvEsc(i.fornecedor),csvEsc(i.cidade),csvEsc(i.moeda),csvNum(i.valor_moeda),csvTaxa(i.taxa),csvNum(i.reais),csvDate(i.vencimento),csvEsc(i.cond_pgto),csvEsc(i.status_pgto),csvDate(i.dt_pgto),csvEsc(i.banco)]);
-  dlCSV(buildCSV(headers,dataRows),"pagamentos.csv");
+  dlCSV(buildCSV(headers,dataRows,[csvResumMoedas(dados)]),"pagamentos.csv");
   showToast("CSV Pagamentos exportado!");
 }
 function exportCSVRanking(){
@@ -1878,7 +1878,7 @@ function exportCSVForn(forn){
   if(f.dtFim)invs=invs.filter(i=>i.emissao_fatura<=f.dtFim);
   const headers=["Fornecedor","Nº Invoice","Pasta","Cidade","Emissão","Vencimento","Data Pgto","Moeda","Valor Moeda","Taxa Câmbio","Valor R$","Cond. Pgto","Status Pgto","Status Câmbio","Banco","AWB/BL","Observações"];
   const dataRows=invs.map(i=>[csvEsc(i.fornecedor),csvEsc(i.n_fatura),csvEsc(i.pasta),csvEsc(i.cidade),csvDate(i.emissao_fatura),csvDate(i.vencimento),csvDate(i.dt_pgto),csvEsc(i.moeda),csvNum(i.valor_moeda),csvTaxa(i.taxa),csvNum(i.reais),csvEsc(i.cond_pgto),csvEsc(i.status_pgto),csvEsc(i.status_cambio),csvEsc(i.banco),csvEsc(i.awb_bl),csvEsc(i.obs)]);
-  dlCSV(buildCSV(headers,dataRows),`fornecedor_${forn.replace(/[^a-zA-Z0-9]/g,"_")}.csv`);
+  dlCSV(buildCSV(headers,dataRows,[csvResumMoedas(invs)]),`fornecedor_${forn.replace(/[^a-zA-Z0-9]/g,"_")}.csv`);
   showToast("CSV exportado!");
 }
 function exportCSVCambial(){
@@ -1890,8 +1890,65 @@ function exportCSVCambial(){
   if(f.dtFim)dados=dados.filter(i=>i.dt_pgto<=f.dtFim);
   const headers=["Fornecedor","Nº Invoice","Data Pgto","Banco","Moeda","Taxa Câmbio","Valor Moeda","Valor R$","Status Pgto","Pasta","Cidade"];
   const dataRows=dados.map(i=>[csvEsc(i.fornecedor),csvEsc(i.n_fatura),csvDate(i.dt_pgto),csvEsc(i.banco),csvEsc(i.moeda),csvTaxa(i.taxa),csvNum(i.valor_moeda),csvNum(i.reais),csvEsc(i.status_pgto),csvEsc(i.pasta),csvEsc(i.cidade)]);
-  dlCSV(buildCSV(headers,dataRows),"analise_cambial.csv");
+  dlCSV(buildCSV(headers,dataRows,[csvResumMoedas(dados)]),"analise_cambial.csv");
   showToast("CSV Análise Cambial exportado!");
+}
+
+
+// Gera bloco HTML de resumo por moedas para PDFs
+function pdfResumMoedas(dados, titulo) {
+  const MCOR  = {USD:"#1d4ed8",EUR:"#7c3aed",CHF:"#dc2626",GBP:"#065f46"};
+  const MBG   = {USD:"#dbeafe",EUR:"#ede9fe",CHF:"#fee2e2",GBP:"#d1fae5"};
+  const MSIMB = {USD:"US$",EUR:"€",CHF:"Fr",GBP:"£"};
+  const cards = MOEDAS.map(m => {
+    const arr    = dados.filter(i => i.moeda === m);
+    if (!arr.length) return "";
+    const totVM  = arr.reduce((s,i) => s + parseCurrency(i.valor_moeda), 0);
+    const totR   = arr.reduce((s,i) => s + (parseFloat(i.reais)||0), 0);
+    const aberto = arr.filter(i => i.status_pgto === "Em Aberto").reduce((s,i) => s + parseCurrency(i.valor_moeda), 0);
+    const pago   = arr.filter(i => i.status_pgto === "Pago Total").reduce((s,i) => s + parseCurrency(i.valor_moeda), 0);
+    const taxas  = arr.filter(i => i.taxa && parseFloat(i.taxa) > 0);
+    const taxaMed= taxas.length ? (taxas.reduce((s,i) => s+(parseFloat(i.taxa)||0), 0)/taxas.length).toFixed(4) : null;
+    return `<div style="flex:1;min-width:160px;border-radius:8px;padding:10px 14px;background:${MBG[m]};border-left:4px solid ${MCOR[m]}">
+      <div style="font-size:12px;font-weight:700;color:${MCOR[m]};margin-bottom:6px">${MSIMB[m]} ${m}</div>
+      <div style="font-size:10px;color:#64748b;margin-bottom:2px">Total na moeda</div>
+      <div style="font-size:14px;font-weight:700;color:${MCOR[m]};margin-bottom:4px">${MSIMB[m]} ${totVM.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div style="font-size:10px;color:#64748b;margin-bottom:2px">Em R$</div>
+      <div style="font-size:13px;font-weight:700;color:#16a34a;margin-bottom:4px">R$ ${totR.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div style="display:flex;gap:8px;font-size:10px;flex-wrap:wrap">
+        <span style="color:#dc2626">⏳ Aberto: ${MSIMB[m]} ${aberto.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+        <span style="color:#16a34a">✅ Pago: ${MSIMB[m]} ${pago.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+        ${taxaMed ? `<span style="color:#475569">Taxa méd: R$ ${taxaMed}</span>` : ""}
+        <span style="color:#64748b">${arr.length} invoice(s)</span>
+      </div>
+    </div>`;
+  }).filter(Boolean).join("");
+  if (!cards) return "";
+  return `<div style="margin:14px 0">
+    <div style="font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📊 ${titulo||"Resumo por Moeda"}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">${cards}</div>
+  </div>`;
+}
+
+// Gera bloco de resumo por moedas para CSV (summary block)
+function csvResumMoedas(dados) {
+  const rows = MOEDAS.map(m => {
+    const arr   = dados.filter(i => i.moeda === m);
+    if (!arr.length) return null;
+    const totVM = arr.reduce((s,i) => s + parseCurrency(i.valor_moeda), 0);
+    const totR  = arr.reduce((s,i) => s + (parseFloat(i.reais)||0), 0);
+    const aberto= arr.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
+    const pago  = arr.filter(i=>i.status_pgto==="Pago Total").reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
+    const taxas = arr.filter(i=>i.taxa&&parseFloat(i.taxa)>0);
+    const taxaMed = taxas.length?(taxas.reduce((s,i)=>s+(parseFloat(i.taxa)||0),0)/taxas.length):0;
+    const totGeralR = dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+    return [csvEsc(m),csvInt(arr.length),csvNum(totVM),csvNum(totR),csvNum(aberto),csvNum(pago),csvTaxa(taxaMed||""),csvPct(totR,totGeralR)];
+  }).filter(Boolean);
+  return {
+    title: "RESUMO POR MOEDA",
+    headers: ["Moeda","Qtd. Invoices","Total na Moeda","Total R$","Em Aberto (Moeda)","Pago Total (Moeda)","Taxa Média (R$)","Part. (%)"],
+    rows
+  };
 }
 
 // ════════════════════════════════════════════════════════
@@ -1908,8 +1965,9 @@ function exportPDF(){
   <div class="hdr"><div><h1>🌐 Relatório de Invoices — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</p></div><div><b>${filtradas.length}</b> faturas</div></div>
   <div class="cards"><div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${filtradas.filter(i=>i.status_pgto==="Em Aberto").length}</div></div><div class="card" style="background:#fef3c7;border-color:#d97706"><div class="cl">Pago Parcial</div><div class="cv" style="color:#d97706">${filtradas.filter(i=>i.status_pgto==="Pago Parcial").length}</div></div><div class="card" style="background:#dcfce7;border-color:#16a34a"><div class="cl">Pago Total</div><div class="cv" style="color:#16a34a">${filtradas.filter(i=>i.status_pgto==="Pago Total").length}</div></div><div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div></div>
   <table><thead><tr><th>Pasta</th><th>Cidade</th><th>Fornecedor</th><th>Nº Invoice</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Cond.</th><th>Dt.Pgto</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="tot"><span><b>Total R$:</b> ${fmtBRL(totR)}</span></div>
-  <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado automaticamente</span></div>
+  ${pdfResumMoedas(filtradas,"Resumo por Moeda — Invoices")}
+  <div class="tot"><span><b>Total R$:</b> ${fmtBRL(totR)}</span><span><b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(filtradas.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span></span><span><b>Pago Total:</b> <span style="color:#16a34a">${fmtBRL(filtradas.filter(i=>i.status_pgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span></span></div>
+  <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado em ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span></div>
   <script>window.print()<\/script></body></html>`);
   w.document.close();
 }
@@ -1927,8 +1985,9 @@ function exportPDFPgto(){
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pagamentos</title><style>${pdfStyles()}</style></head><body>
   <div class="hdr"><div><h1>💰 Relatório de Pagamentos — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${dados.length}</b> registros</div></div>
   <table><thead><tr><th>Pasta</th><th>Nº Invoice</th><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Vencimento</th><th>Status</th><th>Dt.Pgto</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="tot"><b>Total R$:</b> ${fmtBRL(totR)}</div>
-  <div class="footer"><span>Sistema Controle de Invoices</span><span>Gerado automaticamente</span></div>
+  ${pdfResumMoedas(dados,"Resumo por Moeda — Pagamentos")}
+  <div class="tot"><b>Total R$:</b> ${fmtBRL(totR)} &nbsp;|&nbsp; <b>Pago:</b> <span style="color:#16a34a">${fmtBRL(dados.filter(i=>i.status_pgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span> &nbsp;|&nbsp; <b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(dados.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span></div>
+  <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado em ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span></div>
   <script>window.print()<\/script></body></html>`);
   w.document.close();
 }
@@ -1944,8 +2003,9 @@ function exportPDFForn(forn){
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${forn}</title><style>${pdfStyles()}</style></head><body>
   <div class="hdr"><h1>🏢 Relatório — ${forn}</h1><p>Gerado em ${new Date().toLocaleDateString("pt-BR")}</p></div>
   <table><thead><tr><th>Nº Invoice</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Cond.</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="tot"><b>Total R$:</b> <span style="color:#16a34a">${fmtBRL(totR)}</span></div>
-  <div class="footer"><span>Sistema Controle de Invoices</span><span>Gerado automaticamente</span></div>
+  ${pdfResumMoedas(invs,"Resumo por Moeda — "+forn)}
+  <div class="tot"><b>Total R$:</b> <span style="color:#16a34a">${fmtBRL(totR)}</span> &nbsp;|&nbsp; <b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(invs.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span> &nbsp;|&nbsp; <b>Pago:</b> <span style="color:#16a34a">${fmtBRL(invs.filter(i=>i.status_pgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span></div>
+  <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado em ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span></div>
   <script>window.print()<\/script></body></html>`);
   w.document.close();
 }
@@ -1963,8 +2023,9 @@ function exportPDFRanking(){
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ranking Fornecedores</title><style>${pdfStyles()}</style></head><body>
   <div class="hdr"><div><h1>📋 Ranking de Fornecedores — Importação</h1><p>Gerado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${forn.length}</b> fornecedores</div></div>
   <table><thead><tr><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th style="text-align:center">Em Aberto</th><th style="text-align:center">Pago Total</th><th>Total R$</th></tr></thead><tbody>${rows}</tbody></table>
+  ${pdfResumMoedas(invoices,"Resumo Geral por Moeda — Ranking")}
   <div class="tot"><b>Total Geral R$:</b> <span style="color:#16a34a">${fmtBRL(invoices.reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span></div>
-  <div class="footer"><span>Sistema Controle de Invoices</span><span>Gerado automaticamente</span></div>
+  <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado em ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span></div>
   <script>window.print()<\/script></body></html>`);
   w.document.close();
 }
@@ -1982,8 +2043,9 @@ function exportPDFCambial(){
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Análise Cambial</title><style>${pdfStyles()}</style></head><body>
   <div class="hdr"><div><h1>📈 Análise Cambial — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${dados.length}</b> pagamentos</div></div>
   <table><thead><tr><th>Fornecedor</th><th>Data Pgto</th><th>Moeda</th><th>Taxa Câmbio</th><th>Valor Moeda</th><th>Valor R$</th><th>Nº Invoice</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
+  ${pdfResumMoedas(dados,"Resumo por Moeda — Análise Cambial")}
   <div class="tot"><b>Total Geral R$:</b> <span style="color:#16a34a">${fmtBRL(totR)}</span></div>
-  <div class="footer"><span>Análise Cambial — Importação</span><span>Gerado automaticamente</span></div>
+  <div class="footer"><span>Análise Cambial — Importação</span><span>Gerado em ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span></div>
   <script>window.print()<\/script></body></html>`);
   w.document.close();
 }
