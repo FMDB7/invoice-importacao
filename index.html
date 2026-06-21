@@ -296,7 +296,7 @@ const TABS_POR_PERFIL = {
 // ════════════════════════════════════════════════════════
 //  ESTADO GLOBAL
 // ════════════════════════════════════════════════════════
-let supabase       = null;
+let supabaseClient = null;
 let invoices       = [];
 let usuarios       = [];
 let currentTab     = "Dashboard";
@@ -321,7 +321,7 @@ let filtros = {
 window.onload = async () => {
   // Inicializa Supabase (se configurado)
   if (!CONFIG.supabaseUrl.includes("SEU_PROJETO")) {
-    supabase = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
+    supabaseClient = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
   }
 
   // Verifica retorno OAuth Microsoft
@@ -389,10 +389,10 @@ async function autenticarComMS() {
 }
 
 async function buscarOuCriarUsuario(email, nome) {
-  if (!supabase) return { id: "demo", nome, email, perfil: "admin" };
+  if (!supabaseClient) return { id: "demo", nome, email, perfil: "admin" };
 
   // Tenta buscar usuário existente
-  let { data: user } = await supabase
+  let { data: user } = await supabaseClient
     .from("usuarios")
     .select("*")
     .eq("email", email)
@@ -400,10 +400,10 @@ async function buscarOuCriarUsuario(email, nome) {
 
   if (!user) {
     // Primeiro usuário = admin; demais = visualizador até admin definir perfil
-    const { count } = await supabase.from("usuarios").select("*", { count: "exact", head: true });
+    const { count } = await supabaseClient.from("usuarios").select("*", { count: "exact", head: true });
     const perfil = (count === 0) ? "admin" : "visualizador";
 
-    const { data: novo } = await supabase
+    const { data: novo } = await supabaseClient
       .from("usuarios")
       .insert({ nome, email, perfil, ativo: true })
       .select()
@@ -414,7 +414,7 @@ async function buscarOuCriarUsuario(email, nome) {
 
   // Atualiza nome se mudou
   if (user.nome !== nome) {
-    await supabase.from("usuarios").update({ nome }).eq("id", user.id);
+    await supabaseClient.from("usuarios").update({ nome }).eq("id", user.id);
     user.nome = nome;
   }
 
@@ -442,17 +442,17 @@ function logout() {
 //  SUPABASE — CRUD
 // ════════════════════════════════════════════════════════
 async function carregarDados() {
-  if (!supabase) { invoices = getDemoData(); return; }
+  if (!supabaseClient) { invoices = getDemoData(); return; }
   mostrarLoading("Carregando invoices...");
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from("invoices")
       .select("*")
       .order("created_at", { ascending: false });
     if (error) throw error;
     invoices = data || [];
 
-    const { data: usrs } = await supabase.from("usuarios").select("*").order("nome");
+    const { data: usrs } = await supabaseClient.from("usuarios").select("*").order("nome");
     usuarios = usrs || [];
   } catch(e) {
     showToast("Erro ao carregar dados: " + e.message, "err");
@@ -463,14 +463,14 @@ async function carregarDados() {
 }
 
 async function salvarInvoiceDB(invoice) {
-  if (!supabase) { renderTab(currentTab); return; }
+  if (!supabaseClient) { renderTab(currentTab); return; }
   mostrarLoading("Salvando...");
   try {
     if (invoice.id) {
-      const { error } = await supabase.from("invoices").update(invoice).eq("id", invoice.id);
+      const { error } = await supabaseClient.from("invoices").update(invoice).eq("id", invoice.id);
       if (error) throw error;
     } else {
-      const { error } = await supabase.from("invoices").insert(invoice);
+      const { error } = await supabaseClient.from("invoices").insert(invoice);
       if (error) throw error;
     }
   } catch(e) {
@@ -481,8 +481,8 @@ async function salvarInvoiceDB(invoice) {
 }
 
 async function excluirInvoiceDB(id) {
-  if (!supabase) { renderTab(currentTab); return; }
-  const { error } = await supabase.from("invoices").delete().eq("id", id);
+  if (!supabaseClient) { renderTab(currentTab); return; }
+  const { error } = await supabaseClient.from("invoices").delete().eq("id", id);
   if (error) showToast("Erro ao excluir: " + error.message, "err");
 }
 
@@ -490,10 +490,10 @@ async function excluirInvoiceDB(id) {
 //  REALTIME — SUPABASE SUBSCRIPTIONS
 // ════════════════════════════════════════════════════════
 function iniciarRealtime() {
-  if (!supabase) return;
+  if (!supabaseClient) return;
   if (realtimeSub) realtimeSub.unsubscribe();
 
-  realtimeSub = supabase
+  realtimeSub = supabaseClient
     .channel("invoices-realtime")
     .on("postgres_changes", { event: "*", schema: "public", table: "invoices" }, payload => {
       const { eventType, new: novo, old } = payload;
@@ -842,9 +842,9 @@ async function confirmarTaxas() {
 
   fecharModal("modalTaxa");
   mostrarLoading("Aplicando taxas...");
-  if (supabase) {
+  if (supabaseClient) {
     for (const u of updates) {
-      await supabase.from("invoices").update({ taxa: u.taxa, reais: u.reais }).eq("id", u.id);
+      await supabaseClient.from("invoices").update({ taxa: u.taxa, reais: u.reais }).eq("id", u.id);
     }
   }
   esconderLoading();
@@ -962,7 +962,7 @@ async function salvarInvoice() {
 
   fecharModal("modalInvoice");
 
-  if (!supabase) {
+  if (!supabaseClient) {
     // modo demo: manipula array local
     if (formState.id) {
       const idx = invoices.findIndex(i => i.id === formState.id);
@@ -989,7 +989,7 @@ function editarInvoice(id) {
 async function excluirInvoice(id) {
   if (!pode("excluir")) { showToast("Apenas Admins podem excluir","err"); return; }
   if (!confirm("Confirma exclusão desta invoice?")) return;
-  if (!supabase) { invoices = invoices.filter(i => i.id !== id); renderTab("Invoices"); showToast("Excluída."); return; }
+  if (!supabaseClient) { invoices = invoices.filter(i => i.id !== id); renderTab("Invoices"); showToast("Excluída."); return; }
   await excluirInvoiceDB(id);
   invoices = invoices.filter(i => i.id !== id);
   renderTab("Invoices");
@@ -1048,7 +1048,7 @@ async function salvarPagamento() {
 
   fecharModal("modalPgto");
 
-  if (!supabase) {
+  if (!supabaseClient) {
     const idx = invoices.findIndex(i => i.id === pgtoTarget);
     if (idx !== -1) invoices[idx] = { ...invoices[idx], ...update };
     renderTab("Pagamentos");
@@ -1057,7 +1057,7 @@ async function salvarPagamento() {
   }
 
   mostrarLoading("Salvando pagamento...");
-  await supabase.from("invoices").update(update).eq("id", pgtoTarget);
+  await supabaseClient.from("invoices").update(update).eq("id", pgtoTarget);
   const idx = invoices.findIndex(i => i.id === pgtoTarget);
   if (idx !== -1) invoices[idx] = { ...invoices[idx], ...update };
   esconderLoading();
@@ -1069,7 +1069,7 @@ async function desfazerPagamento(id) {
   if (!pode("pagamento")) { showToast("Sem permissão","err"); return; }
   if (!confirm("Desfazer pagamento?")) return;
   const update = { dt_pgto:null, banco:null, taxa:null, reais:null, status_cambio:"Pendente", status_pgto:"Em Aberto" };
-  if (supabase) await supabase.from("invoices").update(update).eq("id", id);
+  if (supabaseClient) await supabaseClient.from("invoices").update(update).eq("id", id);
   const idx = invoices.findIndex(i => i.id === id);
   if (idx !== -1) invoices[idx] = { ...invoices[idx], ...update };
   renderTab("Pagamentos");
@@ -1141,7 +1141,7 @@ async function alterarPerfil(userId, novoPerfil) {
   if (userId === currentUser.id && novoPerfil !== "admin") {
     if (!confirm("Você está alterando seu próprio perfil. Isso pode remover seu acesso admin. Continuar?")) return;
   }
-  if (supabase) await supabase.from("usuarios").update({ perfil: novoPerfil }).eq("id", userId);
+  if (supabaseClient) await supabaseClient.from("usuarios").update({ perfil: novoPerfil }).eq("id", userId);
   const idx = usuarios.findIndex(u => u.id === userId);
   if (idx !== -1) usuarios[idx].perfil = novoPerfil;
   renderTab("Usuários");
@@ -1151,7 +1151,7 @@ async function alterarPerfil(userId, novoPerfil) {
 async function toggleUsuario(userId, ativo) {
   if (!pode("usuarios")) { showToast("Sem permissão","err"); return; }
   if (userId === currentUser.id) { showToast("Não é possível desativar sua própria conta","err"); return; }
-  if (supabase) await supabase.from("usuarios").update({ ativo }).eq("id", userId);
+  if (supabaseClient) await supabaseClient.from("usuarios").update({ ativo }).eq("id", userId);
   const idx = usuarios.findIndex(u => u.id === userId);
   if (idx !== -1) usuarios[idx].ativo = ativo;
   renderTab("Usuários");
