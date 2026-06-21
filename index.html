@@ -9,34 +9,45 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1e3a5f">
-<link rel="manifest" id="manifestLink">
-<link rel="apple-touch-icon" id="appleIcon">
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- XLSX para exportação -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',sans-serif;background:#f1f5f9;font-size:13px;color:#1e293b}
 
-/* FROZEN HEADER */
+/* ── HEADER ── */
 .header{background:linear-gradient(135deg,#1e3a5f,#2563eb);padding:14px 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .header h1{color:#fff;font-size:16px}.header p{color:#93c5fd;font-size:11px}
+
+/* ── TABS ── */
 .tabs{background:#fff;border-bottom:2px solid #e2e8f0;display:flex;overflow-x:auto;position:sticky;top:57px;z-index:49;box-shadow:0 2px 4px rgba(0,0,0,.06)}
 .tab{padding:10px 16px;border:none;background:transparent;color:#64748b;cursor:pointer;font-size:13px;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-2px}
 .tab.active{background:#2563eb;color:#fff;font-weight:700;border-color:#2563eb}
+
+/* ── LAYOUT ── */
 .content{padding:16px;max-width:1600px;margin:0 auto}
 .card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:14px}
 .stat{border-radius:10px;padding:14px 16px}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+
+/* ── FORM CONTROLS ── */
 .form-label{display:block;font-size:12px;font-weight:700;color:#1e3a5f;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
 input,select,textarea{width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px;outline:none;background:#fff}
 input:focus,select:focus,textarea:focus{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe}
+input:read-only{background:#f8fafc;cursor:default}
+
+/* ── BUTTONS ── */
 .btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px}
 .btn-primary{background:#2563eb;color:#fff}
 .btn-green{background:#16a34a;color:#fff}
 .btn-ghost{background:transparent;color:#64748b;border:1px solid #e2e8f0}
 .btn-search{background:#0f172a;color:#fff;padding:8px 18px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px}
 .btn-sm{padding:4px 8px;font-size:12px;border:none;border-radius:5px;cursor:pointer;margin-right:3px}
+.btn-danger{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5}
 
-/* TABLE with sticky thead */
+/* ── TABLE ── */
 .table-wrap{overflow-x:auto}
 .table-wrap table{width:100%;border-collapse:collapse}
 .table-wrap thead tr{background:#1e3a5f;color:#fff}
@@ -44,36 +55,44 @@ input:focus,select:focus,textarea:focus{border-color:#2563eb;box-shadow:0 0 0 3p
 .table-wrap td{padding:7px 10px;font-size:12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
 .table-wrap tr:nth-child(even) td{background:#f8fafc}
 
-/* Legacy table (no scroll context) */
-table{width:100%;border-collapse:collapse}
-thead tr{background:#1e3a5f;color:#fff}
-th{padding:8px 10px;text-align:left;font-size:12px;white-space:nowrap}
-td{padding:7px 10px;font-size:12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
-tr:nth-child(even) td{background:#f8fafc}
-
+/* ── BADGES ── */
 .badge{padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap}
 .badge-red{background:#fee2e2;color:#dc2626}
 .badge-green{background:#dcfce7;color:#16a34a}
 .badge-yellow{background:#fef3c7;color:#d97706}
 .badge-blue{background:#dbeafe;color:#1d4ed8}
+.badge-purple{background:#ede9fe;color:#7c3aed}
+.badge-gray{background:#f1f5f9;color:#475569}
+
+/* ── MODALS ── */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;align-items:center;justify-content:center}
 .modal-overlay.open{display:flex}
 .modal{background:#fff;border-radius:14px;padding:28px;width:980px;max-width:98vw;max-height:93vh;overflow-y:auto}
-.modal-sm{width:480px}
-.toast{position:fixed;top:16px;right:16px;z-index:999;padding:10px 20px;border-radius:8px;color:#fff;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.2);display:none}
-.login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1e3a5f,#2563eb)}
-.login-box{background:#fff;border-radius:16px;padding:40px;text-align:center;width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-.filter-btn{padding:6px 14px;border-radius:20px;border:none;cursor:pointer;font-weight:600;font-size:12px;transition:all .15s}
-.col-wide{min-width:150px}
-.kpi-moeda{border-radius:10px;padding:14px 16px;border-left:5px solid}
-.chart-bar{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
-.chart-wrap{display:flex;align-items:flex-end;gap:16px;height:180px;padding:0 10px}
+.modal-sm{width:500px}
+.modal-md{width:680px}
 
-/* Dashboard bold labels */
+/* ── TOAST ── */
+.toast{position:fixed;top:16px;right:16px;z-index:999;padding:10px 20px;border-radius:8px;color:#fff;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.2);display:none;animation:slideIn .3s ease}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── LOGIN ── */
+.login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1e3a5f,#2563eb)}
+.login-box{background:#fff;border-radius:16px;padding:40px;text-align:center;width:400px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+
+/* ── LOADING ── */
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.85);z-index:200;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+.spinner{width:48px;height:48px;border:4px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── KPI CARDS ── */
 .kpi-label{font-size:11px;color:#64748b;margin-bottom:2px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.kpi-moeda{border-radius:10px;padding:14px 16px;border-left:5px solid}
 .stat-label{font-size:11px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-top:4px}
 
-/* Bank multi-select filter */
+/* ── FILTER BAR ── */
+.filter-bar{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+
+/* ── BANCO MULTI-SELECT ── */
 .banco-filter-wrap{position:relative}
 .banco-dropdown{position:absolute;top:100%;left:0;z-index:60;background:#fff;border:1.5px solid #2563eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);min-width:200px;max-height:260px;overflow-y:auto;display:none;margin-top:4px}
 .banco-dropdown.open{display:block}
@@ -82,13 +101,27 @@ tr:nth-child(even) td{background:#f8fafc}
 .banco-option input[type=checkbox]{width:14px;height:14px;accent-color:#2563eb;cursor:pointer;flex-shrink:0}
 .banco-option.selected{background:#eff6ff}
 .banco-trigger{width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px;background:#fff;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:6px;white-space:nowrap;overflow:hidden}
-.banco-trigger:focus,.banco-trigger.active{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe;outline:none}
+.banco-trigger.active{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe}
 .banco-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
-.banco-chip{background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.banco-chip{background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px}
 .banco-chip-x{cursor:pointer;font-size:13px;line-height:1;color:#2563eb;font-weight:700}
 .banco-chip-x:hover{color:#dc2626}
 
-/* Column widths */
+/* ── REALTIME INDICATOR ── */
+.realtime-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── PERMISSION BADGE ── */
+.perm-badge{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700}
+.perm-admin{background:#ede9fe;color:#7c3aed}
+.perm-financeiro{background:#dbeafe;color:#1d4ed8}
+.perm-visualizador{background:#f1f5f9;color:#475569}
+
+/* ── CHART ── */
+.chart-bar{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.chart-wrap{display:flex;align-items:flex-end;gap:16px;height:180px;padding:0 10px}
+
+/* ── COLUMN WIDTHS ── */
 .col-pasta{width:80px;min-width:70px}
 .col-cidade{width:90px;min-width:80px}
 .col-fornecedor{min-width:130px}
@@ -102,31 +135,55 @@ tr:nth-child(even) td{background:#f8fafc}
 .col-cambio{width:88px;min-width:80px}
 .col-awb{width:100px;min-width:90px}
 .col-obs{min-width:120px;max-width:200px}
-.col-acoes{width:90px;min-width:80px;white-space:nowrap}
+.col-acoes{width:110px;min-width:100px;white-space:nowrap}
+
+/* ── PDF STYLES (injected into popup) ── */
 </style>
 </head>
 <body>
-<div class="login-screen" id="loginScreen">
+
+<!-- ══════════════════ LOADING ══════════════════ -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div style="color:#1e3a5f;font-weight:600;font-size:14px">Carregando...</div>
+</div>
+
+<!-- ══════════════════ LOGIN ══════════════════ -->
+<div class="login-screen" id="loginScreen" style="display:none">
   <div class="login-box">
-    <div style="font-size:48px;margin-bottom:16px">🌐</div>
-    <h2 style="color:#1e3a5f;margin-bottom:6px">Controle de Invoices</h2>
-    <p style="color:#64748b;font-size:13px;margin-bottom:28px">Importação — Acesso Microsoft 365</p>
-    <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px" onclick="loginMicrosoft()">
+    <div style="font-size:52px;margin-bottom:16px">🌐</div>
+    <h2 style="color:#1e3a5f;margin-bottom:6px;font-size:22px">Controle de Invoices</h2>
+    <p style="color:#64748b;font-size:13px;margin-bottom:8px">Importação — Sistema Multi-usuário</p>
+    <div style="display:flex;gap:6px;justify-content:center;margin-bottom:28px">
+      <span class="badge badge-purple">Admin</span>
+      <span class="badge badge-blue">Financeiro</span>
+      <span class="badge badge-gray">Visualizador</span>
+    </div>
+    <button class="btn btn-primary" style="width:100%;padding:13px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:8px" onclick="loginMicrosoft()">
       <svg width="20" height="20" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
       Entrar com Microsoft 365
     </button>
-    <p style="color:#94a3b8;font-size:11px;margin-top:16px">Use sua conta corporativa da empresa</p>
+    <p style="color:#94a3b8;font-size:11px;margin-top:16px">Use sua conta corporativa</p>
+    <hr style="margin:20px 0;border-color:#f1f5f9">
+    <button class="btn btn-ghost" style="width:100%;font-size:12px" onclick="loginDemo()">🧪 Entrar em modo demo</button>
   </div>
 </div>
 
+<!-- ══════════════════ APP ══════════════════ -->
 <div id="appScreen" style="display:none">
   <div class="header">
-    <span style="font-size:22px">🌐</span>
-    <div style="flex:1"><h1>Controle de Invoices — Importação</h1><p>Gestão de faturas internacionais</p></div>
-    <div style="display:flex;align-items:center;gap:12px">
+    <span style="font-size:24px">🌐</span>
+    <div style="flex:1">
+      <h1>Controle de Invoices — Importação</h1>
+      <p>Gestão de faturas internacionais • Multi-usuário em tempo real</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px">
       <div style="text-align:right">
         <div id="userName" style="color:#fff;font-size:12px;font-weight:600"></div>
-        <div id="syncStatus" style="color:#93c5fd;font-size:11px">● Conectado ao OneDrive</div>
+        <div id="userRole" style="font-size:11px;margin-top:2px"></div>
+        <div id="syncStatus" style="color:#93c5fd;font-size:10px;margin-top:1px">
+          <span class="realtime-dot"></span> Tempo real ativo
+        </div>
       </div>
       <button class="btn btn-ghost" style="color:#fff;border-color:#ffffff44;font-size:12px" onclick="logout()">Sair</button>
     </div>
@@ -135,7 +192,9 @@ tr:nth-child(even) td{background:#f8fafc}
   <div class="content" id="mainContent"></div>
 </div>
 
-<!-- MODAL INVOICE -->
+<!-- ══════════════════ MODALS ══════════════════ -->
+
+<!-- Modal Invoice -->
 <div class="modal-overlay" id="modalInvoice">
   <div class="modal">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
@@ -150,9 +209,9 @@ tr:nth-child(even) td{background:#f8fafc}
   </div>
 </div>
 
-<!-- MODAL TAXA CAMBIO -->
+<!-- Modal Taxa Câmbio -->
 <div class="modal-overlay" id="modalTaxa">
-  <div class="modal modal-sm">
+  <div class="modal modal-md">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <h3 style="color:#1e3a5f;font-size:15px">💱 Atualizar Taxas de Câmbio</h3>
       <span style="font-size:11px;color:#94a3b8">ESC para fechar</span>
@@ -166,6 +225,8 @@ tr:nth-child(even) td{background:#f8fafc}
     </div>
   </div>
 </div>
+
+<!-- Modal Pagamento -->
 <div class="modal-overlay" id="modalPgto">
   <div class="modal modal-sm">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
@@ -175,656 +236,1024 @@ tr:nth-child(even) td{background:#f8fafc}
     <div id="pgtoInfo" style="color:#64748b;font-size:12px;margin-bottom:16px;padding:8px;background:#f8fafc;border-radius:6px"></div>
     <div class="form-grid" id="pgtoFields"></div>
     <div style="display:flex;gap:10px;margin-top:16px">
-      <button class="btn btn-green" onclick="salvarPagamento()">✅ Confirmar</button>
+      <button class="btn btn-green" onclick="salvarPagamento()">✅ Confirmar Pagamento</button>
       <button class="btn btn-ghost" onclick="fecharModal('modalPgto')">Cancelar</button>
     </div>
   </div>
 </div>
+
+<!-- Modal Gerenciar Usuários (Admin) -->
+<div class="modal-overlay" id="modalUsuarios">
+  <div class="modal modal-md">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h3 style="color:#1e3a5f;font-size:15px">👥 Gerenciar Usuários</h3>
+      <span style="font-size:11px;color:#94a3b8">ESC para fechar</span>
+    </div>
+    <div id="usuariosContent"></div>
+    <div style="margin-top:16px">
+      <button class="btn btn-ghost" onclick="fecharModal('modalUsuarios')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
-const CONFIG={
-  clientId:"0bf8719c-223e-4f05-81a8-dafffa789ce7",
-  tenantId:"8003b84e-097a-420a-afa4-ca9eab1bc74d",
-  redirectUri:"https://fmdb7.github.io/invoice-importacao/",
-  scopes:["Files.ReadWrite","User.Read"],
-  fileName:"invoices_importacao.xlsx",
-  folderPath:"/Invoices Importação"
-};
-const MOEDAS=["USD","EUR","CHF","GBP"];
-const SIMBOLO={USD:"US$",EUR:"€",CHF:"Fr",GBP:"£"};
-const MOEDA_COR={USD:"#1d4ed8",EUR:"#7c3aed",CHF:"#dc2626",GBP:"#065f46"};
-const MOEDA_BG={USD:"#dbeafe",EUR:"#ede9fe",CHF:"#fee2e2",GBP:"#d1fae5"};
-const MOEDA_CHART={USD:"#3b82f6",EUR:"#8b5cf6",CHF:"#ef4444",GBP:"#10b981"};
-const STATUS_PGTO=["Em Aberto","Pago Parcial","Pago Total"];
-const STATUS_CAMBIO=["Pendente","Fechado"];
-const COND_PGTO=["À Vista","Antecipado","30 dias","45 dias","60 dias","90 dias","120 dias"];
-const COND_DIAS={"À Vista":0,"Antecipado":0,"30 dias":30,"45 dias":45,"60 dias":60,"90 dias":90,"120 dias":120};
-// "Rel. Fornecedores" renamed to "Fornecedores"
-const TABS=["Dashboard","Nova Invoice","Invoices","Pagamentos","Fornecedores","Análise Cambial"];
+// ════════════════════════════════════════════════════════
+//  CONFIGURAÇÃO — preencha com seus dados reais
+// ════════════════════════════════════════════════════════
+const CONFIG = {
+  // Microsoft Azure AD
+  msClientId:    "0bf8719c-223e-4f05-81a8-dafffa789ce7",
+  msTenantId:    "8003b84e-097a-420a-afa4-ca9eab1bc74d",
+  msRedirectUri: window.location.origin + "/", // URI cadastrado no Azure AD → Authentication
 
-let invoices=[],editIndex=null,currentTab="Dashboard",accessToken=null,currentUser=null;
-let filtroPgto="Todos",relForn="",pgtoTarget=null;
-let filtros={
-  inv:{fornecedor:"",status:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_dtIni:"",_dtFim:""},
-  pgto:{status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:"",bancos:[],_bancos:[]},
-  forn:{fornecedor:"",dtIni:"",dtFim:"",_fornecedor:"",_dtIni:"",_dtFim:""},
-  cambial:{fornecedor:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_moeda:"",_dtIni:"",_dtFim:""}
+  // Supabase
+  supabaseUrl:   "https://qnxwbsthhaqbappitviu.supabase.co",
+  supabaseKey:   "sb_publishable_pVeePfsdknx0GVPahgS7_w_JsxpYABk"
 };
 
-let taxasAtivas={USD:"",EUR:"",CHF:"",GBP:""};
+// ════════════════════════════════════════════════════════
+//  CONSTANTES
+// ════════════════════════════════════════════════════════
+const MOEDAS       = ["USD","EUR","CHF","GBP"];
+const SIMBOLO      = {USD:"US$",EUR:"€",CHF:"Fr",GBP:"£"};
+const MOEDA_COR    = {USD:"#1d4ed8",EUR:"#7c3aed",CHF:"#dc2626",GBP:"#065f46"};
+const MOEDA_BG     = {USD:"#dbeafe",EUR:"#ede9fe",CHF:"#fee2e2",GBP:"#d1fae5"};
+const MOEDA_CHART  = {USD:"#3b82f6",EUR:"#8b5cf6",CHF:"#ef4444",GBP:"#10b981"};
+const STATUS_PGTO  = ["Em Aberto","Pago Parcial","Pago Total"];
+const STATUS_CAM   = ["Pendente","Fechado"];
+const COND_PGTO    = ["À Vista","Antecipado","30 dias","45 dias","60 dias","90 dias","120 dias"];
+const COND_DIAS    = {"À Vista":0,"Antecipado":0,"30 dias":30,"45 dias":45,"60 dias":60,"90 dias":90,"120 dias":120};
+const PERFIS       = ["admin","financeiro","visualizador"];
+const TABS_POR_PERFIL = {
+  admin:        ["Dashboard","Nova Invoice","Invoices","Pagamentos","Fornecedores","Análise Cambial","Usuários"],
+  financeiro:   ["Dashboard","Invoices","Pagamentos","Fornecedores","Análise Cambial"],
+  visualizador: ["Dashboard","Invoices","Fornecedores","Análise Cambial"]
+};
 
-function abrirModalTaxa(){
-  MOEDAS.forEach(m=>{
-    const arr=invoices.filter(i=>i.moeda===m&&i.taxa&&parseFloat(i.taxa)>0);
-    if(!taxasAtivas[m]&&arr.length){
-      const ultima=arr[arr.length-1];
-      taxasAtivas[m]=parseFloat(ultima.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4});
-    }
+// ════════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ════════════════════════════════════════════════════════
+let supabase       = null;
+let invoices       = [];
+let usuarios       = [];
+let currentTab     = "Dashboard";
+let currentUser    = null;   // { id, nome, email, perfil }
+let msAccessToken  = null;
+let editIndex      = null;
+let pgtoTarget     = null;
+let relForn        = "";
+let realtimeSub    = null;
+let taxasAtivas    = {USD:"",EUR:"",CHF:"",GBP:""};
+
+let filtros = {
+  inv:     {fornecedor:"",status:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_dtIni:"",_dtFim:""},
+  pgto:    {status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:"",bancos:[],_bancos:[],_status:"Todos"},
+  forn:    {fornecedor:"",dtIni:"",dtFim:"",_fornecedor:"",_dtIni:"",_dtFim:""},
+  cambial: {fornecedor:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_moeda:"",_dtIni:"",_dtFim:""}
+};
+
+// ════════════════════════════════════════════════════════
+//  INICIALIZAÇÃO
+// ════════════════════════════════════════════════════════
+window.onload = async () => {
+  // Inicializa Supabase (se configurado)
+  if (!CONFIG.supabaseUrl.includes("SEU_PROJETO")) {
+    supabase = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
+  }
+
+  // Verifica retorno OAuth Microsoft
+  const hash = window.location.hash;
+  if (hash.includes("access_token")) {
+    const params  = new URLSearchParams(hash.substring(1));
+    msAccessToken = params.get("access_token");
+    window.history.replaceState(null, null, window.location.pathname);
+    await autenticarComMS();
+    return;
+  }
+
+  // Verifica sessão salva
+  const sessao = sessionStorage.getItem("inv_user");
+  if (sessao) {
+    currentUser = JSON.parse(sessao);
+    await carregarDados();
+    iniciarApp();
+    return;
+  }
+
+  esconderLoading();
+  mostrarLogin();
+};
+
+// ════════════════════════════════════════════════════════
+//  AUTH — MICROSOFT 365
+// ════════════════════════════════════════════════════════
+function loginMicrosoft() {
+  if (CONFIG.msClientId === "SEU_CLIENT_ID_AZURE") {
+    alert("⚙️ Configure as credenciais do Azure AD e Supabase no objeto CONFIG no topo do código.");
+    return;
+  }
+  const params = new URLSearchParams({
+    client_id:     CONFIG.msClientId,
+    response_type: "token",
+    redirect_uri:  CONFIG.msRedirectUri,
+    scope:         "User.Read",
+    response_mode: "fragment",
+    nonce:         Math.random().toString(36)
   });
-  renderTaxaFields();abrirModal("modalTaxa");
+  window.location.href = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params}`;
 }
 
-function renderTaxaFields(){
-  document.getElementById("taxaFields").innerHTML=`
-    <table style="width:100%;border-collapse:collapse;margin-bottom:8px">
-      <thead><tr style="background:#1e3a5f;color:#fff">
-        <th style="padding:8px 12px;text-align:left;font-size:12px">Moeda</th>
-        <th style="padding:8px 12px;text-align:left;font-size:12px">Taxa Atual (R$)</th>
-        <th style="padding:8px 12px;text-align:left;font-size:12px">Nova Taxa (R$)</th>
-        <th style="padding:8px 12px;text-align:left;font-size:12px">Invoices Afetadas</th>
-      </tr></thead>
-      <tbody>
-        ${MOEDAS.map(m=>{
-          const afetadas=invoices.filter(i=>i.moeda===m&&i.statusCambio==="Pendente").length;
-          const taxaAtual=taxasAtivas[m]||"—";
-          return`<tr style="border-bottom:1px solid #f1f5f9">
-            <td style="padding:10px 12px">
-              <span style="background:${MOEDA_BG[m]};color:${MOEDA_COR[m]};padding:3px 10px;border-radius:10px;font-weight:700;font-size:12px">${SIMBOLO[m]} ${m}</span>
-            </td>
-            <td style="padding:10px 12px;font-weight:600;color:${MOEDA_COR[m]}">${taxaAtual}</td>
-            <td style="padding:6px 12px">
-              <input id="taxa_${m}" type="text" inputmode="numeric"
-                placeholder="Ex: 5,4585"
-                value="${taxasAtivas[m]||""}"
-                oninput="handleTaxaModalInput(this,'${m}')"
-                style="width:120px;padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px">
-              <div id="err_${m}" style="color:#dc2626;font-size:10px;margin-top:2px"></div>
-            </td>
-            <td style="padding:10px 12px">
-              <span style="background:${afetadas>0?"#fef3c7":"#f1f5f9"};color:${afetadas>0?"#d97706":"#64748b"};padding:2px 8px;border-radius:8px;font-size:12px;font-weight:600">${afetadas} invoice(s)</span>
-            </td>
-          </tr>`;
-        }).join("")}
-      </tbody>
-    </table>`;
-  atualizarPreviewTaxa();
+async function autenticarComMS() {
+  mostrarLoading("Autenticando com Microsoft...");
+  try {
+    const resp = await fetch("https://graph.microsoft.com/v1.0/me", {
+      headers: { Authorization: `Bearer ${msAccessToken}` }
+    });
+    const msUser = await resp.json();
+    const email  = msUser.mail || msUser.userPrincipalName;
+    const nome   = msUser.displayName;
+
+    // Busca ou cria usuário no Supabase
+    currentUser = await buscarOuCriarUsuario(email, nome);
+    sessionStorage.setItem("inv_user", JSON.stringify(currentUser));
+    await carregarDados();
+    iniciarApp();
+  } catch(e) {
+    esconderLoading();
+    mostrarLogin();
+    showToast("Erro ao autenticar com Microsoft: " + e.message, "err");
+  }
 }
 
-function handleTaxaModalInput(el,m){
-  let raw=el.value.replace(/[^\d]/g,"").slice(0,6);
-  if(!raw){el.value="";taxasAtivas[m]="";atualizarPreviewTaxa();return;}
-  const padded=raw.padStart(6,"0");
-  const intPart=padded.slice(0,2).replace(/^0+/,"")||"0";
-  const decPart=padded.slice(2);
-  el.value=`${intPart},${decPart}`;
-  const n=parseFloat(`${intPart}.${decPart}`);
-  const errEl=document.getElementById(`err_${m}`);
-  if(n<1||n>20){errEl.textContent="⚠️ Taxa fora do intervalo aceitável (1,00 a 20,00)";taxasAtivas[m]="";}
-  else{errEl.textContent="";taxasAtivas[m]=el.value;}
-  atualizarPreviewTaxa();
+async function buscarOuCriarUsuario(email, nome) {
+  if (!supabase) return { id: "demo", nome, email, perfil: "admin" };
+
+  // Tenta buscar usuário existente
+  let { data: user } = await supabase
+    .from("usuarios")
+    .select("*")
+    .eq("email", email)
+    .single();
+
+  if (!user) {
+    // Primeiro usuário = admin; demais = visualizador até admin definir perfil
+    const { count } = await supabase.from("usuarios").select("*", { count: "exact", head: true });
+    const perfil = (count === 0) ? "admin" : "visualizador";
+
+    const { data: novo } = await supabase
+      .from("usuarios")
+      .insert({ nome, email, perfil, ativo: true })
+      .select()
+      .single();
+    user = novo;
+    showToast(`Bem-vindo! Perfil atribuído: ${perfil === "admin" ? "Admin" : "Visualizador"}`);
+  }
+
+  // Atualiza nome se mudou
+  if (user.nome !== nome) {
+    await supabase.from("usuarios").update({ nome }).eq("id", user.id);
+    user.nome = nome;
+  }
+
+  return user;
 }
 
-function atualizarPreviewTaxa(){
-  const linhas=MOEDAS.map(m=>{
-    if(!taxasAtivas[m])return"";
-    const t=parseFloat(taxasAtivas[m].replace(/\./g,"").replace(",","."))||0;
-    if(!t)return"";
-    const afetadas=invoices.filter(i=>i.moeda===m&&i.statusCambio==="Pendente");
-    const totalVM=afetadas.reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
-    const totalR=t*totalVM;
-    return`<tr><td style="padding:5px 10px"><span style="color:${MOEDA_COR[m]};font-weight:700">${m}</span></td><td style="padding:5px 10px">R$ ${taxasAtivas[m]}</td><td style="padding:5px 10px">${fmtM(totalVM,m)}</td><td style="padding:5px 10px;font-weight:700;color:#16a34a">${fmtBRL(totalR)}</td></tr>`;
-  }).filter(Boolean).join("");
-  document.getElementById("taxaPreview").innerHTML=linhas?`
-    <div style="background:#f0fdf4;border-radius:8px;padding:12px;border:1px solid #bbf7d0">
-      <div style="font-size:12px;font-weight:700;color:#16a34a;margin-bottom:8px">📊 Preview do impacto:</div>
-      <table style="width:100%;font-size:12px;border-collapse:collapse">
-        <thead><tr style="color:#64748b"><th style="padding:4px 10px;text-align:left">Moeda</th><th style="padding:4px 10px;text-align:left">Nova Taxa</th><th style="padding:4px 10px;text-align:left">Total Moeda</th><th style="padding:4px 10px;text-align:left">Total R$</th></tr></thead>
-        <tbody>${linhas}</tbody>
-      </table>
-    </div>`:"";
+function loginDemo() {
+  currentUser = { id: "demo-admin", nome: "Usuário Demo", email: "demo@empresa.com.br", perfil: "admin" };
+  sessionStorage.setItem("inv_user", JSON.stringify(currentUser));
+  invoices = getDemoData();
+  iniciarApp();
 }
 
-function confirmarTaxas(){
-  let erros=[];let atualizados=0;
-  MOEDAS.forEach(m=>{
-    const val=taxasAtivas[m];if(!val)return;
-    const t=parseFloat(val.replace(/\./g,"").replace(",","."))||0;
-    if(t<1||t>20){erros.push(`${m}: taxa fora do intervalo`);return;}
-    invoices.forEach((inv,idx)=>{
-      if(inv.moeda===m&&inv.statusCambio==="Pendente"){
-        const vm=parseCurrency(inv.valorMoeda)||0;
-        invoices[idx]={...inv,taxa:String(t),reais:vm?(t*vm).toFixed(2):""};
-        atualizados++;
+function logout() {
+  sessionStorage.removeItem("inv_user");
+  if (realtimeSub) realtimeSub.unsubscribe();
+  currentUser    = null;
+  msAccessToken  = null;
+  invoices       = [];
+  document.getElementById("appScreen").style.display  = "none";
+  document.getElementById("loginScreen").style.display = "flex";
+}
+
+// ════════════════════════════════════════════════════════
+//  SUPABASE — CRUD
+// ════════════════════════════════════════════════════════
+async function carregarDados() {
+  if (!supabase) { invoices = getDemoData(); return; }
+  mostrarLoading("Carregando invoices...");
+  try {
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    invoices = data || [];
+
+    const { data: usrs } = await supabase.from("usuarios").select("*").order("nome");
+    usuarios = usrs || [];
+  } catch(e) {
+    showToast("Erro ao carregar dados: " + e.message, "err");
+    invoices = [];
+  } finally {
+    esconderLoading();
+  }
+}
+
+async function salvarInvoiceDB(invoice) {
+  if (!supabase) { renderTab(currentTab); return; }
+  mostrarLoading("Salvando...");
+  try {
+    if (invoice.id) {
+      const { error } = await supabase.from("invoices").update(invoice).eq("id", invoice.id);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from("invoices").insert(invoice);
+      if (error) throw error;
+    }
+  } catch(e) {
+    showToast("Erro ao salvar: " + e.message, "err");
+  } finally {
+    esconderLoading();
+  }
+}
+
+async function excluirInvoiceDB(id) {
+  if (!supabase) { renderTab(currentTab); return; }
+  const { error } = await supabase.from("invoices").delete().eq("id", id);
+  if (error) showToast("Erro ao excluir: " + error.message, "err");
+}
+
+// ════════════════════════════════════════════════════════
+//  REALTIME — SUPABASE SUBSCRIPTIONS
+// ════════════════════════════════════════════════════════
+function iniciarRealtime() {
+  if (!supabase) return;
+  if (realtimeSub) realtimeSub.unsubscribe();
+
+  realtimeSub = supabase
+    .channel("invoices-realtime")
+    .on("postgres_changes", { event: "*", schema: "public", table: "invoices" }, payload => {
+      const { eventType, new: novo, old } = payload;
+      if (eventType === "INSERT") {
+        invoices.unshift(novo);
+      } else if (eventType === "UPDATE") {
+        const idx = invoices.findIndex(i => i.id === novo.id);
+        if (idx !== -1) invoices[idx] = novo;
+      } else if (eventType === "DELETE") {
+        invoices = invoices.filter(i => i.id !== old.id);
       }
-    });
-  });
-  if(erros.length){showToast("Erros: "+erros.join(", "),"err");return;}
-  fecharModal("modalTaxa");
-  salvarDados().then(()=>renderTab(currentTab));
-  showToast(`✅ Taxas aplicadas! ${atualizados} invoice(s) atualizada(s)!`);
+      renderTab(currentTab);
+      showToast("🔄 Dados atualizados em tempo real", "info");
+    })
+    .subscribe();
 }
 
-const fmtBRL=v=>v!=null&&v!==""&&!isNaN(parseFloat(v))?`R$ ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}`:"—";
-const fmtM=(v,m)=>v!=null&&v!==""&&!isNaN(parseFloat(v))?`${SIMBOLO[m]||""} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}`:"—";
-const fmtD=d=>d?new Date(d+"T00:00:00").toLocaleDateString("pt-BR"):"—";
-const hoje=()=>new Date().toISOString().split("T")[0];
-const pct=(v,t)=>t>0?((v/t)*100).toFixed(1)+"%":"0%";
+// ════════════════════════════════════════════════════════
+//  APP INIT
+// ════════════════════════════════════════════════════════
+function iniciarApp() {
+  esconderLoading();
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("appScreen").style.display   = "block";
 
-function parseCurrency(s){
-  if(!s)return 0;if(typeof s==="number")return s;
-  return parseFloat(String(s).replace(/\./g,"").replace(",","."))||0;
-}
+  // Header info
+  document.getElementById("userName").textContent = currentUser.nome || currentUser.email;
+  const perfilBadge = document.getElementById("userRole");
+  const perfilLabel = { admin:"👑 Admin", financeiro:"💼 Financeiro", visualizador:"👁 Visualizador" };
+  const perfilColors = { admin:"#ede9fe;color:#7c3aed", financeiro:"#dbeafe;color:#1d4ed8", visualizador:"#f1f5f9;color:#475569" };
+  perfilBadge.innerHTML = `<span style="background:${perfilColors[currentUser.perfil]};padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700">${perfilLabel[currentUser.perfil]||currentUser.perfil}</span>`;
 
-// ===== UTILITÁRIOS XLSX NATIVO (padrão brasileiro) =====
-// Datas usam formato de exibição dd/mm/aaaa. Os campos numéricos (taxa, reais,
-// valorMoeda, valorPago) são gravados como TEXTO no padrão BR (vírgula decimal),
-// preservando exatamente o valor — por isso não recebem código de formato numérico.
-const XLSX_FMT_DATA="dd/mm/yyyy";          // data brasileira
-
-// Converte uma string de data ISO ("YYYY-MM-DD") em objeto Date (meia-noite local).
-function isoParaData(s){
-  if(!s||!/^\d{4}-\d{2}-\d{2}/.test(String(s)))return null;
-  const[y,m,d]=String(s).split("T")[0].split("-").map(Number);
-  return new Date(y,m-1,d);
-}
-// Converte objeto Date (lido do xlsx) de volta para string ISO "YYYY-MM-DD".
-function dataParaIso(v){
-  if(v instanceof Date&&!isNaN(v)){
-    const y=v.getFullYear(),m=String(v.getMonth()+1).padStart(2,"0"),d=String(v.getDate()).padStart(2,"0");
-    return `${y}-${m}-${d}`;
-  }
-  if(typeof v==="string"){
-    // Aceita tanto ISO quanto DD/MM/YYYY vindos de planilhas editadas manualmente.
-    if(/^\d{4}-\d{2}-\d{2}/.test(v))return v.split("T")[0];
-    const br=v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-    if(br)return `${br[3]}-${br[2]}-${br[1]}`;
-  }
-  return "";
-}
-// Normaliza um valor numérico lido da planilha (número nativo OU texto BR/JS)
-// para number JS, tolerando célula vazia.
-function numDePlanilha(v){
-  if(v===null||v===undefined||v==="")return null;
-  if(typeof v==="number")return v;
-  // String: pode vir como "15.000,00" (BR) ou "15000.00" (JS) dependendo da edição.
-  const s=String(v).trim();
-  if(/,/.test(s))return parseFloat(s.replace(/\./g,"").replace(",","."));
-  const n=parseFloat(s);
-  return isNaN(n)?null:n;
-}
-// Converte um valor numérico em TEXTO no padrão brasileiro: vírgula decimal,
-// sem separador de milhar e sem zeros à direita forçados.
-//   origemBR: false (padrão) interpreta string com ponto decimal estilo JS
-//             ("5.8555","146387.50"); true interpreta string já BR ("68.850,00").
-//   casas:    nº máximo de casas decimais para arredondar (remove ruído de float).
-//             Use 2 para valores monetários e 4 para taxa. Padrão 2.
-// Ex.: numParaTextoBR("146387.50") -> "146387,5"; numParaTextoBR("5.8555",false,4) -> "5,8555".
-function numParaTextoBR(v,origemBR,casas){
-  if(v===null||v===undefined||v==="")return"";
-  let n;
-  if(typeof v==="number")n=v;
-  else n=origemBR?parseCurrency(v):parseFloat(v);
-  if(isNaN(n))return"";
-  const d=(casas===undefined)?2:casas;
-  const f=Math.pow(10,d);
-  const arred=Math.round(n*f)/f;
-  return String(arred).replace(".",",");
-}
-// Conjuntos de campos por tipo, usados na (re)serialização do xlsx.
-const CAMPOS_DATA=["dtPedido","dtEmbarque","emissaoFatura","dtAntecipado","vencimento","dtPgto"];
-const CAMPOS_MOEDA=["valorMoeda","reais","valorPago"]; // numéricos (gravados como texto BR)
-const CAMPOS_TAXA=["taxa"];
-function fmtCurrencyDisplay(v){
-  if(!v&&v!==0)return"";
-  const n=typeof v==="string"?parseCurrency(v):v;
-  if(isNaN(n))return"";
-  return n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
-}
-function handleTaxaInput(el,key){
-  let raw=el.value.replace(/[^\d]/g,"").slice(0,6);
-  if(!raw){el.value="";updateForm(key,"");return;}
-  const padded=raw.padStart(6,"0");
-  const intPart=padded.slice(0,2).replace(/^0+/,"")||"0";
-  const decPart=padded.slice(2);
-  el.value=`${intPart},${decPart}`;
-  updateForm(key,String(parseFloat(`${intPart}.${decPart}`)));
-}
-function handleCurrencyInput(el,key){
-  let raw=el.value.replace(/[^\d]/g,"");
-  if(!raw){el.value="";updateForm(key,"");return;}
-  const n=parseInt(raw,10)/100;
-  el.value=n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
-  updateForm(key,el.value);
-}
-function calcVcto(embarque,cond){
-  if(!embarque||cond==="Antecipado")return"";
-  const dias=COND_DIAS[cond]||0;
-  const d=new Date(embarque+"T00:00:00");d.setDate(d.getDate()+dias);
-  return d.toISOString().split("T")[0];
-}
-function alertaVcto(vcto,status){
-  if(!vcto||status==="Pago Total")return null;
-  const diff=(new Date(vcto+"T00:00:00")-new Date())/86400000;
-  if(diff<0)return"vencido";if(diff<=7)return"urgente";if(diff<=15)return"alerta";return null;
-}
-function statusBadge(s){
-  const cls=s==="Pago Total"?"badge-green":s==="Em Aberto"?"badge-red":"badge-yellow";
-  return`<span class="badge ${cls}">${s||"Em Aberto"}</span>`;
-}
-function showToast(msg,tipo="ok"){
-  const t=document.getElementById("toast");t.textContent=msg;
-  t.style.background=tipo==="err"?"#dc2626":"#16a34a";t.style.display="block";
-  setTimeout(()=>t.style.display="none",3000);
-}
-function abrirModal(id){document.getElementById(id).classList.add("open");document.addEventListener("keydown",handleEsc);}
-function fecharModal(id){document.getElementById(id).classList.remove("open");document.removeEventListener("keydown",handleEsc);}
-function handleEsc(e){if(e.key==="Escape"){["modalInvoice","modalPgto"].forEach(id=>{if(document.getElementById(id).classList.contains("open"))fecharModal(id);});}}
-
-// ===== GRÁFICO =====
-function renderGraficoMoeda(dados,titulo){
-  const max=Math.max(...dados.map(d=>d.pct),1);
-  const bars=dados.map(d=>`
-    <div class="chart-bar">
-      <div style="font-size:11px;font-weight:700;color:${d.cor}">${d.pct.toFixed(1)}%</div>
-      <div style="width:52px;height:${Math.max((d.pct/max)*140,4).toFixed(0)}px;background:${d.cor};border-radius:6px 6px 0 0;transition:height .4s"></div>
-      <div style="font-size:11px;font-weight:700;color:${d.cor}">${d.moeda}</div>
-      <div style="font-size:10px;color:#64748b;text-align:center">${fmtM(d.valor,d.moeda)}</div>
-    </div>`).join("");
-  return`<div class="card">
-    <div style="font-weight:700;color:#1e3a5f;margin-bottom:14px">📊 ${titulo}</div>
-    <div class="chart-wrap">${bars}</div>
-  </div>`;
+  iniciarRealtime();
+  renderTabBar();
+  renderTab("Dashboard");
 }
 
-// ===== AUTH =====
-function getAuthUrl(){
-  const p=new URLSearchParams({client_id:CONFIG.clientId,response_type:"token",redirect_uri:CONFIG.redirectUri,scope:CONFIG.scopes.join(" "),response_mode:"fragment",nonce:Math.random().toString(36)});
-  return`https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${p}`;
+// ════════════════════════════════════════════════════════
+//  PERMISSÕES
+// ════════════════════════════════════════════════════════
+function pode(acao) {
+  const p = currentUser?.perfil;
+  if (acao === "editar")    return p === "admin" || p === "financeiro";
+  if (acao === "excluir")   return p === "admin";
+  if (acao === "pagamento") return p === "admin" || p === "financeiro";
+  if (acao === "taxa")      return p === "admin" || p === "financeiro";
+  if (acao === "usuarios")  return p === "admin";
+  if (acao === "nova")      return p === "admin" || p === "financeiro";
+  return true;
 }
-function loginMicrosoft(){if(CONFIG.clientId==="SEU_CLIENT_ID_AQUI"){loginDemo();return;}window.location.href=getAuthUrl();}
-function loginDemo(){accessToken="demo";currentUser={displayName:"Usuário Demo"};invoices=getDemoData();iniciarApp();}
-function checkAuth(){
-  const hash=window.location.hash;
-  if(hash.includes("access_token")){
-    const p=new URLSearchParams(hash.substring(1));accessToken=p.get("access_token");
-    window.history.replaceState(null,null,window.location.pathname);carregarUsuario();return true;
-  }return false;
+
+function getTabs() {
+  return TABS_POR_PERFIL[currentUser?.perfil] || TABS_POR_PERFIL.visualizador;
 }
-async function carregarUsuario(){
-  try{const r=await msGraph("GET","https://graph.microsoft.com/v1.0/me");currentUser=r;document.getElementById("userName").textContent=r.displayName||r.mail;await carregarDados();iniciarApp();}
-  catch(e){showToast("Erro ao carregar usuário","err");}
+
+// ════════════════════════════════════════════════════════
+//  UI HELPERS
+// ════════════════════════════════════════════════════════
+function mostrarLoading(msg) {
+  const el = document.getElementById("loadingOverlay");
+  el.querySelector("div:last-child").textContent = msg || "Carregando...";
+  el.style.display = "flex";
 }
-function logout(){accessToken=null;currentUser=null;invoices=[];document.getElementById("appScreen").style.display="none";document.getElementById("loginScreen").style.display="flex";}
-async function msGraph(method,url,body){
-  const opts={method,headers:{Authorization:`Bearer ${accessToken}`,"Content-Type":"application/json"}};
-  if(body)opts.body=JSON.stringify(body);
-  const r=await fetch(url,opts);if(!r.ok)throw new Error(await r.text());
-  if(r.status===204)return null;return r.json();
+function esconderLoading() { document.getElementById("loadingOverlay").style.display = "none"; }
+function mostrarLogin()    { document.getElementById("loginScreen").style.display = "flex"; }
+
+function showToast(msg, tipo="ok") {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.background = tipo === "err" ? "#dc2626" : tipo === "info" ? "#0284c7" : "#16a34a";
+  t.style.display = "block";
+  setTimeout(() => t.style.display = "none", 3500);
 }
-async function carregarDados(){
-  if(accessToken==="demo"){invoices=getDemoData();return;}
-  try{
-    document.getElementById("syncStatus").textContent="● Sincronizando...";
-    const path=encodeURIComponent(`${CONFIG.folderPath}/${CONFIG.fileName}`);
-    const r=await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:${path}:/content`,{headers:{Authorization:`Bearer ${accessToken}`}});
-    if(r.status===404){invoices=[];salvarDados();return;}
-    const buf=await r.arrayBuffer();
-    const wb=XLSX.read(buf,{type:"array",cellDates:true});
-    const ws=wb.Sheets["Invoices"];
-    if(!ws){invoices=[];return;}
-    // Lê valores brutos (raw:true) para receber datas como Date e números como number,
-    // depois reconverte para o contrato interno de strings que o restante do app espera.
-    const linhas=XLSX.utils.sheet_to_json(ws,{raw:true,defval:""});
-    invoices=linhas.map(linha=>{
-      const o={...linha};
-      // Datas → ISO "YYYY-MM-DD"
-      CAMPOS_DATA.forEach(c=>{o[c]=dataParaIso(linha[c]);});
-      // valorMoeda → string BR "15.000,00"; reais/valorPago → string JS com ponto
-      const vm=numDePlanilha(linha.valorMoeda);
-      o.valorMoeda=vm===null?"":vm.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
-      ["reais","valorPago"].forEach(c=>{const n=numDePlanilha(linha[c]);o[c]=n===null?"":String(n);});
-      // taxa → string JS com ponto (ex.: "5.42")
-      const tx=numDePlanilha(linha.taxa);
-      o.taxa=tx===null?"":String(tx);
-      // Demais campos como texto simples
-      Object.keys(o).forEach(c=>{if(o[c]==null)o[c]="";else if(typeof o[c]!=="string"&&!CAMPOS_DATA.includes(c)&&!CAMPOS_MOEDA.includes(c)&&!CAMPOS_TAXA.includes(c))o[c]=String(o[c]);});
-      return o;
-    });
-    document.getElementById("syncStatus").textContent="● Conectado ao OneDrive";
-  }catch(e){showToast("Erro ao carregar OneDrive","err");invoices=[];}
+
+function abrirModal(id)  { document.getElementById(id).classList.add("open"); document.addEventListener("keydown", handleEsc); }
+function fecharModal(id) { document.getElementById(id).classList.remove("open"); document.removeEventListener("keydown", handleEsc); }
+function handleEsc(e)    { if (e.key === "Escape") ["modalInvoice","modalPgto","modalTaxa","modalUsuarios"].forEach(id => { if (document.getElementById(id).classList.contains("open")) fecharModal(id); }); }
+
+// ════════════════════════════════════════════════════════
+//  FORMATAÇÃO
+// ════════════════════════════════════════════════════════
+const fmtBRL = v => (v != null && v !== "" && !isNaN(parseFloat(v)))
+  ? `R$ ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}` : "—";
+
+const fmtM = (v, m) => (v != null && v !== "" && !isNaN(parseFloat(v)))
+  ? `${SIMBOLO[m]||""} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}` : "—";
+
+const fmtD = d => d ? new Date(d+"T00:00:00").toLocaleDateString("pt-BR") : "—";
+const hoje = () => new Date().toISOString().split("T")[0];
+const pct  = (v,t) => t > 0 ? ((v/t)*100).toFixed(1)+"%" : "0%";
+
+function parseCurrency(s) {
+  if (!s) return 0;
+  if (typeof s === "number") return s;
+  return parseFloat(String(s).replace(/\./g,"").replace(",",".")) || 0;
 }
-async function salvarDados(){
-  if(accessToken==="demo"){renderTab(currentTab);return;}
-  try{
-    document.getElementById("syncStatus").textContent="● Salvando...";
-    const cols=["pasta","cidade","fornecedor","marca","dtPedido","nProforma","nFatura","dtEmbarque","emissaoFatura","dtAntecipado","condPgto","vencimento","dtPgto","banco","taxa","moeda","valorMoeda","reais","statusCambio","statusPgto","awbBl","valorPago","obs"];
-    // Monta a planilha como matriz de linhas.
-    // - Datas → Date real (formato dd/mm/aaaa).
-    // - taxa, reais, valorPago → TEXTO no padrão BR (vírgula decimal, sem milhar,
-    //   sem zeros à direita forçados): ex. 146387.50 -> "146387,5", 5.8555 -> "5,8555".
-    // - valorMoeda → preserva a string já existente no app (formato BR com milhar,
-    //   ex. "68.850,00"), apenas normalizando inteiros (ex. "25000").
-    const aoa=[cols];
-    invoices.forEach(i=>{
-      aoa.push(cols.map(c=>{
-        if(CAMPOS_DATA.includes(c)){const d=isoParaData(i[c]);return d||"";}
-        if(c==="valorMoeda"){
-          if(i[c]===""||i[c]==null)return "";
-          // Se já vier formatado em BR (contém vírgula), mantém; senão é inteiro puro.
-          return /,/.test(String(i[c]))?String(i[c]):numParaTextoBR(i[c],false,2);
-        }
-        if(CAMPOS_TAXA.includes(c)){
-          // Taxa: até 4 casas decimais (ex.: "5.8555" -> "5,8555").
-          return numParaTextoBR(i[c],false,4);
-        }
-        if(c==="reais"||c==="valorPago"){
-          // Valor em R$: até 2 casas (ex.: "146387.50" -> "146387,5").
-          return numParaTextoBR(i[c],false,2);
-        }
-        return i[c]||"";
-      }));
-    });
-    const ws=XLSX.utils.aoa_to_sheet(aoa,{cellDates:true});
-    // Aplica formato de data brasileira nas células de data. Os campos numéricos
-    // ficam como texto (não recebem formato numérico), exibindo exatamente o valor BR.
-    const range=XLSX.utils.decode_range(ws["!ref"]);
-    for(let R=1;R<=range.e.r;R++){
-      cols.forEach((c,C)=>{
-        const cell=ws[XLSX.utils.encode_cell({r:R,c:C})];
-        if(!cell||cell.v===""||cell.v==null)return;
-        if(CAMPOS_DATA.includes(c))cell.z=XLSX_FMT_DATA;
-        else if(c==="taxa"||c==="reais"||c==="valorPago"||c==="valorMoeda"){
-          // Força tipo texto para preservar exatamente "146387,5" / "68.850,00".
-          cell.t="s";cell.v=String(cell.v);
-        }
-      });
+
+function fmtCurrencyDisplay(v) {
+  if (!v && v !== 0) return "";
+  const n = typeof v === "string" ? parseCurrency(v) : v;
+  return isNaN(n) ? "" : n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function statusBadge(s) {
+  const cls = s==="Pago Total" ? "badge-green" : s==="Em Aberto" ? "badge-red" : "badge-yellow";
+  return `<span class="badge ${cls}">${s||"Em Aberto"}</span>`;
+}
+
+// ════════════════════════════════════════════════════════
+//  TAB BAR & ROUTER
+// ════════════════════════════════════════════════════════
+function renderTabBar() {
+  document.getElementById("tabBar").innerHTML = getTabs().map(t =>
+    `<button class="tab${t===currentTab?" active":""}" onclick="renderTab('${t}')">${t}</button>`
+  ).join("");
+}
+
+function renderTab(tab) {
+  currentTab = tab;
+  renderTabBar();
+  const el = document.getElementById("mainContent");
+  if      (tab === "Dashboard")       el.innerHTML = renderDashboard();
+  else if (tab === "Nova Invoice")    { abrirFormInvoice(); el.innerHTML = renderInvoices(); }
+  else if (tab === "Invoices")        el.innerHTML = renderInvoices();
+  else if (tab === "Pagamentos")      el.innerHTML = renderPagamentos();
+  else if (tab === "Fornecedores")    el.innerHTML = renderRelForn();
+  else if (tab === "Análise Cambial") el.innerHTML = renderAnaliseCambial();
+  else if (tab === "Usuários")        el.innerHTML = renderUsuarios();
+}
+
+// ════════════════════════════════════════════════════════
+//  FILTROS
+// ════════════════════════════════════════════════════════
+function filtroBar(ns, campos, onBuscar) {
+  const inputs = campos.map(c => {
+    if (c.type === "select") {
+      const val = filtros[ns]["_"+c.key] || "";
+      return `<div><label class="form-label">${c.label}</label><select id="f_${ns}_${c.key}" onchange="filtros['${ns}']['_${c.key}']=this.value">${(c.options||[]).map(o=>`<option value="${o.val}"${val===o.val?" selected":""}>${o.txt}</option>`).join("")}</select></div>`;
     }
-    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Invoices");
-    const buf=XLSX.write(wb,{type:"array",bookType:"xlsx",cellDates:true});
-    const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
-    const path=encodeURIComponent(`${CONFIG.folderPath}/${CONFIG.fileName}`);
-    await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:${path}:/content`,{method:"PUT",headers:{Authorization:`Bearer ${accessToken}`,"Content-Type":"application/octet-stream"},body:blob});
-    document.getElementById("syncStatus").textContent="● Salvo ✓";
-    setTimeout(()=>document.getElementById("syncStatus").textContent="● Conectado ao OneDrive",3000);
-  }catch(e){showToast("Erro ao salvar","err");}
-}
-
-function iniciarApp(){
-  document.getElementById("loginScreen").style.display="none";
-  document.getElementById("appScreen").style.display="block";
-  if(currentUser)document.getElementById("userName").textContent=currentUser.displayName||currentUser.mail||"Usuário";
-  setupPWA();renderTabBar();renderTab("Dashboard");
-}
-function renderTabBar(){
-  document.getElementById("tabBar").innerHTML=TABS.map(t=>`<button class="tab${t===currentTab?" active":""}" onclick="renderTab('${t}')">${t}</button>`).join("");
-}
-function renderTab(tab){
-  currentTab=tab;renderTabBar();
-  const el=document.getElementById("mainContent");
-  if(tab==="Dashboard")el.innerHTML=renderDashboard();
-  else if(tab==="Nova Invoice"){abrirFormInvoice();el.innerHTML=renderInvoices();}
-  else if(tab==="Invoices")el.innerHTML=renderInvoices();
-  else if(tab==="Pagamentos")el.innerHTML=renderPagamentos();
-  else if(tab==="Fornecedores")el.innerHTML=renderRelForn();
-  else if(tab==="Análise Cambial")el.innerHTML=renderAnaliseCambial();
-}
-
-// ===== FILTRO HELPERS =====
-function filtroBar(ns,campos,onBuscar){
-  const inputs=campos.map(c=>{
-    if(c.type==="select"){
-      const val=filtros[ns]["_"+c.key]||filtros[ns][c.key]||"";
-      return`<div><label class="form-label">${c.label}</label><select id="f_${ns}_${c.key}" onchange="filtros['${ns}']['_${c.key}']=this.value">${(c.options||[]).map(o=>`<option value="${o.val}"${val===o.val?" selected":""}>${o.txt}</option>`).join("")}</select></div>`;
-    }
-    const val=filtros[ns]["_"+c.key]||"";
-    return`<div><label class="form-label">${c.label}</label><input type="date" id="f_${ns}_${c.key}" value="${val}" onchange="filtros['${ns}']['_${c.key}']=this.value"></div>`;
+    const val = filtros[ns]["_"+c.key] || "";
+    return `<div><label class="form-label">${c.label}</label><input type="date" id="f_${ns}_${c.key}" value="${val}" onchange="filtros['${ns}']['_${c.key}']=this.value"></div>`;
   }).join("");
-  return`<div class="card" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-    ${inputs}
-    <button class="btn-search" onclick="${onBuscar}">🔍 Buscar</button>
-    <button class="btn btn-ghost" onclick="limparFiltro('${ns}')">✖ Limpar</button>
-  </div>`;
+  return `<div class="filter-bar">${inputs}<button class="btn-search" onclick="${onBuscar}">🔍 Buscar</button><button class="btn btn-ghost" onclick="limparFiltro('${ns}')">✖ Limpar</button></div>`;
 }
 
-function limparFiltro(ns){
-  const f=filtros[ns];
-  Object.keys(f).forEach(k=>{if(Array.isArray(f[k]))f[k]=[];else f[k]="";});
-  if(ns==="pgto"){filtros.pgto.status="Todos";filtros.pgto._status="Todos";filtros.pgto.bancos=[];filtros.pgto._bancos=[];}
-  ["status","fornecedor","moeda","dtIni","dtFim"].forEach(k=>{
-    const el=document.getElementById(`f_${ns}_${k}`);
-    if(el){if(el.tagName==="SELECT")el.value=el.options[0]?.value||"";else el.value="";}
-  });
+function limparFiltro(ns) {
+  const f = filtros[ns];
+  Object.keys(f).forEach(k => { if (Array.isArray(f[k])) f[k]=[]; else f[k]=""; });
+  if (ns==="pgto") { filtros.pgto.status="Todos"; filtros.pgto._status="Todos"; filtros.pgto.bancos=[]; filtros.pgto._bancos=[]; }
   renderTab(currentTab);
 }
 
-function aplicarFiltroInv(){
-  filtros.inv.fornecedor=filtros.inv._fornecedor;
-  filtros.inv.status=filtros.inv._status;
-  filtros.inv.moeda=filtros.inv._moeda;
-  filtros.inv.dtIni=filtros.inv._dtIni;
-  filtros.inv.dtFim=filtros.inv._dtFim;
-  renderTab("Invoices");
-}
-function aplicarFiltroPgto(){
-  const sel=document.getElementById("f_pgto_status");
-  const dtIni=document.getElementById("f_pgto_dtIni");
-  const dtFim=document.getElementById("f_pgto_dtFim");
-  filtros.pgto.status=sel?sel.value:"Todos";
-  filtros.pgto.dtIni=dtIni?dtIni.value:"";
-  filtros.pgto.dtFim=dtFim?dtFim.value:"";
+function aplicarFiltroInv()     { Object.assign(filtros.inv, {fornecedor:filtros.inv._fornecedor,status:filtros.inv._status,moeda:filtros.inv._moeda,dtIni:filtros.inv._dtIni,dtFim:filtros.inv._dtFim}); renderTab("Invoices"); }
+function aplicarFiltroPgto()    {
+  filtros.pgto.status=document.getElementById("f_pgto_status")?.value||"Todos";
+  filtros.pgto.dtIni=document.getElementById("f_pgto_dtIni")?.value||"";
+  filtros.pgto.dtFim=document.getElementById("f_pgto_dtFim")?.value||"";
   filtros.pgto._status=filtros.pgto.status;
   filtros.pgto._dtIni=filtros.pgto.dtIni;
   filtros.pgto._dtFim=filtros.pgto.dtFim;
   filtros.pgto.bancos=[...filtros.pgto._bancos];
   renderTab("Pagamentos");
 }
+function aplicarFiltroForn()    { Object.assign(filtros.forn, {fornecedor:filtros.forn._fornecedor,dtIni:filtros.forn._dtIni,dtFim:filtros.forn._dtFim}); if(filtros.forn.fornecedor) relForn=filtros.forn.fornecedor; renderTab("Fornecedores"); }
+function aplicarFiltroCambial() { Object.assign(filtros.cambial, {fornecedor:filtros.cambial._fornecedor,moeda:filtros.cambial._moeda,dtIni:filtros.cambial._dtIni,dtFim:filtros.cambial._dtFim}); renderTab("Análise Cambial"); }
 
-// ===== BANCO MULTI-SELECT =====
-function getBancosDisponiveis(){
-  return [...new Set(invoices.map(i=>i.banco).filter(b=>b&&b.trim()!==""))].sort();
-}
-
-function toggleBancoDropdown(){
-  const dd=document.getElementById("banco-dropdown");
-  const tr=document.getElementById("banco-trigger");
-  if(!dd)return;
-  const isOpen=dd.classList.contains("open");
-  if(isOpen){dd.classList.remove("open");tr.classList.remove("active");}
-  else{dd.classList.add("open");tr.classList.add("active");}
-}
-
-function toggleBancoOpcao(banco){
-  const arr=filtros.pgto._bancos;
-  const idx=arr.indexOf(banco);
-  if(idx===-1)arr.push(banco);else arr.splice(idx,1);
-  // update checkbox visual
-  const cb=document.getElementById(`cb_banco_${CSS.escape(banco)}`);
-  if(cb)cb.checked=arr.includes(banco);
-  // update option highlight
-  const opt=document.getElementById(`opt_banco_${CSS.escape(banco)}`);
-  if(opt)opt.classList.toggle("selected",arr.includes(banco));
-  // update trigger label + chips instantly (real-time)
-  atualizarBancoTrigger();
-  // apply filter real-time
-  filtros.pgto.bancos=[...arr];
-  renderTab("Pagamentos");
-}
-
-function removerBancoChip(banco){
-  filtros.pgto._bancos=filtros.pgto._bancos.filter(b=>b!==banco);
-  filtros.pgto.bancos=[...filtros.pgto._bancos];
-  renderTab("Pagamentos");
-}
-
-function atualizarBancoTrigger(){
-  const tr=document.getElementById("banco-trigger");
-  const chips=document.getElementById("banco-chips");
-  if(!tr)return;
-  const sel=filtros.pgto._bancos;
-  tr.querySelector(".banco-trigger-txt").textContent=sel.length===0?"Todos os bancos":sel.length===1?sel[0]:`${sel.length} bancos selecionados`;
-  if(chips){
-    chips.innerHTML=sel.map(b=>`<span class="banco-chip">${b}<span class="banco-chip-x" onclick="event.stopPropagation();removerBancoChip('${b.replace(/'/g,"\\'")}')">×</span></span>`).join("");
-  }
-}
-
-// Close dropdown when clicking outside
-document.addEventListener("click",function(e){
-  const wrap=document.getElementById("banco-filter-wrap");
-  if(wrap&&!wrap.contains(e.target)){
-    const dd=document.getElementById("banco-dropdown");
-    const tr=document.getElementById("banco-trigger");
-    if(dd)dd.classList.remove("open");
-    if(tr)tr.classList.remove("active");
-  }
-});
-function aplicarFiltroForn(){
-  filtros.forn.fornecedor=filtros.forn._fornecedor;
-  filtros.forn.dtIni=filtros.forn._dtIni;
-  filtros.forn.dtFim=filtros.forn._dtFim;
-  if(filtros.forn.fornecedor)relForn=filtros.forn.fornecedor;
-  renderTab("Fornecedores");
-}
-function aplicarFiltroCambial(){
-  filtros.cambial.fornecedor=filtros.cambial._fornecedor;
-  filtros.cambial.moeda=filtros.cambial._moeda;
-  filtros.cambial.dtIni=filtros.cambial._dtIni;
-  filtros.cambial.dtFim=filtros.cambial._dtFim;
-  renderTab("Análise Cambial");
-}
-
-function filtroAtivoTxt(ns){
-  const f=filtros[ns];const partes=[];
-  if(f.fornecedor)partes.push(`Fornecedor: ${f.fornecedor}`);
-  if(f.moeda)partes.push(`Moeda: ${f.moeda}`);
-  if(f.status&&f.status!=="Todos")partes.push(`Status: ${f.status}`);
-  if(f.dtIni)partes.push(`De: ${fmtD(f.dtIni)}`);
-  if(f.dtFim)partes.push(`Até: ${fmtD(f.dtFim)}`);
-  return partes.length?`✅ Filtro ativo: ${partes.join(" | ")}`:"";
-}
-
-function getInvFiltradas(){
-  const f=filtros.inv;
-  return invoices.filter(i=>{
-    if(f.fornecedor&&i.fornecedor!==f.fornecedor)return false;
-    if(f.status&&i.statusPgto!==f.status)return false;
-    if(f.moeda&&i.moeda!==f.moeda)return false;
-    if(f.dtIni&&i.emissaoFatura&&i.emissaoFatura<f.dtIni)return false;
-    if(f.dtFim&&i.emissaoFatura&&i.emissaoFatura>f.dtFim)return false;
+function getInvFiltradas() {
+  const f = filtros.inv;
+  return invoices.filter(i => {
+    if (f.fornecedor && i.fornecedor !== f.fornecedor) return false;
+    if (f.status     && i.status_pgto !== f.status)   return false;
+    if (f.moeda      && i.moeda !== f.moeda)           return false;
+    if (f.dtIni      && i.emissao_fatura && i.emissao_fatura < f.dtIni) return false;
+    if (f.dtFim      && i.emissao_fatura && i.emissao_fatura > f.dtFim) return false;
     return true;
   });
 }
 
-// ===== DASHBOARD =====
-function renderDashboard(){
-  const kpisMoeda=MOEDAS.map(m=>{
-    const invs=invoices.filter(i=>i.moeda===m);
-    const aberto=invs.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
-    const pago=invs.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
-    const total=invs.reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
-    if(!total)return"";
-    return`<div class="kpi-moeda" style="background:${MOEDA_BG[m]};border-color:${MOEDA_COR[m]}">
+function filtroAtivoTxt(ns) {
+  const f = filtros[ns], p = [];
+  if (f.fornecedor)               p.push(`Fornecedor: ${f.fornecedor}`);
+  if (f.moeda)                    p.push(`Moeda: ${f.moeda}`);
+  if (f.status && f.status!=="Todos") p.push(`Status: ${f.status}`);
+  if (f.dtIni)                    p.push(`De: ${fmtD(f.dtIni)}`);
+  if (f.dtFim)                    p.push(`Até: ${fmtD(f.dtFim)}`);
+  return p.length ? `✅ Filtro ativo: ${p.join(" | ")}` : "";
+}
+
+// ════════════════════════════════════════════════════════
+//  BANCO MULTI-SELECT (Pagamentos)
+// ════════════════════════════════════════════════════════
+function getBancosDisponiveis() {
+  return [...new Set(invoices.map(i=>i.banco).filter(Boolean))].sort();
+}
+function toggleBancoDropdown() {
+  const dd = document.getElementById("banco-dropdown");
+  const tr = document.getElementById("banco-trigger");
+  if (!dd) return;
+  dd.classList.toggle("open");
+  tr.classList.toggle("active");
+}
+function toggleBancoOpcao(banco) {
+  const arr = filtros.pgto._bancos;
+  const idx = arr.indexOf(banco);
+  if (idx===-1) arr.push(banco); else arr.splice(idx,1);
+  filtros.pgto.bancos = [...arr];
+  renderTab("Pagamentos");
+}
+function removerBancoChip(banco) {
+  filtros.pgto._bancos = filtros.pgto._bancos.filter(b=>b!==banco);
+  filtros.pgto.bancos  = [...filtros.pgto._bancos];
+  renderTab("Pagamentos");
+}
+document.addEventListener("click", e => {
+  const wrap = document.getElementById("banco-filter-wrap");
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById("banco-dropdown")?.classList.remove("open");
+    document.getElementById("banco-trigger")?.classList.remove("active");
+  }
+});
+
+// ════════════════════════════════════════════════════════
+//  ALERTAS DE VENCIMENTO
+// ════════════════════════════════════════════════════════
+function alertaVcto(vcto, status) {
+  if (!vcto || status==="Pago Total") return null;
+  const diff = (new Date(vcto+"T00:00:00") - new Date()) / 86400000;
+  if (diff < 0)  return "vencido";
+  if (diff <= 7) return "urgente";
+  if (diff <= 15)return "alerta";
+  return null;
+}
+function calcVcto(embarque, cond) {
+  if (!embarque || cond==="Antecipado") return "";
+  const d = new Date(embarque+"T00:00:00");
+  d.setDate(d.getDate() + (COND_DIAS[cond]||0));
+  return d.toISOString().split("T")[0];
+}
+
+// ════════════════════════════════════════════════════════
+//  GRÁFICO DE BARRAS
+// ════════════════════════════════════════════════════════
+function renderGraficoMoeda(dados, titulo) {
+  const max = Math.max(...dados.map(d=>d.pct), 1);
+  const bars = dados.map(d => `
+    <div class="chart-bar">
+      <div style="font-size:11px;font-weight:700;color:${d.cor}">${d.pct.toFixed(1)}%</div>
+      <div style="width:52px;height:${Math.max((d.pct/max)*140,4).toFixed(0)}px;background:${d.cor};border-radius:6px 6px 0 0;transition:height .4s"></div>
+      <div style="font-size:11px;font-weight:700;color:${d.cor}">${d.moeda}</div>
+      <div style="font-size:10px;color:#64748b;text-align:center">${fmtM(d.valor,d.moeda)}</div>
+    </div>`).join("");
+  return `<div class="card"><div style="font-weight:700;color:#1e3a5f;margin-bottom:14px">📊 ${titulo}</div><div class="chart-wrap">${bars}</div></div>`;
+}
+
+// ════════════════════════════════════════════════════════
+//  TAXAS DE CÂMBIO
+// ════════════════════════════════════════════════════════
+function abrirModalTaxa() {
+  if (!pode("taxa")) { showToast("Sem permissão para alterar taxas", "err"); return; }
+  MOEDAS.forEach(m => {
+    if (!taxasAtivas[m]) {
+      const arr = invoices.filter(i => i.moeda===m && i.taxa && parseFloat(i.taxa)>0);
+      if (arr.length) taxasAtivas[m] = parseFloat(arr[arr.length-1].taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4});
+    }
+  });
+  renderTaxaFields();
+  abrirModal("modalTaxa");
+}
+
+function renderTaxaFields() {
+  document.getElementById("taxaFields").innerHTML = `
+    <table style="width:100%;border-collapse:collapse;margin-bottom:8px">
+      <thead><tr style="background:#1e3a5f;color:#fff">
+        <th style="padding:8px 12px;font-size:12px">Moeda</th>
+        <th style="padding:8px 12px;font-size:12px">Taxa Atual</th>
+        <th style="padding:8px 12px;font-size:12px">Nova Taxa (R$)</th>
+        <th style="padding:8px 12px;font-size:12px">Invoices Afetadas</th>
+      </tr></thead>
+      <tbody>${MOEDAS.map(m => {
+        const afetadas = invoices.filter(i => i.moeda===m && i.status_cambio==="Pendente").length;
+        return `<tr style="border-bottom:1px solid #f1f5f9">
+          <td style="padding:10px 12px"><span style="background:${MOEDA_BG[m]};color:${MOEDA_COR[m]};padding:3px 10px;border-radius:10px;font-weight:700;font-size:12px">${SIMBOLO[m]} ${m}</span></td>
+          <td style="padding:10px 12px;font-weight:600;color:${MOEDA_COR[m]}">${taxasAtivas[m]||"—"}</td>
+          <td style="padding:6px 12px">
+            <input id="taxa_${m}" type="text" inputmode="numeric" placeholder="Ex: 5,4585" value="${taxasAtivas[m]||""}"
+              oninput="handleTaxaModalInput(this,'${m}')" style="width:120px;padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px">
+            <div id="err_${m}" style="color:#dc2626;font-size:10px;margin-top:2px"></div>
+          </td>
+          <td style="padding:10px 12px"><span style="background:${afetadas>0?"#fef3c7":"#f1f5f9"};color:${afetadas>0?"#d97706":"#64748b"};padding:2px 8px;border-radius:8px;font-size:12px;font-weight:600">${afetadas} invoice(s)</span></td>
+        </tr>`;
+      }).join("")}</tbody>
+    </table>`;
+  atualizarPreviewTaxa();
+}
+
+function handleTaxaModalInput(el, m) {
+  let raw = el.value.replace(/[^\d]/g,"").slice(0,6);
+  if (!raw) { el.value=""; taxasAtivas[m]=""; atualizarPreviewTaxa(); return; }
+  const padded = raw.padStart(6,"0");
+  const intPart = padded.slice(0,2).replace(/^0+/,"")||"0";
+  const decPart = padded.slice(2);
+  el.value = `${intPart},${decPart}`;
+  const n = parseFloat(`${intPart}.${decPart}`);
+  const errEl = document.getElementById(`err_${m}`);
+  if (n<1||n>20) { errEl.textContent="⚠️ Taxa fora do intervalo (1,00–20,00)"; taxasAtivas[m]=""; }
+  else           { errEl.textContent=""; taxasAtivas[m]=el.value; }
+  atualizarPreviewTaxa();
+}
+
+function atualizarPreviewTaxa() {
+  const linhas = MOEDAS.map(m => {
+    if (!taxasAtivas[m]) return "";
+    const t = parseFloat(taxasAtivas[m].replace(/\./g,"").replace(",",".")) || 0;
+    if (!t) return "";
+    const afetadas = invoices.filter(i => i.moeda===m && i.status_cambio==="Pendente");
+    const totalVM  = afetadas.reduce((s,i) => s+parseCurrency(i.valor_moeda), 0);
+    const totalR   = t * totalVM;
+    return `<tr><td style="padding:5px 10px"><span style="color:${MOEDA_COR[m]};font-weight:700">${m}</span></td><td style="padding:5px 10px">R$ ${taxasAtivas[m]}</td><td style="padding:5px 10px">${fmtM(totalVM,m)}</td><td style="padding:5px 10px;font-weight:700;color:#16a34a">${fmtBRL(totalR)}</td></tr>`;
+  }).filter(Boolean).join("");
+  document.getElementById("taxaPreview").innerHTML = linhas ? `
+    <div style="background:#f0fdf4;border-radius:8px;padding:12px;border:1px solid #bbf7d0">
+      <div style="font-size:12px;font-weight:700;color:#16a34a;margin-bottom:8px">📊 Preview do impacto:</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+        <thead><tr style="color:#64748b"><th style="padding:4px 10px;text-align:left">Moeda</th><th style="padding:4px 10px;text-align:left">Nova Taxa</th><th style="padding:4px 10px;text-align:left">Total Moeda</th><th style="padding:4px 10px;text-align:left">Total R$</th></tr></thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    </div>` : "";
+}
+
+async function confirmarTaxas() {
+  let erros = [], updates = [];
+  MOEDAS.forEach(m => {
+    const val = taxasAtivas[m];
+    if (!val) return;
+    const t = parseFloat(val.replace(/\./g,"").replace(",",".")) || 0;
+    if (t<1||t>20) { erros.push(`${m}: taxa fora do intervalo`); return; }
+    invoices.filter(i => i.moeda===m && i.status_cambio==="Pendente").forEach(inv => {
+      const vm   = parseCurrency(inv.valor_moeda) || 0;
+      const novo = { ...inv, taxa: t, reais: vm ? (t*vm).toFixed(2) : null };
+      const idx  = invoices.findIndex(i => i.id === inv.id);
+      if (idx!==-1) invoices[idx] = novo;
+      updates.push({ id: inv.id, taxa: t, reais: vm ? parseFloat((t*vm).toFixed(2)) : null });
+    });
+  });
+  if (erros.length) { showToast("Erros: "+erros.join(", "),"err"); return; }
+
+  fecharModal("modalTaxa");
+  mostrarLoading("Aplicando taxas...");
+  if (supabase) {
+    for (const u of updates) {
+      await supabase.from("invoices").update({ taxa: u.taxa, reais: u.reais }).eq("id", u.id);
+    }
+  }
+  esconderLoading();
+  renderTab(currentTab);
+  showToast(`✅ Taxas aplicadas! ${updates.length} invoice(s) atualizada(s)!`);
+}
+
+// ════════════════════════════════════════════════════════
+//  FORM INVOICE
+// ════════════════════════════════════════════════════════
+let formState = {};
+
+function abrirFormInvoice(inv) {
+  if (!pode("editar") && !pode("nova")) { showToast("Sem permissão para esta ação","err"); return; }
+  formState = inv ? {...inv} : { moeda:"USD", cond_pgto:"À Vista", status_cambio:"Pendente", status_pgto:"Em Aberto" };
+  document.getElementById("modalTitle").textContent = (inv && inv.id) ? "✏️ Editar Invoice" : "➕ Nova Invoice";
+  renderFormFields();
+  abrirModal("modalInvoice");
+}
+
+function flabel(txt) { return `<label class="form-label">${txt}</label>`; }
+
+function renderFormFields() {
+  const f = formState;
+  const vmFmt   = f.valor_moeda ? fmtCurrencyDisplay(f.valor_moeda) : "";
+  const taxaFmt = f.taxa ? parseFloat(f.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4}) : "";
+  const reaisFmt= f.reais ? fmtBRL(f.reais) : "";
+
+  document.getElementById("formFields").innerHTML = `
+    <div>${flabel("Pasta")}<input value="${f.pasta||""}" onchange="updateForm('pasta',this.value)"></div>
+    <div>${flabel("Cidade")}<input value="${f.cidade||""}" onchange="updateForm('cidade',this.value)"></div>
+    <div>${flabel("Fornecedor ★")}<input value="${f.fornecedor||""}" onchange="updateForm('fornecedor',this.value)"></div>
+    <div>${flabel("Marca")}<input value="${f.marca||""}" onchange="updateForm('marca',this.value)"></div>
+    <div>${flabel("Nº Proforma")}<input value="${f.n_proforma||""}" onchange="updateForm('n_proforma',this.value)"></div>
+    <div>${flabel("Nº Invoice ★")}<input value="${f.n_fatura||""}" onchange="updateForm('n_fatura',this.value)"></div>
+    <div>${flabel("AWB / BL")}<input value="${f.awb_bl||""}" onchange="updateForm('awb_bl',this.value)"></div>
+    <div>${flabel("Dt. Pedido Fornecedor")}<input type="date" value="${f.dt_pedido||""}" onchange="updateForm('dt_pedido',this.value)"></div>
+    <div>${flabel("Emissão da Fatura")}<input type="date" value="${f.emissao_fatura||""}" onchange="updateForm('emissao_fatura',this.value)"></div>
+    <div>${flabel("Data de Embarque")}<input type="date" value="${f.dt_embarque||""}" onchange="updateForm('dt_embarque',this.value)"></div>
+    <div>${flabel("Data Antecipado")}<input type="date" value="${f.dt_antecipado||""}" onchange="updateForm('dt_antecipado',this.value)"></div>
+    <div>${flabel("Condição de Pagamento")}<select onchange="updateForm('cond_pgto',this.value)">${COND_PGTO.map(c=>`<option${f.cond_pgto===c?" selected":""}>${c}</option>`).join("")}</select></div>
+    <div>${flabel("Vencimento (automático)")}<input type="date" id="inp_vencimento" value="${f.vencimento||""}" onchange="updateForm('vencimento',this.value)" style="background:#f0fdf4"></div>
+    <div>${flabel("Moeda")}<select onchange="updateForm('moeda',this.value)">${MOEDAS.map(m=>`<option${f.moeda===m?" selected":""}>${m}</option>`).join("")}</select></div>
+    <div>${flabel("Valor na Moeda")}<input id="inp_valor_moeda" type="text" inputmode="numeric" value="${vmFmt}" placeholder="0,00" oninput="handleCurrencyInput(this,'valor_moeda')"></div>
+    <div>${flabel("Taxa de Câmbio (R$)")}<input id="inp_taxa" type="text" inputmode="numeric" value="${taxaFmt}" placeholder="5,4585" oninput="handleTaxaInput(this,'taxa')"></div>
+    <div>${flabel("Valor em R$ (calculado)")}<input id="inp_reais" value="${reaisFmt}" readonly style="background:#f0fdf4;font-weight:700;color:#16a34a;border-color:#bbf7d0"></div>
+    <div>${flabel("Status Câmbio")}<select onchange="updateForm('status_cambio',this.value)">${STATUS_CAM.map(s=>`<option${f.status_cambio===s?" selected":""}>${s}</option>`).join("")}</select></div>
+    <div>${flabel("Status Pagamento")}<select onchange="updateForm('status_pgto',this.value)">${STATUS_PGTO.map(s=>`<option${f.status_pgto===s?" selected":""}>${s}</option>`).join("")}</select></div>
+    <div>${flabel("Banco")}<input value="${f.banco||""}" onchange="updateForm('banco',this.value)"></div>
+    <div>${flabel("Data Pagamento")}<input type="date" value="${f.dt_pgto||""}" onchange="updateForm('dt_pgto',this.value)"></div>
+    <div style="grid-column:1/-1">${flabel("Observações")}<textarea rows="3" placeholder="Observações..." onchange="updateForm('obs',this.value)" style="resize:vertical">${f.obs||""}</textarea></div>`;
+}
+
+function updateForm(k, v) {
+  formState[k] = v;
+  if (k==="dt_embarque" || k==="cond_pgto") {
+    formState.vencimento = calcVcto(formState.dt_embarque, formState.cond_pgto);
+    const el = document.getElementById("inp_vencimento");
+    if (el) el.value = formState.vencimento || "";
+  }
+  if (k==="taxa" || k==="valor_moeda") {
+    const t  = parseFloat(formState.taxa) || 0;
+    const vm = parseCurrency(formState.valor_moeda) || 0;
+    formState.reais = (t && vm) ? parseFloat((t*vm).toFixed(2)) : null;
+    const el = document.getElementById("inp_reais");
+    if (el) el.value = formState.reais ? fmtBRL(formState.reais) : "";
+  }
+}
+
+function handleTaxaInput(el, key) {
+  let raw = el.value.replace(/[^\d]/g,"").slice(0,6);
+  if (!raw) { el.value=""; updateForm(key,""); return; }
+  const padded  = raw.padStart(6,"0");
+  const intPart = padded.slice(0,2).replace(/^0+/,"")||"0";
+  const decPart = padded.slice(2);
+  el.value = `${intPart},${decPart}`;
+  updateForm(key, parseFloat(`${intPart}.${decPart}`));
+}
+
+function handleCurrencyInput(el, key) {
+  let raw = el.value.replace(/[^\d]/g,"");
+  if (!raw) { el.value=""; updateForm(key,""); return; }
+  const n = parseInt(raw,10) / 100;
+  el.value = n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  updateForm(key, n);
+}
+
+async function salvarInvoice() {
+  if (!formState.fornecedor || !formState.n_fatura) { showToast("Fornecedor e Nº Invoice são obrigatórios","err"); return; }
+  const data = {
+    pasta:          formState.pasta         || null,
+    cidade:         formState.cidade        || null,
+    fornecedor:     formState.fornecedor,
+    marca:          formState.marca         || null,
+    n_proforma:     formState.n_proforma    || null,
+    n_fatura:       formState.n_fatura,
+    awb_bl:         formState.awb_bl        || null,
+    dt_pedido:      formState.dt_pedido     || null,
+    emissao_fatura: formState.emissao_fatura|| null,
+    dt_embarque:    formState.dt_embarque   || null,
+    dt_antecipado:  formState.dt_antecipado || null,
+    cond_pgto:      formState.cond_pgto     || null,
+    vencimento:     formState.vencimento    || null,
+    dt_pgto:        formState.dt_pgto       || null,
+    banco:          formState.banco         || null,
+    taxa:           parseFloat(formState.taxa) || null,
+    moeda:          formState.moeda         || "USD",
+    valor_moeda:    parseCurrency(formState.valor_moeda) || null,
+    reais:          formState.reais         || null,
+    status_cambio:  formState.status_cambio || "Pendente",
+    status_pgto:    formState.status_pgto   || "Em Aberto",
+    obs:            formState.obs           || null,
+    criado_por:     currentUser?.email      || null
+  };
+
+  fecharModal("modalInvoice");
+
+  if (!supabase) {
+    // modo demo: manipula array local
+    if (formState.id) {
+      const idx = invoices.findIndex(i => i.id === formState.id);
+      if (idx !== -1) invoices[idx] = { ...invoices[idx], ...data };
+    } else {
+      invoices.unshift({ id: "demo-"+Date.now(), ...data });
+    }
+    renderTab("Invoices");
+    showToast("Invoice salva!");
+    return;
+  }
+
+  if (formState.id) data.id = formState.id;
+  await salvarInvoiceDB(data);
+  showToast("✅ Invoice salva com sucesso!");
+}
+
+function editarInvoice(id) {
+  if (!pode("editar")) { showToast("Sem permissão para editar","err"); return; }
+  const inv = invoices.find(i => i.id === id);
+  if (inv) { editIndex = id; abrirFormInvoice(inv); }
+}
+
+async function excluirInvoice(id) {
+  if (!pode("excluir")) { showToast("Apenas Admins podem excluir","err"); return; }
+  if (!confirm("Confirma exclusão desta invoice?")) return;
+  if (!supabase) { invoices = invoices.filter(i => i.id !== id); renderTab("Invoices"); showToast("Excluída."); return; }
+  await excluirInvoiceDB(id);
+  invoices = invoices.filter(i => i.id !== id);
+  renderTab("Invoices");
+  showToast("Invoice excluída.");
+}
+
+// ════════════════════════════════════════════════════════
+//  PAGAMENTOS
+// ════════════════════════════════════════════════════════
+function abrirPgto(id) {
+  if (!pode("pagamento")) { showToast("Sem permissão para registrar pagamento","err"); return; }
+  pgtoTarget = id;
+  const i = invoices.find(inv => inv.id === id);
+  if (!i) return;
+  const vm = parseCurrency(i.valor_moeda);
+  document.getElementById("pgtoInfo").innerHTML = `<b>${i.n_fatura}</b> — ${i.fornecedor} &nbsp;|&nbsp; <span style="color:${MOEDA_COR[i.moeda]};font-weight:700">${i.moeda} ${fmtM(vm,i.moeda)}</span>`;
+  document.getElementById("pgtoFields").innerHTML = `
+    <div>${flabel("Data Pagamento")}<input id="p_dtPgto" type="date" value="${hoje()}"></div>
+    <div>${flabel("Banco")}<input id="p_banco" value="${i.banco||""}"></div>
+    <div>${flabel("Taxa de Câmbio (R$)")}<input id="p_taxa" type="text" inputmode="numeric" value="${i.taxa?parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4}):""}" oninput="calcPgtoTaxa(this)"></div>
+    <div>${flabel("Valor em R$ (calculado)")}<input id="p_reais" value="${i.reais?fmtBRL(i.reais):""}" readonly style="background:#f0fdf4;font-weight:700;color:#16a34a"></div>
+    <div>${flabel("Status")}<select id="p_status">${STATUS_PGTO.map(s=>`<option${s==="Pago Total"?" selected":""}>${s}</option>`).join("")}</select></div>`;
+  abrirModal("modalPgto");
+}
+
+function calcPgtoTaxa(el) {
+  let raw = el.value.replace(/[^\d]/g,"").slice(0,6);
+  if (!raw) { el.value=""; return; }
+  const padded  = raw.padStart(6,"0");
+  const intPart = padded.slice(0,2).replace(/^0+/,"")||"0";
+  const decPart = padded.slice(2);
+  el.value = `${intPart},${decPart}`;
+  const n  = parseFloat(`${intPart}.${decPart}`);
+  const inv = invoices.find(i => i.id === pgtoTarget);
+  if (!inv) return;
+  const vm = parseCurrency(inv.valor_moeda) || 0;
+  if (n && vm) document.getElementById("p_reais").value = fmtBRL((n*vm).toFixed(2));
+}
+
+async function salvarPagamento() {
+  const inv    = invoices.find(i => i.id === pgtoTarget);
+  if (!inv) return;
+  const taxaStr = document.getElementById("p_taxa").value;
+  const taxa    = parseFloat(taxaStr.replace(/\./g,"").replace(",",".")) || 0;
+  const vm      = parseCurrency(inv.valor_moeda) || 0;
+  const reais   = taxa && vm ? parseFloat((taxa*vm).toFixed(2)) : (parseFloat(inv.reais)||null);
+
+  const update = {
+    dt_pgto:      document.getElementById("p_dtPgto").value,
+    banco:        document.getElementById("p_banco").value,
+    taxa,
+    reais,
+    status_cambio:"Fechado",
+    status_pgto:  document.getElementById("p_status").value
+  };
+
+  fecharModal("modalPgto");
+
+  if (!supabase) {
+    const idx = invoices.findIndex(i => i.id === pgtoTarget);
+    if (idx !== -1) invoices[idx] = { ...invoices[idx], ...update };
+    renderTab("Pagamentos");
+    showToast("Pagamento registrado!");
+    return;
+  }
+
+  mostrarLoading("Salvando pagamento...");
+  await supabase.from("invoices").update(update).eq("id", pgtoTarget);
+  const idx = invoices.findIndex(i => i.id === pgtoTarget);
+  if (idx !== -1) invoices[idx] = { ...invoices[idx], ...update };
+  esconderLoading();
+  renderTab("Pagamentos");
+  showToast("✅ Pagamento registrado!");
+}
+
+async function desfazerPagamento(id) {
+  if (!pode("pagamento")) { showToast("Sem permissão","err"); return; }
+  if (!confirm("Desfazer pagamento?")) return;
+  const update = { dt_pgto:null, banco:null, taxa:null, reais:null, status_cambio:"Pendente", status_pgto:"Em Aberto" };
+  if (supabase) await supabase.from("invoices").update(update).eq("id", id);
+  const idx = invoices.findIndex(i => i.id === id);
+  if (idx !== -1) invoices[idx] = { ...invoices[idx], ...update };
+  renderTab("Pagamentos");
+  showToast("Pagamento desfeito.");
+}
+
+// ════════════════════════════════════════════════════════
+//  GERENCIAR USUÁRIOS (Admin)
+// ════════════════════════════════════════════════════════
+function renderUsuarios() {
+  if (!pode("usuarios")) return `<div class="card" style="text-align:center;padding:40px;color:#94a3b8">🔒 Acesso restrito a Admins</div>`;
+  const perfilBg = { admin:"#ede9fe;color:#7c3aed", financeiro:"#dbeafe;color:#1d4ed8", visualizador:"#f1f5f9;color:#475569" };
+  const rows = usuarios.map(u => `<tr>
+    <td><b>${u.nome||"—"}</b></td>
+    <td style="color:#64748b">${u.email}</td>
+    <td><span style="padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;background:${perfilBg[u.perfil]||"#f1f5f9;color:#475569"}">${u.perfil||"visualizador"}</span></td>
+    <td><span class="badge ${u.ativo?"badge-green":"badge-red"}">${u.ativo?"Ativo":"Inativo"}</span></td>
+    <td style="white-space:nowrap">
+      <select style="font-size:11px;padding:3px 6px;border-radius:4px;border:1px solid #e2e8f0;width:auto" onchange="alterarPerfil('${u.id}',this.value)">
+        ${PERFIS.map(p=>`<option value="${p}"${u.perfil===p?" selected":""}>${p.charAt(0).toUpperCase()+p.slice(1)}</option>`).join("")}
+      </select>
+      <button class="btn-sm" style="background:${u.ativo?"#fee2e2":"#dcfce7"};color:${u.ativo?"#dc2626":"#16a34a"};margin-left:4px" onclick="toggleUsuario('${u.id}',${!u.ativo})">${u.ativo?"Desativar":"Ativar"}</button>
+    </td>
+  </tr>`).join("");
+
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div style="font-weight:700;font-size:15px;color:#1e3a5f">👥 Gerenciar Usuários</div>
+    <div style="background:#dbeafe;border-radius:8px;padding:8px 16px;font-size:12px;color:#1d4ed8;font-weight:600">
+      👑 Apenas o Admin pode alterar perfis e ativar/desativar usuários
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      ${["admin","financeiro","visualizador"].map(p=>{
+        const qtd = usuarios.filter(u=>u.perfil===p).length;
+        const bg  = {admin:"#ede9fe",financeiro:"#dbeafe",visualizador:"#f1f5f9"}[p];
+        const c   = {admin:"#7c3aed",financeiro:"#1d4ed8",visualizador:"#475569"}[p];
+        return `<div style="background:${bg};border-radius:8px;padding:10px 16px;border-left:4px solid ${c};min-width:120px">
+          <div style="font-size:11px;font-weight:700;color:${c};text-transform:uppercase">${p}</div>
+          <div style="font-size:22px;font-weight:700;color:${c}">${qtd}</div>
+        </div>`;
+      }).join("")}
+      <div style="background:#dcfce7;border-radius:8px;padding:10px 16px;border-left:4px solid #16a34a;min-width:120px">
+        <div style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase">Total Ativos</div>
+        <div style="font-size:22px;font-weight:700;color:#16a34a">${usuarios.filter(u=>u.ativo).length}</div>
+      </div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>Nome</th><th>E-mail</th><th>Perfil</th><th>Status</th><th>Ações</th>
+      </tr></thead>
+      <tbody>${rows || `<tr><td colspan="5" style="text-align:center;padding:20px;color:#94a3b8">Nenhum usuário cadastrado ainda. Os usuários aparecem aqui após o primeiro login.</td></tr>`}</tbody>
+    </table></div>
+  </div>
+  <div class="card" style="background:#fffbeb;border:1px solid #fde68a">
+    <div style="font-weight:700;color:#d97706;margin-bottom:8px">📋 Perfis e Permissões</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:#fef3c7"><th style="padding:6px 10px;text-align:left">Ação</th><th style="padding:6px 10px;text-align:center">👑 Admin</th><th style="padding:6px 10px;text-align:center">💼 Financeiro</th><th style="padding:6px 10px;text-align:center">👁 Visualizador</th></tr></thead>
+      <tbody>
+        ${[["Criar/Editar Invoices","✅","✅","❌"],["Registrar Pagamentos","✅","✅","❌"],["Alterar Taxas de Câmbio","✅","✅","❌"],["Excluir Invoices","✅","❌","❌"],["Gerenciar Usuários","✅","❌","❌"],["Visualizar Dashboard","✅","✅","✅"],["Exportar PDF/Excel","✅","✅","✅"]].map(([a,...v])=>`<tr style="border-bottom:1px solid #fde68a"><td style="padding:6px 10px;font-weight:600">${a}</td>${v.map(x=>`<td style="padding:6px 10px;text-align:center">${x}</td>`).join("")}</tr>`).join("")}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+async function alterarPerfil(userId, novoPerfil) {
+  if (!pode("usuarios")) { showToast("Sem permissão","err"); return; }
+  if (userId === currentUser.id && novoPerfil !== "admin") {
+    if (!confirm("Você está alterando seu próprio perfil. Isso pode remover seu acesso admin. Continuar?")) return;
+  }
+  if (supabase) await supabase.from("usuarios").update({ perfil: novoPerfil }).eq("id", userId);
+  const idx = usuarios.findIndex(u => u.id === userId);
+  if (idx !== -1) usuarios[idx].perfil = novoPerfil;
+  renderTab("Usuários");
+  showToast(`✅ Perfil atualizado para ${novoPerfil}`);
+}
+
+async function toggleUsuario(userId, ativo) {
+  if (!pode("usuarios")) { showToast("Sem permissão","err"); return; }
+  if (userId === currentUser.id) { showToast("Não é possível desativar sua própria conta","err"); return; }
+  if (supabase) await supabase.from("usuarios").update({ ativo }).eq("id", userId);
+  const idx = usuarios.findIndex(u => u.id === userId);
+  if (idx !== -1) usuarios[idx].ativo = ativo;
+  renderTab("Usuários");
+  showToast(ativo ? "Usuário ativado" : "Usuário desativado");
+}
+
+// ════════════════════════════════════════════════════════
+//  DASHBOARD
+// ════════════════════════════════════════════════════════
+function renderDashboard() {
+  const kpisMoeda = MOEDAS.map(m => {
+    const invs   = invoices.filter(i=>i.moeda===m);
+    const aberto = invs.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
+    const pago   = invs.filter(i=>i.status_pgto==="Pago Total").reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
+    const total  = invs.reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
+    if (!total) return "";
+    return `<div class="kpi-moeda" style="background:${MOEDA_BG[m]};border-color:${MOEDA_COR[m]}">
       <div style="font-size:14px;font-weight:700;color:${MOEDA_COR[m]};margin-bottom:8px">${SIMBOLO[m]} ${m}</div>
-      <div style="margin-bottom:6px">
-        <div class="kpi-label">Total</div>
-        <div style="font-size:20px;font-weight:800;color:${MOEDA_COR[m]};line-height:1">${fmtM(total,m)}</div>
-      </div>
-      <div style="margin-bottom:6px">
-        <div class="kpi-label" style="color:#dc2626">Em Aberto</div>
-        <div style="font-size:17px;font-weight:700;color:#dc2626;line-height:1">${fmtM(aberto,m)}</div>
-      </div>
-      <div>
-        <div class="kpi-label" style="color:#16a34a">Pago</div>
-        <div style="font-size:17px;font-weight:700;color:#16a34a;line-height:1">${fmtM(pago,m)}</div>
-      </div>
+      <div style="margin-bottom:6px"><div class="kpi-label">Total</div><div style="font-size:20px;font-weight:800;color:${MOEDA_COR[m]};line-height:1">${fmtM(total,m)}</div></div>
+      <div style="margin-bottom:6px"><div class="kpi-label" style="color:#dc2626">Em Aberto</div><div style="font-size:17px;font-weight:700;color:#dc2626;line-height:1">${fmtM(aberto,m)}</div></div>
+      <div><div class="kpi-label" style="color:#16a34a">Pago</div><div style="font-size:17px;font-weight:700;color:#16a34a;line-height:1">${fmtM(pago,m)}</div></div>
     </div>`;
   }).join("");
 
-  const totReaisPago=invoices.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const totReaisAberto=invoices.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const totReais=invoices.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const vencidos=invoices.filter(i=>alertaVcto(i.vencimento,i.statusPgto)==="vencido");
-  const alertas=invoices.filter(i=>alertaVcto(i.vencimento,i.statusPgto));
+  const totReaisPago   = invoices.filter(i=>i.status_pgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const totReaisAberto = invoices.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const totReais       = invoices.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const vencidos       = invoices.filter(i=>alertaVcto(i.vencimento,i.status_pgto)==="vencido");
+  const alertas        = invoices.filter(i=>alertaVcto(i.vencimento,i.status_pgto));
 
-  const totalGeral=MOEDAS.reduce((s,m)=>s+invoices.filter(i=>i.moeda===m).reduce((s2,i)=>s2+parseCurrency(i.valorMoeda),0),0);
-  const chartDados=MOEDAS.map(m=>{
-    const v=invoices.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
-    return{moeda:m,valor:v,pct:totalGeral>0?(v/totalGeral)*100:0,cor:MOEDA_CHART[m]};
+  const totalGeral = MOEDAS.reduce((s,m)=>s+invoices.filter(i=>i.moeda===m).reduce((s2,i)=>s2+parseCurrency(i.valor_moeda),0),0);
+  const chartDados = MOEDAS.map(m=>{
+    const v = invoices.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
+    return { moeda:m, valor:v, pct:totalGeral>0?(v/totalGeral)*100:0, cor:MOEDA_CHART[m] };
   }).filter(d=>d.valor>0);
 
-  // Stats with bold labels and bold status names
-  const statsData=[
-    ["📄","#dbeafe","#1d4ed8","Total Invoices",""+invoices.length],
-    ["⏳","#fee2e2","#dc2626","Em Aberto",""+invoices.filter(i=>i.statusPgto==="Em Aberto").length],
-    ["⚠️","#fef3c7","#d97706","Pago Parcial",""+invoices.filter(i=>i.statusPgto==="Pago Parcial").length],
-    ["✅","#dcfce7","#16a34a","Pago Total",""+invoices.filter(i=>i.statusPgto==="Pago Total").length],
-    ["🚨","#fecaca","#991b1b","Vencidos",""+vencidos.length]
-  ];
+  // Usuários online simulados (real = Supabase Presence)
+  const usuariosAtivos = usuarios.filter(u=>u.ativo).length || 1;
 
-  return`
+  return `
+  <!-- Indicador Multi-usuário -->
+  <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+    <span class="realtime-dot"></span>
+    <span style="font-size:12px;color:#16a34a;font-weight:600">Sistema em tempo real ativo</span>
+    <span style="font-size:11px;color:#64748b;margin-left:8px">• ${usuariosAtivos} usuário(s) cadastrado(s) • Dados sincronizados automaticamente</span>
+    <span style="margin-left:auto;font-size:11px;color:#94a3b8">Logado como: <b>${currentUser?.perfil}</b></span>
+  </div>
+
+  <!-- KPIs por Moeda -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
     ${kpisMoeda}
     <div class="kpi-moeda" style="background:#dcfce7;border-color:#16a34a">
       <div style="font-size:14px;font-weight:700;color:#16a34a;margin-bottom:8px">🇧🇷 REAIS (R$)</div>
-      <div style="margin-bottom:6px">
-        <div class="kpi-label">Total Geral</div>
-        <div style="font-size:20px;font-weight:800;color:#16a34a;line-height:1">${fmtBRL(totReais)}</div>
-      </div>
-      <div style="margin-bottom:6px">
-        <div class="kpi-label" style="color:#dc2626">Em Aberto</div>
-        <div style="font-size:17px;font-weight:700;color:#dc2626;line-height:1">${fmtBRL(totReaisAberto)}</div>
-      </div>
-      <div>
-        <div class="kpi-label" style="color:#16a34a">Pago</div>
-        <div style="font-size:17px;font-weight:700;color:#16a34a;line-height:1">${fmtBRL(totReaisPago)}</div>
-      </div>
+      <div style="margin-bottom:6px"><div class="kpi-label">Total Geral</div><div style="font-size:20px;font-weight:800;color:#16a34a;line-height:1">${fmtBRL(totReais)}</div></div>
+      <div style="margin-bottom:6px"><div class="kpi-label" style="color:#dc2626">Em Aberto</div><div style="font-size:17px;font-weight:700;color:#dc2626;line-height:1">${fmtBRL(totReaisAberto)}</div></div>
+      <div><div class="kpi-label" style="color:#16a34a">Pago</div><div style="font-size:17px;font-weight:700;color:#16a34a;line-height:1">${fmtBRL(totReaisPago)}</div></div>
     </div>
   </div>
+
+  <!-- Stats -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px">
-    ${statsData.map(([ic,bg,c,lb,vl])=>`
-    <div class="stat" style="background:${bg}">
-      <div style="font-size:20px">${ic}</div>
-      <div style="font-size:24px;font-weight:700;color:${c}">${vl}</div>
-      <div class="stat-label" style="color:${c}">${lb}</div>
-    </div>`).join("")}
+    ${[["📄","#dbeafe","#1d4ed8","Total Invoices",""+invoices.length],
+       ["⏳","#fee2e2","#dc2626","Em Aberto",""+invoices.filter(i=>i.status_pgto==="Em Aberto").length],
+       ["⚠️","#fef3c7","#d97706","Pago Parcial",""+invoices.filter(i=>i.status_pgto==="Pago Parcial").length],
+       ["✅","#dcfce7","#16a34a","Pago Total",""+invoices.filter(i=>i.status_pgto==="Pago Total").length],
+       ["🚨","#fecaca","#991b1b","Vencidos",""+vencidos.length],
+       ["👥","#ede9fe","#7c3aed","Usuários",""+usuarios.filter(u=>u.ativo).length]
+    ].map(([ic,bg,c,lb,vl])=>`<div class="stat" style="background:${bg}"><div style="font-size:20px">${ic}</div><div style="font-size:24px;font-weight:700;color:${c}">${vl}</div><div class="stat-label" style="color:${c}">${lb}</div></div>`).join("")}
   </div>
-  ${chartDados.length?renderGraficoMoeda(chartDados,"Distribuição por Moeda — % do Volume Total"):""}
-  ${alertas.length?`<div class="card"><div style="font-weight:700;color:#dc2626;margin-bottom:10px">🚨 Alertas de Vencimento</div>${alertas.map(i=>{const a=alertaVcto(i.vencimento,i.statusPgto);return`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9"><span><b>${i.nFatura}</b> — ${i.fornecedor}</span><span style="color:${a==="vencido"?"#dc2626":"#d97706"};font-weight:700">${a==="vencido"?"⛔ VENCIDO":"🚨 Vence em breve"} ${fmtD(i.vencimento)}</span></div>`}).join("")}</div>`:""}`;
+
+  ${chartDados.length ? renderGraficoMoeda(chartDados,"Distribuição por Moeda — % do Volume Total") : ""}
+
+  ${alertas.length ? `<div class="card"><div style="font-weight:700;color:#dc2626;margin-bottom:10px">🚨 Alertas de Vencimento</div>${alertas.map(i=>{
+    const a=alertaVcto(i.vencimento,i.status_pgto);
+    return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9"><span><b>${i.n_fatura}</b> — ${i.fornecedor}</span><span style="color:${a==="vencido"?"#dc2626":"#d97706"};font-weight:700">${a==="vencido"?"⛔ VENCIDO":"🚨 Vence em breve"} ${fmtD(i.vencimento)}</span></div>`;
+  }).join("")}</div>` : ""}`;
 }
 
-// ===== INVOICES =====
-function renderInvoices(){
-  const forn=[...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
-  const filtradas=getInvFiltradas();
-  const barInv=filtroBar("inv",[
+// ════════════════════════════════════════════════════════
+//  INVOICES
+// ════════════════════════════════════════════════════════
+function renderInvoices() {
+  const forn      = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
+  const filtradas = getInvFiltradas();
+  const hasObs    = filtradas.some(i=>i.obs&&i.obs.trim()!=="");
+
+  const barInv = filtroBar("inv",[
     {label:"Fornecedor",key:"fornecedor",type:"select",options:[{val:"",txt:"Todos"},...forn.map(f=>({val:f,txt:f}))]},
     {label:"Status",key:"status",type:"select",options:[{val:"",txt:"Todos"},...STATUS_PGTO.map(s=>({val:s,txt:s}))]},
     {label:"Moeda",key:"moeda",type:"select",options:[{val:"",txt:"Todas"},...MOEDAS.map(m=>({val:m,txt:m}))]},
-    {label:"Emissão — Data Inicial",key:"dtIni",type:"date"},
-    {label:"Emissão — Data Final",key:"dtFim",type:"date"}
+    {label:"Emissão Inicial",key:"dtIni",type:"date"},
+    {label:"Emissão Final",key:"dtFim",type:"date"}
   ],"aplicarFiltroInv()");
 
-  // Columns: Pasta | Cidade | Fornecedor | Nº Invoice | Emissão | Vencto | Moeda | Valor Moeda | Taxa | Valor R$ | Cond. | Status | Câmbio | AWB/BL | Obs | Ações
-  const hasObs=filtradas.some(i=>i.obs&&i.obs.trim()!=="");
-
-  return`
+  return `
   ${barInv}
   <div style="margin:-10px 0 12px 0;padding:0 4px"><span style="font-size:11px;color:#2563eb;font-weight:600">${filtroAtivoTxt("inv")}</span></div>
-  <div class="card" style="display:flex;justify-content:flex-end;gap:8px;padding:10px 16px">
-    <button class="btn" style="background:#fef3c7;color:#d97706;border:1px solid #fde68a;font-weight:700" onclick="abrirModalTaxa()">💱 Taxas de Câmbio</button>
+  <div class="card" style="display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;flex-wrap:wrap">
+    ${pode("taxa") ? `<button class="btn" style="background:#fef3c7;color:#d97706;border:1px solid #fde68a;font-weight:700" onclick="abrirModalTaxa()">💱 Taxas de Câmbio</button>` : ""}
     <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSV()">⬇️ Excel</button>
     <button class="btn btn-primary" onclick="exportPDF()">🖨️ PDF</button>
-    <button class="btn btn-green" onclick="editIndex=null;abrirFormInvoice()">+ Nova Invoice</button>
+    ${pode("nova") ? `<button class="btn btn-green" onclick="editIndex=null;abrirFormInvoice()">+ Nova Invoice</button>` : ""}
   </div>
   <div class="table-wrap"><table>
     <thead><tr>
@@ -842,113 +1271,58 @@ function renderInvoices(){
       <th class="col-status">Status</th>
       <th class="col-cambio">Câmbio</th>
       <th class="col-awb">AWB/BL</th>
-      ${hasObs?`<th class="col-obs">Obs.</th>`:""}
+      ${hasObs ? `<th class="col-obs">Obs.</th>` : ""}
       <th class="col-acoes">Ações</th>
     </tr></thead>
-    <tbody>${filtradas.length===0?`<tr><td colspan="${hasObs?16:15}" style="text-align:center;padding:20px;color:#94a3b8">Nenhuma invoice encontrada</td></tr>`:filtradas.map(i=>{
-      const a=alertaVcto(i.vencimento,i.statusPgto),ri=invoices.indexOf(i);
-      const vm=parseCurrency(i.valorMoeda);
-      const obsCell=hasObs?`<td style="max-width:200px;font-size:11px;color:#475569">${i.obs&&i.obs.trim()?`<span title="${i.obs}">${i.obs.length>40?i.obs.substring(0,38)+"…":i.obs}</span>`:"—"}</td>`:"";
-      return`<tr>
-        <td class="col-pasta">${i.pasta||""}</td>
-        <td class="col-cidade">${i.cidade||""}</td>
-        <td class="col-fornecedor">${i.fornecedor||""}<br><span style="color:#94a3b8;font-size:10px">${i.marca||""}</span></td>
-        <td class="col-invoice">${i.nFatura||""}</td>
-        <td class="col-data">${fmtD(i.emissaoFatura)}</td>
-        <td class="col-data">${a==="vencido"?'<span style="color:#dc2626">⛔</span> ':a==="urgente"?'<span style="color:#d97706">🚨</span> ':a==="alerta"?'<span>⚠️</span> ':""}${fmtD(i.vencimento)}</td>
-        <td class="col-moeda"><span class="badge badge-blue">${i.moeda||""}</span></td>
-        <td class="col-valor" style="font-weight:600">${fmtM(vm,i.moeda)}</td>
-        <td class="col-taxa">${i.taxa||"—"}</td>
-        <td class="col-valor" style="font-weight:700;color:#1e3a5f">${fmtBRL(i.reais)}</td>
-        <td class="col-cond">${i.condPgto||""}</td>
-        <td class="col-status">${statusBadge(i.statusPgto)}</td>
-        <td class="col-cambio"><span class="badge ${i.statusCambio==="Fechado"?"badge-green":"badge-yellow"}">${i.statusCambio||"Pendente"}</span></td>
-        <td class="col-awb">${i.awbBl||""}</td>
-        ${obsCell}
-        <td class="col-acoes">
-          <button class="btn-sm" style="background:#f1f5f9" onclick="editarInvoice(${ri})">✏️</button>
-          ${i.statusPgto!=="Pago Total"?`<button class="btn-sm" style="background:#dcfce7;color:#16a34a" onclick="abrirPgto(${ri})">💰</button>`:""}
-          <button class="btn-sm" style="background:#fee2e2;color:#dc2626" onclick="excluirInvoice(${ri})">🗑️</button>
-        </td>
-      </tr>`;
-    }).join("")}</tbody>
+    <tbody>${filtradas.length===0
+      ? `<tr><td colspan="${hasObs?16:15}" style="text-align:center;padding:24px;color:#94a3b8">Nenhuma invoice encontrada</td></tr>`
+      : filtradas.map(i => {
+          const a  = alertaVcto(i.vencimento, i.status_pgto);
+          const vm = parseCurrency(i.valor_moeda);
+          const obsCell = hasObs ? `<td style="max-width:200px;font-size:11px;color:#475569">${i.obs&&i.obs.trim()?`<span title="${i.obs}">${i.obs.length>40?i.obs.substring(0,38)+"…":i.obs}</span>`:"—"}</td>` : "";
+          return `<tr>
+            <td class="col-pasta">${i.pasta||""}</td>
+            <td class="col-cidade">${i.cidade||""}</td>
+            <td class="col-fornecedor">${i.fornecedor||""}<br><span style="color:#94a3b8;font-size:10px">${i.marca||""}</span></td>
+            <td class="col-invoice">${i.n_fatura||""}</td>
+            <td class="col-data">${fmtD(i.emissao_fatura)}</td>
+            <td class="col-data">${a==="vencido"?'<span style="color:#dc2626">⛔</span> ':a==="urgente"?'<span style="color:#d97706">🚨</span> ':a==="alerta"?'<span>⚠️</span> ':""}${fmtD(i.vencimento)}</td>
+            <td class="col-moeda"><span class="badge badge-blue">${i.moeda||""}</span></td>
+            <td class="col-valor" style="font-weight:600">${fmtM(vm,i.moeda)}</td>
+            <td class="col-taxa">${i.taxa||"—"}</td>
+            <td class="col-valor" style="font-weight:700;color:#1e3a5f">${fmtBRL(i.reais)}</td>
+            <td class="col-cond">${i.cond_pgto||""}</td>
+            <td class="col-status">${statusBadge(i.status_pgto)}</td>
+            <td class="col-cambio"><span class="badge ${i.status_cambio==="Fechado"?"badge-green":"badge-yellow"}">${i.status_cambio||"Pendente"}</span></td>
+            <td class="col-awb">${i.awb_bl||""}</td>
+            ${obsCell}
+            <td class="col-acoes">
+              ${pode("editar")  ? `<button class="btn-sm" style="background:#f1f5f9" onclick="editarInvoice('${i.id}')">✏️</button>` : ""}
+              ${pode("pagamento") && i.status_pgto!=="Pago Total" ? `<button class="btn-sm" style="background:#dcfce7;color:#16a34a" onclick="abrirPgto('${i.id}')">💰</button>` : ""}
+              ${pode("excluir") ? `<button class="btn-sm" style="background:#fee2e2;color:#dc2626" onclick="excluirInvoice('${i.id}')">🗑️</button>` : ""}
+            </td>
+          </tr>`;
+        }).join("")
+    }</tbody>
   </table></div>`;
 }
 
-// ===== FORM INVOICE =====
-let formState={};
-function abrirFormInvoice(inv){
-  formState=inv?{...inv}:{moeda:"USD",condPgto:"À Vista",statusCambio:"Pendente",statusPgto:"Em Aberto"};
-  document.getElementById("modalTitle").textContent=editIndex!==null?"✏️ Editar Invoice":"➕ Nova Invoice";
-  renderFormFields();abrirModal("modalInvoice");
-}
-function flabel(txt){return`<label class="form-label">${txt}</label>`;}
-function renderFormFields(){
-  const f=formState;
-  const vmFmt=f.valorMoeda?fmtCurrencyDisplay(f.valorMoeda):"";
-  const taxaFmt=f.taxa?parseFloat(f.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4}):"";
-  document.getElementById("formFields").innerHTML=`
-    <div>${flabel("Pasta")}<input value="${f.pasta||""}" onchange="updateForm('pasta',this.value)"></div>
-    <div>${flabel("Cidade")}<input value="${f.cidade||""}" onchange="updateForm('cidade',this.value)"></div>
-    <div>${flabel("Fornecedor ★")}<input value="${f.fornecedor||""}" onchange="updateForm('fornecedor',this.value)"></div>
-    <div>${flabel("Marca")}<input value="${f.marca||""}" onchange="updateForm('marca',this.value)"></div>
-    <div>${flabel("Nº Proforma")}<input value="${f.nProforma||""}" onchange="updateForm('nProforma',this.value)"></div>
-    <div>${flabel("Nº Invoice ★")}<input value="${f.nFatura||""}" onchange="updateForm('nFatura',this.value)"></div>
-    <div>${flabel("AWB / BL")}<input value="${f.awbBl||""}" onchange="updateForm('awbBl',this.value)"></div>
-    <div>${flabel("Dt. Pedido Fornecedor")}<input type="date" value="${f.dtPedido||""}" onchange="updateForm('dtPedido',this.value)"></div>
-    <div>${flabel("Emissão da Fatura")}<input type="date" value="${f.emissaoFatura||""}" onchange="updateForm('emissaoFatura',this.value)"></div>
-    <div>${flabel("Data de Embarque")}<input type="date" value="${f.dtEmbarque||""}" onchange="updateForm('dtEmbarque',this.value)"></div>
-    <div>${flabel("Data Antecipado")}<input type="date" value="${f.dtAntecipado||""}" onchange="updateForm('dtAntecipado',this.value)"></div>
-    <div>${flabel("Condição de Pagamento")}<select onchange="updateForm('condPgto',this.value)">${COND_PGTO.map(c=>`<option${f.condPgto===c?" selected":""}>${c}</option>`).join("")}</select></div>
-    <div>${flabel("Vencimento (automático)")}<input type="date" id="inp_vencimento" value="${f.vencimento||""}" onchange="updateForm('vencimento',this.value)" style="background:#f0fdf4"></div>
-    <div>${flabel("Moeda")}<select onchange="updateForm('moeda',this.value)">${MOEDAS.map(m=>`<option${f.moeda===m?" selected":""}>${m}</option>`).join("")}</select></div>
-    <div>${flabel("Valor na Moeda")}<input id="inp_valorMoeda" type="text" inputmode="numeric" value="${vmFmt}" placeholder="0,00" oninput="handleCurrencyInput(this,'valorMoeda')"></div>
-    <div>${flabel("Taxa de Câmbio (R$)")}<input id="inp_taxa" type="text" inputmode="numeric" value="${taxaFmt}" placeholder="5,4585" oninput="handleTaxaInput(this,'taxa')"></div>
-    <div>${flabel("Valor em R$ (calculado)")}<input id="inp_reais" value="${f.reais?fmtBRL(f.reais):""}" readonly style="background:#f0fdf4;font-weight:700;color:#16a34a;border-color:#bbf7d0"></div>
-    <div>${flabel("Status Câmbio")}<select onchange="updateForm('statusCambio',this.value)">${STATUS_CAMBIO.map(s=>`<option${f.statusCambio===s?" selected":""}>${s}</option>`).join("")}</select></div>
-    <div>${flabel("Status Pagamento")}<select onchange="updateForm('statusPgto',this.value)">${STATUS_PGTO.map(s=>`<option${f.statusPgto===s?" selected":""}>${s}</option>`).join("")}</select></div>
-    <div>${flabel("Banco")}<input value="${f.banco||""}" onchange="updateForm('banco',this.value)"></div>
-    <div>${flabel("Data Pagamento")}<input type="date" value="${f.dtPgto||""}" onchange="updateForm('dtPgto',this.value)"></div>
-    <div style="grid-column:1/-1">${flabel("Observações")}<textarea rows="3" placeholder="Observações..." onchange="updateForm('obs',this.value)" style="resize:vertical">${f.obs||""}</textarea></div>`;
-}
-function updateForm(k,v){
-  formState[k]=v;
-  if(k==="dtEmbarque"||k==="condPgto"){formState.vencimento=calcVcto(formState.dtEmbarque,formState.condPgto);const el=document.getElementById("inp_vencimento");if(el)el.value=formState.vencimento||"";}
-  if(k==="taxa"||k==="valorMoeda"){const t=parseFloat(formState.taxa)||0,vm=parseCurrency(formState.valorMoeda)||0;formState.reais=t&&vm?(t*vm).toFixed(2):"";const el=document.getElementById("inp_reais");if(el)el.value=formState.reais?fmtBRL(formState.reais):"";}
-}
-function salvarInvoice(){
-  if(!formState.fornecedor||!formState.nFatura){showToast("Fornecedor e Nº Invoice são obrigatórios","err");return;}
-  if(editIndex!==null)invoices[editIndex]={...formState};else invoices.push({...formState});
-  fecharModal("modalInvoice");editIndex=null;
-  salvarDados().then(()=>renderTab("Invoices"));showToast("Invoice salva!");
-}
-function editarInvoice(idx){editIndex=idx;abrirFormInvoice(invoices[idx]);}
-function excluirInvoice(idx){if(!confirm("Excluir?"))return;invoices.splice(idx,1);salvarDados().then(()=>renderTab("Invoices"));showToast("Excluída.");}
+// ════════════════════════════════════════════════════════
+//  PAGAMENTOS
+// ════════════════════════════════════════════════════════
+function renderPagamentos() {
+  const f = filtros.pgto;
+  const bancosDisponiveis = getBancosDisponiveis();
+  const selBancos = filtros.pgto._bancos;
+  const bancoBtnTxt = selBancos.length===0 ? "Todos os bancos" : selBancos.length===1 ? selBancos[0] : `${selBancos.length} bancos`;
 
-// ===== PAGAMENTOS =====
-function renderPagamentos(){
-  const f=filtros.pgto;
-  const bancosDisponiveis=getBancosDisponiveis();
+  let dados = invoices;
+  if (f.status && f.status!=="Todos") dados = dados.filter(i=>i.status_pgto===f.status);
+  if (f.dtIni) dados = dados.filter(i=>(i.dt_pgto&&i.dt_pgto>=f.dtIni)||(i.emissao_fatura&&i.emissao_fatura>=f.dtIni));
+  if (f.dtFim) dados = dados.filter(i=>(i.dt_pgto&&i.dt_pgto<=f.dtFim)||(i.emissao_fatura&&i.emissao_fatura<=f.dtFim));
+  if (f.bancos&&f.bancos.length>0) dados = dados.filter(i=>f.bancos.includes(i.banco));
 
-  let dados=invoices;
-  if(f.status&&f.status!=="Todos")dados=dados.filter(i=>i.statusPgto===f.status);
-  if(f.dtIni)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto>=f.dtIni)||(i.emissaoFatura&&i.emissaoFatura>=f.dtIni));
-  if(f.dtFim)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto<=f.dtFim)||(i.emissaoFatura&&i.emissaoFatura<=f.dtFim));
-  if(f.bancos&&f.bancos.length>0)dados=dados.filter(i=>f.bancos.includes(i.banco));
-
-  const ativoTxt=(()=>{
-    const partes=[];
-    if(f.status&&f.status!=="Todos")partes.push(`Status: ${f.status}`);
-    if(f.bancos&&f.bancos.length>0)partes.push(`Banco(s): ${f.bancos.join(", ")}`);
-    if(f.dtIni)partes.push(`De: ${fmtD(f.dtIni)}`);
-    if(f.dtFim)partes.push(`Até: ${fmtD(f.dtFim)}`);
-    return partes.length?`✅ Filtro ativo: ${partes.join(" | ")}`:"";
-  })();
-
-  // Build the banco multi-select dropdown HTML
-  const selBancos=filtros.pgto._bancos;
-  const bancoBtnTxt=selBancos.length===0?"Todos os bancos":selBancos.length===1?selBancos[0]:`${selBancos.length} bancos selecionados`;
-  const bancoDropdownHTML=`
+  const bancoDropdownHTML = `
     <div id="banco-filter-wrap" class="banco-filter-wrap" style="min-width:200px">
       <label class="form-label">🏦 Banco</label>
       <button id="banco-trigger" class="banco-trigger${selBancos.length>0?" active":""}" onclick="toggleBancoDropdown()" type="button">
@@ -960,197 +1334,140 @@ function renderPagamentos(){
           <span style="font-size:11px;font-weight:700;color:#1e3a5f">${bancosDisponiveis.length} banco(s)</span>
           ${selBancos.length>0?`<button onclick="filtros.pgto._bancos=[];filtros.pgto.bancos=[];renderTab('Pagamentos')" style="font-size:10px;background:none;border:none;color:#dc2626;cursor:pointer;font-weight:600">✖ Limpar</button>`:""}
         </div>
-        ${bancosDisponiveis.length===0?`<div style="padding:12px;color:#94a3b8;font-size:12px;text-align:center">Nenhum banco cadastrado</div>`:bancosDisponiveis.map(b=>`
-          <div id="opt_banco_${b.replace(/[^a-zA-Z0-9]/g,"_")}" class="banco-option${selBancos.includes(b)?" selected":""}" onclick="toggleBancoOpcao('${b.replace(/'/g,"\\'")}')">
-            <input type="checkbox" id="cb_banco_${b.replace(/[^a-zA-Z0-9]/g,"_")}" ${selBancos.includes(b)?"checked":""} onclick="event.stopPropagation();toggleBancoOpcao('${b.replace(/'/g,"\\'")}')">
-            <span style="font-weight:${selBancos.includes(b)?"700":"400"}">${b}</span>
-          </div>`).join("")}
+        ${bancosDisponiveis.length===0
+          ? `<div style="padding:12px;color:#94a3b8;font-size:12px;text-align:center">Nenhum banco cadastrado</div>`
+          : bancosDisponiveis.map(b=>`
+            <div class="banco-option${selBancos.includes(b)?" selected":""}" onclick="toggleBancoOpcao('${b.replace(/'/g,"\\'")}')">
+              <input type="checkbox" ${selBancos.includes(b)?"checked":""} onclick="event.stopPropagation();toggleBancoOpcao('${b.replace(/'/g,"\\'")}')">
+              <span style="font-weight:${selBancos.includes(b)?"700":"400"}">${b}</span>
+            </div>`).join("")}
       </div>
-      ${selBancos.length>0?`<div id="banco-chips" class="banco-chips">${selBancos.map(b=>`<span class="banco-chip">${b}<span class="banco-chip-x" onclick="removerBancoChip('${b.replace(/'/g,"\\'")}')">×</span></span>`).join("")}</div>`:`<div id="banco-chips" class="banco-chips"></div>`}
+      ${selBancos.length>0 ? `<div class="banco-chips">${selBancos.map(b=>`<span class="banco-chip">${b}<span class="banco-chip-x" onclick="removerBancoChip('${b.replace(/'/g,"\\'")}')">×</span></span>`).join("")}</div>` : ""}
     </div>`;
 
-  const barPgto=`<div class="card" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start">
-    <div>
-      <label class="form-label">Status</label>
+  const totPorBanco = [...new Set(dados.filter(i=>i.banco&&(i.status_pgto==="Pago Total"||i.status_pgto==="Pago Parcial")).map(i=>i.banco))].sort()
+    .map(b => {
+      const pagos = dados.filter(i=>i.banco===b&&(i.status_pgto==="Pago Total"||i.status_pgto==="Pago Parcial"));
+      return { banco:b, total:pagos.reduce((s,i)=>s+(parseFloat(i.reais)||0),0), qtd:pagos.length };
+    }).filter(b=>b.total>0);
+
+  const resumoBancos = totPorBanco.length>1 ? `<div class="card" style="margin-bottom:14px">
+    <div style="font-weight:700;color:#1e3a5f;margin-bottom:10px">🏦 Resumo por Banco</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      ${totPorBanco.map((b,idx)=>{
+        const cores=["#1d4ed8","#16a34a","#d97706","#7c3aed","#dc2626"];
+        const c=cores[idx%cores.length];
+        const bg={["#1d4ed8"]:"#dbeafe","#16a34a":"#dcfce7","#d97706":"#fef3c7","#7c3aed":"#ede9fe","#dc2626":"#fee2e2"}[c]||"#f1f5f9";
+        return `<div style="background:${bg};border-radius:8px;padding:10px 16px;border-left:4px solid ${c};min-width:160px">
+          <div style="font-size:11px;font-weight:700;color:${c};text-transform:uppercase">🏦 ${b.banco}</div>
+          <div style="font-size:17px;font-weight:800;color:${c}">${fmtBRL(b.total)}</div>
+          <div style="font-size:10px;color:#64748b;margin-top:2px">${b.qtd} pagamento(s)</div>
+        </div>`;
+      }).join("")}
+    </div>
+  </div>` : "";
+
+  return `
+  <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">💰 Controle de Pagamentos</div>
+  <div class="filter-bar">
+    <div><label class="form-label">Status</label>
       <select id="f_pgto_status" onchange="filtros.pgto._status=this.value">
-        <option value="Todos"${f._status==="Todos"||!f._status?" selected":""}>Todos</option>
+        <option value="Todos"${f._status==="Todos"?" selected":""}>Todos</option>
         ${STATUS_PGTO.map(s=>`<option value="${s}"${f._status===s?" selected":""}>${s}</option>`).join("")}
       </select>
     </div>
-    <div>
-      <label class="form-label">Data Inicial</label>
-      <input type="date" id="f_pgto_dtIni" value="${f._dtIni||""}" onchange="filtros.pgto._dtIni=this.value">
-    </div>
-    <div>
-      <label class="form-label">Data Final</label>
-      <input type="date" id="f_pgto_dtFim" value="${f._dtFim||""}" onchange="filtros.pgto._dtFim=this.value">
-    </div>
+    <div><label class="form-label">Data Inicial</label><input type="date" id="f_pgto_dtIni" value="${f._dtIni||""}" onchange="filtros.pgto._dtIni=this.value"></div>
+    <div><label class="form-label">Data Final</label><input type="date" id="f_pgto_dtFim" value="${f._dtFim||""}" onchange="filtros.pgto._dtFim=this.value"></div>
     ${bancoDropdownHTML}
-    <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:2px;margin-top:auto">
+    <div style="display:flex;gap:8px;align-items:flex-end">
       <button class="btn-search" onclick="aplicarFiltroPgto()">🔍 Buscar</button>
       <button class="btn btn-ghost" onclick="limparFiltro('pgto')">✖ Limpar</button>
     </div>
-  </div>`;
-
-  // Totals per bank (for filtered data with bank payment)
-  const bancosNoFiltro=f.bancos&&f.bancos.length>0?f.bancos:bancosDisponiveis;
-  const totPorBanco=bancosNoFiltro.map(b=>{
-    const pagos=dados.filter(i=>i.banco===b&&(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial"));
-    const total=pagos.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-    const qtd=pagos.length;
-    return{banco:b,total,qtd};
-  }).filter(b=>b.total>0);
-
-  const resumoBancos=totPorBanco.length>1?`
-    <div class="card" style="margin-bottom:14px">
-      <div style="font-weight:700;color:#1e3a5f;margin-bottom:10px;font-size:13px">🏦 Resumo por Banco</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        ${totPorBanco.map((b,idx)=>{
-          const cores=["#1d4ed8","#16a34a","#d97706","#7c3aed","#dc2626","#0891b2"];
-          const c=cores[idx%cores.length];
-          const bg=c==="#1d4ed8"?"#dbeafe":c==="#16a34a"?"#dcfce7":c==="#d97706"?"#fef3c7":c==="#7c3aed"?"#ede9fe":c==="#dc2626"?"#fee2e2":"#e0f2fe";
-          return`<div style="background:${bg};border-radius:8px;padding:10px 16px;border-left:4px solid ${c};min-width:160px">
-            <div style="font-size:11px;font-weight:700;color:${c};text-transform:uppercase;margin-bottom:4px">🏦 ${b.banco}</div>
-            <div style="font-size:17px;font-weight:800;color:${c}">${fmtBRL(b.total)}</div>
-            <div style="font-size:10px;color:#64748b;margin-top:2px">${b.qtd} pagamento(s)</div>
-          </div>`;
-        }).join("")}
-      </div>
-    </div>`:"";
-
-  const cardsMoeda=MOEDAS.map(m=>{
-    const t=invoices.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
-    if(!t)return"";
-    return`<div class="stat" style="background:${MOEDA_BG[m]};border-left:4px solid ${MOEDA_COR[m]}">
-      <div style="font-size:11px;color:#64748b;font-weight:700">${m} ${SIMBOLO[m]}</div>
-      <div style="font-size:18px;font-weight:700;color:${MOEDA_COR[m]}">${fmtM(t,m)}</div>
-    </div>`;
-  }).join("");
-
-  return`
-  <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">💰 Controle de Pagamentos</div>
-  ${barPgto}
-  <div style="margin:-10px 0 12px 0;padding:0 4px"><span style="font-size:11px;color:#2563eb;font-weight:600">${ativoTxt}</span></div>
+  </div>
   <div class="card" style="display:flex;justify-content:flex-end;gap:8px;padding:10px 16px">
     <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVPgto()">⬇️ Excel</button>
     <button class="btn btn-primary" onclick="exportPDFPgto()">🖨️ PDF</button>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px">
     ${[["Em Aberto","#dc2626","#fee2e2"],["Pago Parcial","#d97706","#fef3c7"],["Pago Total","#16a34a","#dcfce7"]].map(([s,c,bg])=>{
-      const invs=dados.filter(i=>i.statusPgto===s);
-      return`<div class="stat" style="background:${bg};border-left:4px solid ${c}">
+      const invs = dados.filter(i=>i.status_pgto===s);
+      return `<div class="stat" style="background:${bg};border-left:4px solid ${c}">
         <div style="color:${c};font-weight:700;font-size:12px">${s}</div>
         <div style="font-size:26px;font-weight:700;color:${c}">${invs.length}</div>
         <div style="font-size:13px;font-weight:700;color:${c}">${fmtBRL(invs.reduce((s2,i)=>s2+(parseFloat(i.reais)||0),0))}</div>
       </div>`;
     }).join("")}
-    ${cardsMoeda}
+    ${MOEDAS.map(m=>{
+      const t = invoices.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
+      if (!t) return "";
+      return `<div class="stat" style="background:${MOEDA_BG[m]};border-left:4px solid ${MOEDA_COR[m]}">
+        <div style="font-size:11px;color:#64748b;font-weight:700">${m} ${SIMBOLO[m]}</div>
+        <div style="font-size:18px;font-weight:700;color:${MOEDA_COR[m]}">${fmtM(t,m)}</div>
+      </div>`;
+    }).join("")}
   </div>
   ${resumoBancos}
   <div class="table-wrap"><table>
     <thead><tr>
-      <th class="col-pasta">Pasta</th>
-      <th class="col-invoice">Nº Invoice</th>
-      <th class="col-fornecedor">Fornecedor</th>
-      <th class="col-cidade">Cidade</th>
-      <th class="col-moeda">Moeda</th>
-      <th class="col-valor">Valor Moeda</th>
-      <th class="col-taxa">Taxa</th>
-      <th class="col-valor">Valor R$</th>
-      <th class="col-data">Vencto</th>
-      <th class="col-cond">Cond.</th>
-      <th class="col-status">Status</th>
-      <th class="col-data">Data Pgto</th>
-      <th class="col-awb">Banco</th>
-      <th class="col-acoes">Ação</th>
+      <th class="col-pasta">Pasta</th><th class="col-invoice">Nº Invoice</th><th class="col-fornecedor">Fornecedor</th>
+      <th class="col-cidade">Cidade</th><th class="col-moeda">Moeda</th><th class="col-valor">Valor Moeda</th>
+      <th class="col-taxa">Taxa</th><th class="col-valor">Valor R$</th><th class="col-data">Vencto</th>
+      <th class="col-cond">Cond.</th><th class="col-status">Status</th><th class="col-data">Dt. Pgto</th>
+      <th class="col-awb">Banco</th><th class="col-acoes">Ação</th>
     </tr></thead>
-    <tbody>${dados.length===0?`<tr><td colspan="14" style="text-align:center;padding:20px;color:#94a3b8">Nenhum registro encontrado</td></tr>`:dados.map(i=>{
-      const ri=invoices.indexOf(i),vm=parseCurrency(i.valorMoeda);
-      return`<tr>
-        <td class="col-pasta" style="font-weight:600;color:#1e3a5f">${i.pasta||""}</td>
-        <td class="col-invoice">${i.nFatura||""}</td>
-        <td class="col-fornecedor">${i.fornecedor||""}</td>
-        <td class="col-cidade">${i.cidade||""}</td>
-        <td class="col-moeda"><span class="badge badge-blue">${i.moeda||""}</span></td>
-        <td class="col-valor">${fmtM(vm,i.moeda)}</td>
-        <td class="col-taxa">${i.taxa||"—"}</td>
-        <td class="col-valor" style="font-weight:700">${fmtBRL(i.reais)}</td>
-        <td class="col-data">${fmtD(i.vencimento)}</td>
-        <td class="col-cond">${i.condPgto||""}</td>
-        <td class="col-status">${statusBadge(i.statusPgto)}</td>
-        <td class="col-data">${fmtD(i.dtPgto)}</td>
-        <td class="col-awb">${i.banco?`<span style="background:#dbeafe;color:#1d4ed8;padding:2px 7px;border-radius:8px;font-size:11px;font-weight:600">${i.banco}</span>`:"—"}</td>
-        <td class="col-acoes" style="white-space:nowrap">
-          ${i.statusPgto!=="Pago Total"?`<button class="btn-sm" style="background:#dbeafe;color:#1d4ed8" onclick="abrirPgto(${ri})">💰 Registrar</button>`:""}
-          ${(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial")?`<button class="btn-sm" style="background:#fef3c7;color:#d97706" onclick="desfazerPagamento(${ri})">↩ Desfazer</button>`:""}
-        </td>
-      </tr>`;
-    }).join("")}</tbody>
+    <tbody>${dados.length===0
+      ? `<tr><td colspan="14" style="text-align:center;padding:24px;color:#94a3b8">Nenhum registro encontrado</td></tr>`
+      : dados.map(i => `<tr>
+          <td class="col-pasta" style="font-weight:600;color:#1e3a5f">${i.pasta||""}</td>
+          <td class="col-invoice">${i.n_fatura||""}</td>
+          <td class="col-fornecedor">${i.fornecedor||""}</td>
+          <td class="col-cidade">${i.cidade||""}</td>
+          <td class="col-moeda"><span class="badge badge-blue">${i.moeda||""}</span></td>
+          <td class="col-valor">${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td>
+          <td class="col-taxa">${i.taxa||"—"}</td>
+          <td class="col-valor" style="font-weight:700">${fmtBRL(i.reais)}</td>
+          <td class="col-data">${fmtD(i.vencimento)}</td>
+          <td class="col-cond">${i.cond_pgto||""}</td>
+          <td class="col-status">${statusBadge(i.status_pgto)}</td>
+          <td class="col-data">${fmtD(i.dt_pgto)}</td>
+          <td class="col-awb">${i.banco?`<span style="background:#dbeafe;color:#1d4ed8;padding:2px 7px;border-radius:8px;font-size:11px;font-weight:600">${i.banco}</span>`:"—"}</td>
+          <td class="col-acoes">
+            ${pode("pagamento") && i.status_pgto!=="Pago Total" ? `<button class="btn-sm" style="background:#dbeafe;color:#1d4ed8" onclick="abrirPgto('${i.id}')">💰 Pagar</button>` : ""}
+            ${pode("pagamento") && (i.status_pgto==="Pago Total"||i.status_pgto==="Pago Parcial") ? `<button class="btn-sm" style="background:#fef3c7;color:#d97706" onclick="desfazerPagamento('${i.id}')">↩ Desfazer</button>` : ""}
+          </td>
+        </tr>`).join("")
+    }</tbody>
   </table></div>`;
 }
 
-function desfazerPagamento(idx){
-  if(!confirm("Desfazer?"))return;
-  invoices[idx]={...invoices[idx],dtPgto:"",banco:"",taxa:"",reais:"",statusCambio:"Pendente",statusPgto:"Em Aberto",valorPago:""};
-  salvarDados().then(()=>renderTab("Pagamentos"));showToast("Desfeito!");
-}
-function abrirPgto(idx){
-  pgtoTarget=idx;const i=invoices[idx];const vm=parseCurrency(i.valorMoeda);
-  document.getElementById("pgtoInfo").innerHTML=`<b>${i.nFatura}</b> — ${i.fornecedor} &nbsp;|&nbsp; <span style="color:${MOEDA_COR[i.moeda]};font-weight:700">${i.moeda} ${fmtM(vm,i.moeda)}</span>`;
-  document.getElementById("pgtoFields").innerHTML=`
-    <div>${flabel("Data Pagamento")}<input id="p_dtPgto" type="date" value="${hoje()}"></div>
-    <div>${flabel("Banco")}<input id="p_banco" value="${i.banco||""}"></div>
-    <div>${flabel("Taxa de Câmbio (R$)")}<input id="p_taxa" type="text" inputmode="numeric" value="${i.taxa?parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4}):""}" oninput="calcPgtoTaxa(this)"></div>
-    <div>${flabel("Valor em R$ (calculado)")}<input id="p_reais" value="${i.reais?fmtBRL(i.reais):""}" readonly style="background:#f0fdf4;font-weight:700;color:#16a34a"></div>
-    <div>${flabel("Status")}<select id="p_status">${STATUS_PGTO.map(s=>`<option${s==="Pago Total"?" selected":""}>${s}</option>`).join("")}</select></div>`;
-  abrirModal("modalPgto");
-}
-function calcPgtoTaxa(el){
-  let raw=el.value.replace(/[^\d]/g,"").slice(0,6);
-  if(!raw){el.value="";return;}
-  const padded=raw.padStart(6,"0");
-  const intPart=padded.slice(0,2).replace(/^0+/,"")||"0";
-  const decPart=padded.slice(2);
-  el.value=`${intPart},${decPart}`;
-  const n=parseFloat(`${intPart}.${decPart}`);
-  const vm=parseCurrency(invoices[pgtoTarget].valorMoeda)||0;
-  if(n&&vm)document.getElementById("p_reais").value=fmtBRL((n*vm).toFixed(2));
-}
-function salvarPagamento(){
-  const i=invoices[pgtoTarget];
-  const taxaStr=document.getElementById("p_taxa").value;
-  const taxa=parseFloat(taxaStr.replace(/\./g,"").replace(",","."))||0;
-  const vm=parseCurrency(i.valorMoeda)||0;
-  invoices[pgtoTarget]={...i,dtPgto:document.getElementById("p_dtPgto").value,banco:document.getElementById("p_banco").value,taxa:String(taxa),reais:taxa&&vm?(taxa*vm).toFixed(2):i.reais,statusCambio:"Fechado",statusPgto:document.getElementById("p_status").value};
-  fecharModal("modalPgto");salvarDados().then(()=>renderTab("Pagamentos"));showToast("Pagamento registrado!");
-}
+// ════════════════════════════════════════════════════════
+//  FORNECEDORES
+// ════════════════════════════════════════════════════════
+function renderRelForn() {
+  const forn = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
+  const f = filtros.forn;
+  let invsForn = relForn ? invoices.filter(i=>i.fornecedor===relForn) : [];
+  if (f.dtIni) invsForn = invsForn.filter(i=>i.emissao_fatura>=f.dtIni);
+  if (f.dtFim) invsForn = invsForn.filter(i=>i.emissao_fatura<=f.dtFim);
+  const totMoeda = {};
+  MOEDAS.forEach(m => { totMoeda[m] = invsForn.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valor_moeda),0); });
+  const totR = invsForn.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
 
-// ===== FORNECEDORES (renamed from Rel. Fornecedores) =====
-function renderRelForn(){
-  const forn=[...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
-  const f=filtros.forn;
-  let invsForn=relForn?invoices.filter(i=>i.fornecedor===relForn):[];
-  if(f.dtIni)invsForn=invsForn.filter(i=>i.emissaoFatura>=f.dtIni);
-  if(f.dtFim)invsForn=invsForn.filter(i=>i.emissaoFatura<=f.dtFim);
-  const totMoeda={};MOEDAS.forEach(m=>{totMoeda[m]=invsForn.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);});
-  const totR=invsForn.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-
-  const barForn=filtroBar("forn",[
+  const barForn = filtroBar("forn",[
     {label:"Fornecedor",key:"fornecedor",type:"select",options:[{val:"",txt:"Todos"},...forn.map(fn=>({val:fn,txt:fn}))]},
     {label:"Data Inicial",key:"dtIni",type:"date"},
     {label:"Data Final",key:"dtFim",type:"date"}
   ],"aplicarFiltroForn()");
 
-  return`
+  return `
   <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">📊 Relatório por Fornecedor</div>
   ${barForn}
-  <div style="margin:-10px 0 12px 0;padding:0 4px"><span style="font-size:11px;color:#2563eb;font-weight:600">${filtroAtivoTxt("forn")}</span></div>
-  ${relForn?`<div class="card" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 16px">
+  ${relForn ? `<div class="card" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 16px">
     <span style="font-weight:700;color:#1e3a5f">📌 ${relForn}</span>
     <button class="btn btn-primary" onclick="exportPDFForn('${relForn}')">🖨️ PDF</button>
     <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVForn('${relForn}')">⬇️ Excel</button>
-    <button class="btn btn-ghost" onclick="relForn='';filtros.forn.fornecedor='';filtros.forn._fornecedor='';renderTab('Fornecedores')">✖ Limpar seleção</button>
-  </div>`:""}
+    <button class="btn btn-ghost" onclick="relForn='';filtros.forn.fornecedor='';filtros.forn._fornecedor='';renderTab('Fornecedores')">✖ Limpar</button>
+  </div>` : ""}
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="font-weight:700;color:#1e3a5f">📋 Ranking de Fornecedores</div>
@@ -1159,62 +1476,84 @@ function renderRelForn(){
         <button class="btn btn-primary" style="font-size:12px" onclick="exportPDFRanking()">🖨️ PDF Ranking</button>
       </div>
     </div>
-    <div class="table-wrap"><table><thead><tr>${["Fornecedor","Moeda","Valor Moeda","Em Aberto","Pago Total","Total R$",""].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
-    <tbody>${forn.map(fn=>{
-      const invs=invoices.filter(i=>i.fornecedor===fn);
-      const totR2=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-      const pm={};invs.forEach(i=>{if(i.moeda)pm[i.moeda]=(pm[i.moeda]||0)+parseCurrency(i.valorMoeda);});
-      const mStr=Object.entries(pm).map(([m,v])=>`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
-      return`<tr style="cursor:pointer;${relForn===fn?"background:#dbeafe!important":""}" onclick="relForn='${fn}';renderTab('Fornecedores')">
-        <td style="font-weight:600;color:${relForn===fn?"#1d4ed8":"#2563eb"}">${fn} ${relForn===fn?"✅":""}</td>
-        <td>${Object.keys(pm).join("/")||"—"}</td>
-        <td style="font-weight:700;color:#1d4ed8">${mStr||"—"}</td>
-        <td><span class="badge badge-red">${invs.filter(i=>i.statusPgto==="Em Aberto").length}</span></td>
-        <td><span class="badge badge-green">${invs.filter(i=>i.statusPgto==="Pago Total").length}</span></td>
-        <td style="font-weight:700;color:#16a34a">${fmtBRL(totR2)}</td>
-        <td style="font-size:11px;color:#2563eb">Ver →</td>
-      </tr>`;
-    }).join("")}</tbody></table></div>
+    <div class="table-wrap"><table>
+      <thead><tr>${["Fornecedor","Moeda","Valor Moeda","Em Aberto","Pago Total","Total R$",""].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+      <tbody>${forn.map(fn => {
+        const invs = invoices.filter(i=>i.fornecedor===fn);
+        const totR2= invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+        const pm   = {};
+        invs.forEach(i=>{ if(i.moeda) pm[i.moeda]=(pm[i.moeda]||0)+parseCurrency(i.valor_moeda); });
+        const mStr = Object.entries(pm).map(([m,v])=>`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
+        return `<tr style="cursor:pointer;${relForn===fn?"background:#dbeafe!important":""}" onclick="relForn='${fn}';renderTab('Fornecedores')">
+          <td style="font-weight:600;color:${relForn===fn?"#1d4ed8":"#2563eb"}">${fn} ${relForn===fn?"✅":""}</td>
+          <td>${Object.keys(pm).join("/")||"—"}</td>
+          <td style="font-weight:700;color:#1d4ed8">${mStr||"—"}</td>
+          <td><span class="badge badge-red">${invs.filter(i=>i.status_pgto==="Em Aberto").length}</span></td>
+          <td><span class="badge badge-green">${invs.filter(i=>i.status_pgto==="Pago Total").length}</span></td>
+          <td style="font-weight:700;color:#16a34a">${fmtBRL(totR2)}</td>
+          <td style="font-size:11px;color:#2563eb">Ver →</td>
+        </tr>`;
+      }).join("")}</tbody>
+    </table></div>
   </div>
-  ${relForn&&invsForn.length>0?`<div class="card"><div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:8px">🏢 Detalhes — ${relForn}</div>
+  ${relForn && invsForn.length>0 ? `<div class="card">
+    <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:8px">🏢 Detalhes — ${relForn}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
       ${MOEDAS.map(m=>totMoeda[m]>0?`<div style="background:${MOEDA_BG[m]};border-radius:8px;padding:10px 16px;border-left:3px solid ${MOEDA_COR[m]}"><div style="font-size:11px;color:#64748b">Total ${m}</div><div style="font-weight:700;color:${MOEDA_COR[m]}">${fmtM(totMoeda[m],m)}</div></div>`:"").join("")}
       <div style="background:#dcfce7;border-radius:8px;padding:10px 16px;border-left:3px solid #16a34a"><div style="font-size:11px;color:#64748b">Total R$</div><div style="font-weight:700;color:#16a34a">${fmtBRL(totR)}</div></div>
     </div>
-    <div class="table-wrap"><table><thead><tr>${["Nº Invoice","Emissão","Vencimento","Moeda","Valor na Moeda","Taxa (R$)","Valor em R$","Cond.","Status"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
-    <tbody>${invsForn.map(i=>`<tr>
-      <td>${i.nFatura||""}</td><td>${fmtD(i.emissaoFatura)}</td><td>${fmtD(i.vencimento)}</td>
-      <td><span class="badge badge-blue">${i.moeda||""}</span></td>
-      <td style="font-weight:700;color:${MOEDA_COR[i.moeda]||"#1d4ed8"}">${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td>
-      <td>${i.taxa?`R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}`:"—"}</td>
-      <td style="font-weight:700;color:#16a34a">${fmtBRL(i.reais)}</td>
-      <td>${i.condPgto||""}</td><td>${statusBadge(i.statusPgto)}</td>
-    </tr>`).join("")}</tbody></table></div>
-  </div>`:""}`;
+    <div class="table-wrap"><table>
+      <thead><tr>${["Nº Invoice","Emissão","Vencimento","Moeda","Valor Moeda","Taxa R$","Valor R$","Cond.","Status"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+      <tbody>${invsForn.map(i=>`<tr>
+        <td>${i.n_fatura||""}</td><td>${fmtD(i.emissao_fatura)}</td><td>${fmtD(i.vencimento)}</td>
+        <td><span class="badge badge-blue">${i.moeda||""}</span></td>
+        <td style="font-weight:700;color:${MOEDA_COR[i.moeda]||"#1d4ed8"}">${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td>
+        <td>${i.taxa?`R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}`:"—"}</td>
+        <td style="font-weight:700;color:#16a34a">${fmtBRL(i.reais)}</td>
+        <td>${i.cond_pgto||""}</td><td>${statusBadge(i.status_pgto)}</td>
+      </tr>`).join("")}</tbody>
+    </table></div>
+  </div>` : ""}`;
 }
 
-// ===== ANÁLISE CAMBIAL =====
-function renderAnaliseCambial(){
-  const forn=[...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
-  const f=filtros.cambial;
-  let dados=invoices.filter(i=>i.dtPgto&&i.taxa&&parseFloat(i.taxa)>0);
-  if(f.fornecedor)dados=dados.filter(i=>i.fornecedor===f.fornecedor);
-  if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
-  if(f.dtIni)dados=dados.filter(i=>i.dtPgto>=f.dtIni);
-  if(f.dtFim)dados=dados.filter(i=>i.dtPgto<=f.dtFim);
+// ════════════════════════════════════════════════════════
+//  ANÁLISE CAMBIAL
+// ════════════════════════════════════════════════════════
+function renderAnaliseCambial() {
+  const forn = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
+  const f = filtros.cambial;
+  let dados = invoices.filter(i=>i.dt_pgto&&i.taxa&&parseFloat(i.taxa)>0);
+  if (f.fornecedor) dados = dados.filter(i=>i.fornecedor===f.fornecedor);
+  if (f.moeda)      dados = dados.filter(i=>i.moeda===f.moeda);
+  if (f.dtIni)      dados = dados.filter(i=>i.dt_pgto>=f.dtIni);
+  if (f.dtFim)      dados = dados.filter(i=>i.dt_pgto<=f.dtFim);
 
-  const totMoeda={},totReaisMoeda={},taxaMedia={};
+  const totMoeda={}, totReaisMoeda={}, taxaMedia={};
   MOEDAS.forEach(m=>{
-    const arr=dados.filter(i=>i.moeda===m);
-    totMoeda[m]=arr.reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
-    totReaisMoeda[m]=arr.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-    if(arr.length){taxaMedia[m]=(arr.reduce((s,i)=>s+(parseFloat(i.taxa)||0),0)/arr.length).toFixed(4);}
+    const arr = dados.filter(i=>i.moeda===m);
+    totMoeda[m]      = arr.reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
+    totReaisMoeda[m] = arr.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+    if (arr.length) taxaMedia[m] = (arr.reduce((s,i)=>s+(parseFloat(i.taxa)||0),0)/arr.length).toFixed(4);
   });
-  const totReais=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const totalMoedaGeral=MOEDAS.reduce((s,m)=>s+totMoeda[m],0);
+  const totReais = dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const totalMoedaGeral = MOEDAS.reduce((s,m)=>s+totMoeda[m],0);
+  const chartDados = MOEDAS.map(m=>({moeda:m,valor:totMoeda[m],pct:totalMoedaGeral>0?(totMoeda[m]/totalMoedaGeral)*100:0,cor:MOEDA_CHART[m]})).filter(d=>d.valor>0);
 
-  const cardsMoeda=MOEDAS.map(m=>totMoeda[m]>0?`
-    <div class="kpi-moeda" style="background:${MOEDA_BG[m]};border-color:${MOEDA_COR[m]}">
+  return `
+  <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">📈 Análise Cambial</div>
+  ${filtroBar("cambial",[
+    {label:"Fornecedor",key:"fornecedor",type:"select",options:[{val:"",txt:"Todos"},...forn.map(fn=>({val:fn,txt:fn}))]},
+    {label:"Moeda",key:"moeda",type:"select",options:[{val:"",txt:"Todas"},...MOEDAS.map(m=>({val:m,txt:m}))]},
+    {label:"Data Inicial",key:"dtIni",type:"date"},
+    {label:"Data Final",key:"dtFim",type:"date"}
+  ],"aplicarFiltroCambial()")}
+  <div style="margin:-10px 0 12px 0;padding:0 4px"><span style="font-size:11px;color:#2563eb;font-weight:600">${filtroAtivoTxt("cambial")}</span></div>
+  <div class="card" style="display:flex;justify-content:flex-end;gap:8px;padding:10px 16px">
+    <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVCambial()">⬇️ Excel</button>
+    <button class="btn btn-primary" onclick="exportPDFCambial()">🖨️ PDF</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px">
+    ${MOEDAS.map(m=>totMoeda[m]>0?`<div class="kpi-moeda" style="background:${MOEDA_BG[m]};border-color:${MOEDA_COR[m]}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <span style="font-size:13px;font-weight:700;color:${MOEDA_COR[m]}">${SIMBOLO[m]} ${m}</span>
         <span style="font-size:16px;font-weight:700;color:${MOEDA_COR[m]};background:#fff;padding:2px 8px;border-radius:8px">${pct(totMoeda[m],totalMoedaGeral)}</span>
@@ -1222,358 +1561,120 @@ function renderAnaliseCambial(){
       <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:#64748b">Total Pago</span><span style="font-weight:700;color:${MOEDA_COR[m]}">${fmtM(totMoeda[m],m)}</span></div>
       <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:#64748b">Em R$</span><span style="font-weight:700;color:#16a34a">${fmtBRL(totReaisMoeda[m])}</span></div>
       <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#64748b">Taxa Média</span><span style="font-weight:600;color:#475569">${taxaMedia[m]||"—"}</span></div>
-    </div>`:"").join("");
-
-  const chartDados=MOEDAS.map(m=>({moeda:m,valor:totMoeda[m],pct:totalMoedaGeral>0?(totMoeda[m]/totalMoedaGeral)*100:0,cor:MOEDA_CHART[m]})).filter(d=>d.valor>0);
-
-  const barCambial=filtroBar("cambial",[
-    {label:"Fornecedor",key:"fornecedor",type:"select",options:[{val:"",txt:"Todos"},...forn.map(fn=>({val:fn,txt:fn}))]},
-    {label:"Moeda",key:"moeda",type:"select",options:[{val:"",txt:"Todas"},...MOEDAS.map(m=>({val:m,txt:m}))]},
-    {label:"Data Inicial",key:"dtIni",type:"date"},
-    {label:"Data Final",key:"dtFim",type:"date"}
-  ],"aplicarFiltroCambial()");
-
-  return`
-  <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">📈 Análise Cambial</div>
-  ${barCambial}
-  <div style="margin:-10px 0 12px 0;padding:0 4px"><span style="font-size:11px;color:#2563eb;font-weight:600">${filtroAtivoTxt("cambial")}</span></div>
-  <div class="card" style="display:flex;justify-content:flex-end;gap:8px;padding:10px 16px">
-    <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVCambial()">⬇️ Excel</button>
-    <button class="btn btn-primary" onclick="exportPDFCambial()">🖨️ PDF</button>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px">
-    ${cardsMoeda}
+    </div>`:"").join("")}
     <div class="kpi-moeda" style="background:#dcfce7;border-color:#16a34a">
       <div style="font-size:13px;font-weight:700;color:#16a34a;margin-bottom:6px">🇧🇷 Total Geral R$</div>
       <div style="font-size:22px;font-weight:700;color:#16a34a">${fmtBRL(totReais)}</div>
       <div style="font-size:11px;color:#475569;margin-top:4px">${dados.length} pagamento(s)</div>
     </div>
   </div>
-  ${chartDados.length?renderGraficoMoeda(chartDados,"Distribuição por Moeda — % do Volume Pago"):""}
+  ${chartDados.length ? renderGraficoMoeda(chartDados,"Distribuição por Moeda — % do Volume Pago") : ""}
   <div class="table-wrap"><table>
     <thead><tr>${["Fornecedor","Data Pgto","Moeda","Taxa de Câmbio","Valor na Moeda","Valor em R$","Nº Invoice","Banco","Status"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
-    <tbody>${dados.length===0?`<tr><td colspan="9" style="text-align:center;padding:20px;color:#94a3b8">Nenhum pagamento encontrado.</td></tr>`:dados.map(i=>`<tr>
-      <td><b>${i.fornecedor||""}</b></td><td>${fmtD(i.dtPgto)}</td>
-      <td><span class="badge" style="background:${MOEDA_BG[i.moeda]};color:${MOEDA_COR[i.moeda]}">${i.moeda||""}</span></td>
-      <td style="font-weight:600">R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}</td>
-      <td style="font-weight:700;color:${MOEDA_COR[i.moeda]||"#1d4ed8"}">${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td>
-      <td style="font-weight:700;color:#16a34a">${fmtBRL(i.reais)}</td>
-      <td>${i.nFatura||""}</td><td>${i.banco||"—"}</td><td>${statusBadge(i.statusPgto)}</td>
-    </tr>`).join("")}</tbody>
+    <tbody>${dados.length===0
+      ? `<tr><td colspan="9" style="text-align:center;padding:24px;color:#94a3b8">Nenhum pagamento encontrado.</td></tr>`
+      : dados.map(i=>`<tr>
+          <td><b>${i.fornecedor||""}</b></td><td>${fmtD(i.dt_pgto)}</td>
+          <td><span class="badge" style="background:${MOEDA_BG[i.moeda]};color:${MOEDA_COR[i.moeda]}">${i.moeda||""}</span></td>
+          <td style="font-weight:600">R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}</td>
+          <td style="font-weight:700;color:${MOEDA_COR[i.moeda]||"#1d4ed8"}">${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td>
+          <td style="font-weight:700;color:#16a34a">${fmtBRL(i.reais)}</td>
+          <td>${i.n_fatura||""}</td><td>${i.banco||"—"}</td><td>${statusBadge(i.status_pgto)}</td>
+        </tr>`).join("")
+    }</tbody>
   </table></div>`;
 }
 
-// ===== PDF STYLES =====
-function pdfStyles(){return`*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;background:#fff;color:#1e293b;padding:24px}.hdr{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:18px 24px;border-radius:10px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}.hdr h1{font-size:16px;margin-bottom:3px}.hdr p{font-size:11px;opacity:.8}.cards{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}.card{flex:1;min-width:110px;border-radius:8px;padding:10px 14px;border-left:4px solid}.cl{font-size:10px;color:#64748b;margin-bottom:2px;font-weight:700;text-transform:uppercase}.cv{font-size:15px;font-weight:700}table{width:100%;border-collapse:collapse;font-size:10.5px}thead tr{background:#1e3a5f;color:#fff}th{padding:7px 8px;text-align:left;font-weight:700;white-space:nowrap}td{padding:5px 8px;border-bottom:1px solid #f1f5f9;vertical-align:middle}.tot{background:#f8fafc;border-radius:8px;padding:10px 14px;margin-top:12px;display:flex;gap:20px;flex-wrap:wrap;font-size:11px}.footer{margin-top:14px;display:flex;justify-content:space-between;border-top:2px solid #e2e8f0;padding-top:10px;font-size:10px;color:#94a3b8}@media print{.hdr,.cards,thead tr{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`;}
-
-// ===== EXPORTAÇÕES CSV — ENGINE UNIFICADO =====
-
-// Utilitários de formatação limpa para CSV
-function csvEsc(v){
-  // Remove aspas duplas internas, retorna como campo entre aspas duplas
-  if(v===null||v===undefined)return'""';
-  return'"'+String(v).replace(/"/g,'""')+'"';
-}
-function csvDate(d){
-  // ISO date string YYYY-MM-DD → DD/MM/YYYY
-  if(!d||!String(d).match(/^\d{4}-\d{2}-\d{2}/))return'""';
-  const[y,m,day]=String(d).split("T")[0].split("-");
-  return csvEsc(`${day}/${m}/${y}`);
-}
-function csvNum(v){
-  // Número no padrão brasileiro: vírgula como separador decimal.
-  // Valores monetários: arredonda a no máx. 2 casas (elimina ruído de ponto
-  // flutuante de somatórios) e remove zeros à direita — ex.: 146387.50 -> "146387,5",
-  // 1605398.109999 -> "1605398,11", 25000 -> "25000". Sem milhar, sem aspas.
-  // Detecta a origem: string com vírgula = formato BR ("68.850,00"); caso
-  // contrário, número JS com ponto decimal ("146387.50") ou number puro.
-  if(v===null||v===undefined||v==="")return'""';
-  let n;
-  if(typeof v==="number")n=v;
-  else n=/,/.test(String(v))?parseCurrency(v):parseFloat(v);
-  if(isNaN(n))return'""';
-  // Arredonda a 2 casas e remove zeros decimais à direita.
-  const arred=Math.round(n*100)/100;
-  return String(arred).replace(".",",");
-}
-function csvTaxa(v){
-  // Taxa no padrão brasileiro (vírgula decimal), mantendo a precisão natural.
-  // Ex.: 5.8555 -> "5,8555", 9.9999 -> "9,9999".
-  if(v===null||v===undefined||v==="")return'""';
-  const n=parseFloat(v);
-  return isNaN(n)?'""':String(n).replace(".",",");
-}
-function csvInt(v){
-  const n=parseInt(v,10);
-  return isNaN(n)?'""':String(n);
-}
-function csvPct(v,t){
-  if(!t||t===0)return'"0,00%"';
-  return csvEsc(((v/t)*100).toFixed(2).replace(".",",")+"%");
-}
+// ════════════════════════════════════════════════════════
+//  EXPORTAÇÕES CSV
+// ════════════════════════════════════════════════════════
+const SEP=";";
+function csvEsc(v){ if(v===null||v===undefined)return'""'; return '"'+String(v).replace(/"/g,'""')+'"'; }
+function csvDate(d){ if(!d||!String(d).match(/^\d{4}-\d{2}-\d{2}/))return'""'; const[y,m,day]=String(d).split("T")[0].split("-"); return csvEsc(`${day}/${m}/${y}`); }
+function csvNum(v){ if(v===null||v===undefined||v==="")return'""'; let n=typeof v==="number"?v:/,/.test(String(v))?parseCurrency(v):parseFloat(v); if(isNaN(n))return'""'; const arred=Math.round(n*100)/100; return String(arred).replace(".",","); }
+function csvTaxa(v){ if(v===null||v===undefined||v==="")return'""'; const n=parseFloat(v); return isNaN(n)?'""':String(n).replace(".",","); }
+function csvInt(v){ const n=parseInt(v,10); return isNaN(n)?'""':String(n); }
+function csvPct(v,t){ if(!t||t===0)return'"0,00%"'; return csvEsc(((v/t)*100).toFixed(2).replace(".",",")+"%"); }
 function buildCSV(headerRow,dataRows,summaryBlocks){
-  // headerRow: array of strings (labels)
-  // dataRows: array of arrays of already-escaped csv values
-  // summaryBlocks: array of {title, headers, rows} — each appended after blank line
-  // Separador de campos: ponto e vírgula (";"), padrão de lista do Excel em
-  // português brasileiro, evitando conflito com a vírgula decimal dos números.
-  const SEP=";";
-  const lines=[];
-  // Declaração lida automaticamente pelo Excel para definir o separador.
-  lines.push("sep=;");
-  lines.push(headerRow.map(h=>csvEsc(h)).join(SEP));
+  const lines=["sep=;",headerRow.map(h=>csvEsc(h)).join(SEP)];
   dataRows.forEach(r=>lines.push(r.join(SEP)));
-  if(summaryBlocks&&summaryBlocks.length){
-    summaryBlocks.forEach(block=>{
-      lines.push(""); // blank separator
-      lines.push(csvEsc("=== "+block.title+" ==="));
-      lines.push(block.headers.map(h=>csvEsc(h)).join(SEP));
-      block.rows.forEach(r=>lines.push(r.join(SEP)));
-    });
-  }
+  if(summaryBlocks&&summaryBlocks.length){ summaryBlocks.forEach(block=>{ lines.push(""); lines.push(csvEsc("=== "+block.title+" ===")); lines.push(block.headers.map(h=>csvEsc(h)).join(SEP)); block.rows.forEach(r=>lines.push(r.join(SEP))); }); }
   return lines.join("\r\n");
 }
-function dlCSV(content,filename){
-  const a=document.createElement("a");
-  a.href="data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent(content);
-  a.download=filename.endsWith(".csv")?filename:filename+".csv";
-  a.click();
-}
-// legacy dl kept for any other use
-function dl(href,name){const a=document.createElement("a");a.href=href;a.download=name;a.click();}
+function dlCSV(content,filename){ const a=document.createElement("a"); a.href="data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent(content); a.download=filename.endsWith(".csv")?filename:filename+".csv"; a.click(); }
 
-// ----- 1. Invoices -----
 function exportCSV(){
   const filtradas=getInvFiltradas();
-  const headers=[
-    "Pasta","Cidade","Fornecedor","Marca",
-    "Data Pedido Fornecedor","Nº Proforma","Nº Invoice",
-    "Data Embarque","Emissão da Fatura","Data Antecipado",
-    "Condição de Pagamento","Vencimento","Data Pagamento","Banco",
-    "Taxa de Câmbio (R$)","Moeda","Valor na Moeda (Moeda)","Valor em R$",
-    "Status Câmbio","Status Pagamento","AWB / BL","Observações"
-  ];
-  const dataRows=filtradas.map(i=>[
-    csvEsc(i.pasta),csvEsc(i.cidade),csvEsc(i.fornecedor),csvEsc(i.marca),
-    csvDate(i.dtPedido),csvEsc(i.nProforma),csvEsc(i.nFatura),
-    csvDate(i.dtEmbarque),csvDate(i.emissaoFatura),csvDate(i.dtAntecipado),
-    csvEsc(i.condPgto),csvDate(i.vencimento),csvDate(i.dtPgto),csvEsc(i.banco),
-    csvTaxa(i.taxa),csvEsc(i.moeda),csvNum(i.valorMoeda),csvNum(i.reais),
-    csvEsc(i.statusCambio),csvEsc(i.statusPgto),csvEsc(i.awbBl),csvEsc(i.obs)
-  ]);
+  const headers=["Pasta","Cidade","Fornecedor","Marca","Data Pedido","Nº Proforma","Nº Invoice","Data Embarque","Emissão Fatura","Data Antecipado","Condição Pgto","Vencimento","Data Pagamento","Banco","Taxa Câmbio (R$)","Moeda","Valor Moeda","Valor R$","Status Câmbio","Status Pagamento","AWB/BL","Observações"];
+  const dataRows=filtradas.map(i=>[csvEsc(i.pasta),csvEsc(i.cidade),csvEsc(i.fornecedor),csvEsc(i.marca),csvDate(i.dt_pedido),csvEsc(i.n_proforma),csvEsc(i.n_fatura),csvDate(i.dt_embarque),csvDate(i.emissao_fatura),csvDate(i.dt_antecipado),csvEsc(i.cond_pgto),csvDate(i.vencimento),csvDate(i.dt_pgto),csvEsc(i.banco),csvTaxa(i.taxa),csvEsc(i.moeda),csvNum(i.valor_moeda),csvNum(i.reais),csvEsc(i.status_cambio),csvEsc(i.status_pgto),csvEsc(i.awb_bl),csvEsc(i.obs)]);
   dlCSV(buildCSV(headers,dataRows),"invoices.csv");
-  showToast("CSV Invoices exportado!");
+  showToast("CSV exportado!");
 }
-
-// ----- 2. Pagamentos -----
 function exportCSVPgto(){
   const f=filtros.pgto;
   let dados=invoices;
-  if(f.status&&f.status!=="Todos")dados=dados.filter(i=>i.statusPgto===f.status);
-  if(f.dtIni)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto>=f.dtIni)||(i.emissaoFatura&&i.emissaoFatura>=f.dtIni));
-  if(f.dtFim)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto<=f.dtFim)||(i.emissaoFatura&&i.emissaoFatura<=f.dtFim));
+  if(f.status&&f.status!=="Todos")dados=dados.filter(i=>i.status_pgto===f.status);
+  if(f.dtIni)dados=dados.filter(i=>(i.dt_pgto&&i.dt_pgto>=f.dtIni)||(i.emissao_fatura&&i.emissao_fatura>=f.dtIni));
+  if(f.dtFim)dados=dados.filter(i=>(i.dt_pgto&&i.dt_pgto<=f.dtFim)||(i.emissao_fatura&&i.emissao_fatura<=f.dtFim));
   if(f.bancos&&f.bancos.length>0)dados=dados.filter(i=>f.bancos.includes(i.banco));
-
-  const headers=[
-    "Pasta","Nº Invoice","Fornecedor","Cidade",
-    "Moeda","Valor na Moeda (Moeda)","Taxa de Câmbio (R$)","Valor em R$",
-    "Vencimento","Condição de Pagamento","Status Pagamento",
-    "Data Pagamento","Banco"
-  ];
-  const dataRows=dados.map(i=>[
-    csvEsc(i.pasta),csvEsc(i.nFatura),csvEsc(i.fornecedor),csvEsc(i.cidade),
-    csvEsc(i.moeda),csvNum(i.valorMoeda),csvTaxa(i.taxa),csvNum(i.reais),
-    csvDate(i.vencimento),csvEsc(i.condPgto),csvEsc(i.statusPgto),
-    csvDate(i.dtPgto),csvEsc(i.banco)
-  ]);
-
-  // Resumo por banco
-  const bancosNoRel=[...new Set(dados.filter(i=>i.banco&&(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial")).map(i=>i.banco))].sort();
-  const totPgR=dados.filter(i=>i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const summaryBlocks=bancosNoRel.length>0?[{
-    title:"RESUMO DE PAGAMENTOS POR BANCO",
-    headers:["Banco","Quantidade de Pagamentos","Total Pago (R$)","Participação (%)"],
-    rows:[
-      ...bancosNoRel.map(b=>{
-        const pagos=dados.filter(i=>i.banco===b&&(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial"));
-        const tot=pagos.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-        return[csvEsc(b),csvInt(pagos.length),csvNum(tot),csvPct(tot,totPgR)];
-      }),
-      [csvEsc("TOTAL GERAL PAGO"),csvInt(dados.filter(i=>i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial").length),csvNum(totPgR),csvEsc("100,00%")]
-    ]
-  }]:[];
-
-  dlCSV(buildCSV(headers,dataRows,summaryBlocks),"pagamentos.csv");
+  const headers=["Pasta","Nº Invoice","Fornecedor","Cidade","Moeda","Valor Moeda","Taxa Câmbio","Valor R$","Vencimento","Cond. Pgto","Status Pgto","Data Pgto","Banco"];
+  const dataRows=dados.map(i=>[csvEsc(i.pasta),csvEsc(i.n_fatura),csvEsc(i.fornecedor),csvEsc(i.cidade),csvEsc(i.moeda),csvNum(i.valor_moeda),csvTaxa(i.taxa),csvNum(i.reais),csvDate(i.vencimento),csvEsc(i.cond_pgto),csvEsc(i.status_pgto),csvDate(i.dt_pgto),csvEsc(i.banco)]);
+  dlCSV(buildCSV(headers,dataRows),"pagamentos.csv");
   showToast("CSV Pagamentos exportado!");
 }
-
-// ----- 3. Ranking Fornecedores -----
 function exportCSVRanking(){
   const forn=[...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
   const totGeralR=invoices.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const headers=[
-    "Fornecedor","Moedas Utilizadas",
-    "Qtd. Invoices Total","Qtd. Em Aberto","Qtd. Pago Parcial","Qtd. Pago Total",
-    "Valor Total em R$","Valor Em Aberto (R$)","Valor Pago (R$)","Participação no Total (%)"
-  ];
+  const headers=["Fornecedor","Moedas","Qtd Total","Em Aberto","Pago Parcial","Pago Total","Total R$","Em Aberto R$","Pago R$","Participação (%)"];
   const dataRows=forn.map(fn=>{
     const invs=invoices.filter(i=>i.fornecedor===fn);
     const totR=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-    const aberto=invs.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-    const pago=invs.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+    const aberto=invs.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+    const pago=invs.filter(i=>i.status_pgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
     const moedas=[...new Set(invs.map(i=>i.moeda).filter(Boolean))].join(", ");
-    return[
-      csvEsc(fn),csvEsc(moedas),
-      csvInt(invs.length),
-      csvInt(invs.filter(i=>i.statusPgto==="Em Aberto").length),
-      csvInt(invs.filter(i=>i.statusPgto==="Pago Parcial").length),
-      csvInt(invs.filter(i=>i.statusPgto==="Pago Total").length),
-      csvNum(totR),csvNum(aberto),csvNum(pago),
-      csvPct(totR,totGeralR)
-    ];
+    return[csvEsc(fn),csvEsc(moedas),csvInt(invs.length),csvInt(invs.filter(i=>i.status_pgto==="Em Aberto").length),csvInt(invs.filter(i=>i.status_pgto==="Pago Parcial").length),csvInt(invs.filter(i=>i.status_pgto==="Pago Total").length),csvNum(totR),csvNum(aberto),csvNum(pago),csvPct(totR,totGeralR)];
   });
-  // Totalizador final
-  const totAberto=invoices.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const totPago=invoices.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  dataRows.push([
-    csvEsc("TOTAL GERAL"),csvEsc(""),
-    csvInt(invoices.length),
-    csvInt(invoices.filter(i=>i.statusPgto==="Em Aberto").length),
-    csvInt(invoices.filter(i=>i.statusPgto==="Pago Parcial").length),
-    csvInt(invoices.filter(i=>i.statusPgto==="Pago Total").length),
-    csvNum(totGeralR),csvNum(totAberto),csvNum(totPago),
-    csvEsc("100,00%")
-  ]);
   dlCSV(buildCSV(headers,dataRows),"ranking_fornecedores.csv");
   showToast("CSV Ranking exportado!");
 }
-
-function exportPDFRanking(){
-  const forn=[...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
-  const rows=forn.map((fn,idx)=>{
-    const invs=invoices.filter(i=>i.fornecedor===fn);
-    const totR=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-    const pm={};invs.forEach(i=>{if(i.moeda)pm[i.moeda]=(pm[i.moeda]||0)+parseCurrency(i.valorMoeda);});
-    const mStr=Object.entries(pm).map(([m,v])=>`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
-    return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td><b>${fn}</b></td><td>${Object.keys(pm).join("/")||"—"}</td><td>${mStr||"—"}</td><td style="text-align:center">${invs.filter(i=>i.statusPgto==="Em Aberto").length}</td><td style="text-align:center">${invs.filter(i=>i.statusPgto==="Pago Total").length}</td><td style="font-weight:700;color:#16a34a">${fmtBRL(totR)}</td></tr>`;
-  }).join("");
-  const totGeral=invoices.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const w=window.open("","_blank");
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ranking Fornecedores</title><style>${pdfStyles()}</style></head><body>
-  <div class="hdr"><div><h1>📋 Ranking de Fornecedores — Importação</h1><p>Gerado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${forn.length}</b> fornecedores</div></div>
-  <table><thead><tr><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th style="text-align:center">Em Aberto</th><th style="text-align:center">Pago Total</th><th>Total R$</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="tot"><b>Total Geral R$:</b> <span style="color:#16a34a">${fmtBRL(totGeral)}</span></div>
-  <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado automaticamente</span></div>
-  <script>window.print()<\/script></body></html>`);
-  w.document.close();
-}
-
-// ----- 4. Fornecedor Individual -----
 function exportCSVForn(forn){
   const f=filtros.forn;
   let invs=invoices.filter(i=>i.fornecedor===forn);
-  if(f.dtIni)invs=invs.filter(i=>i.emissaoFatura>=f.dtIni);
-  if(f.dtFim)invs=invs.filter(i=>i.emissaoFatura<=f.dtFim);
-
-  const headers=[
-    "Fornecedor","Nº Invoice","Pasta","Cidade",
-    "Emissão da Fatura","Vencimento","Data Pagamento",
-    "Moeda","Valor na Moeda (Moeda)","Taxa de Câmbio (R$)","Valor em R$",
-    "Condição de Pagamento","Status Pagamento","Status Câmbio",
-    "Banco","AWB / BL","Observações"
-  ];
-  const dataRows=invs.map(i=>[
-    csvEsc(i.fornecedor),csvEsc(i.nFatura),csvEsc(i.pasta),csvEsc(i.cidade),
-    csvDate(i.emissaoFatura),csvDate(i.vencimento),csvDate(i.dtPgto),
-    csvEsc(i.moeda),csvNum(i.valorMoeda),csvTaxa(i.taxa),csvNum(i.reais),
-    csvEsc(i.condPgto),csvEsc(i.statusPgto),csvEsc(i.statusCambio),
-    csvEsc(i.banco),csvEsc(i.awbBl),csvEsc(i.obs)
-  ]);
-
-  // Resumo por moeda
-  const moedaHeaders=["Moeda","Qtd. Invoices","Valor Total na Moeda","Valor Total em R$","Taxa Média (R$)"];
-  const moedaRows=MOEDAS.map(m=>{
-    const arr=invs.filter(i=>i.moeda===m);
-    if(!arr.length)return null;
-    const totM=arr.reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
-    const totR=arr.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-    const taxas=arr.filter(i=>i.taxa&&parseFloat(i.taxa)>0);
-    const taxaMedia=taxas.length?(taxas.reduce((s,i)=>s+(parseFloat(i.taxa)||0),0)/taxas.length):0;
-    return[csvEsc(m),csvInt(arr.length),csvNum(totM),csvNum(totR),csvTaxa(taxaMedia)];
-  }).filter(Boolean);
-
-  const totR=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  if(moedaRows.length){
-    moedaRows.push([csvEsc("TOTAL GERAL"),csvInt(invs.length),csvEsc(""),csvNum(totR),csvEsc("")]);
-  }
-
-  const summaryBlocks=moedaRows.length?[{
-    title:`RESUMO POR MOEDA — ${forn}`,
-    headers:moedaHeaders,
-    rows:moedaRows
-  }]:[];
-
-  dlCSV(buildCSV(headers,dataRows,summaryBlocks),`fornecedor_${forn.replace(/[^a-zA-Z0-9]/g,"_")}.csv`);
+  if(f.dtIni)invs=invs.filter(i=>i.emissao_fatura>=f.dtIni);
+  if(f.dtFim)invs=invs.filter(i=>i.emissao_fatura<=f.dtFim);
+  const headers=["Fornecedor","Nº Invoice","Pasta","Cidade","Emissão","Vencimento","Data Pgto","Moeda","Valor Moeda","Taxa Câmbio","Valor R$","Cond. Pgto","Status Pgto","Status Câmbio","Banco","AWB/BL","Observações"];
+  const dataRows=invs.map(i=>[csvEsc(i.fornecedor),csvEsc(i.n_fatura),csvEsc(i.pasta),csvEsc(i.cidade),csvDate(i.emissao_fatura),csvDate(i.vencimento),csvDate(i.dt_pgto),csvEsc(i.moeda),csvNum(i.valor_moeda),csvTaxa(i.taxa),csvNum(i.reais),csvEsc(i.cond_pgto),csvEsc(i.status_pgto),csvEsc(i.status_cambio),csvEsc(i.banco),csvEsc(i.awb_bl),csvEsc(i.obs)]);
+  dlCSV(buildCSV(headers,dataRows),`fornecedor_${forn.replace(/[^a-zA-Z0-9]/g,"_")}.csv`);
   showToast("CSV exportado!");
 }
-
-// ----- 5. Análise Cambial -----
 function exportCSVCambial(){
   const f=filtros.cambial;
-  let dados=invoices.filter(i=>i.dtPgto&&i.taxa&&parseFloat(i.taxa)>0);
+  let dados=invoices.filter(i=>i.dt_pgto&&i.taxa&&parseFloat(i.taxa)>0);
   if(f.fornecedor)dados=dados.filter(i=>i.fornecedor===f.fornecedor);
   if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
-  if(f.dtIni)dados=dados.filter(i=>i.dtPgto>=f.dtIni);
-  if(f.dtFim)dados=dados.filter(i=>i.dtPgto<=f.dtFim);
-
-  const headers=[
-    "Fornecedor","Nº Invoice","Data Pagamento","Banco",
-    "Moeda","Taxa de Câmbio (R$)","Valor na Moeda (Moeda)","Valor em R$",
-    "Status Pagamento","Pasta","Cidade"
-  ];
-  const dataRows=dados.map(i=>[
-    csvEsc(i.fornecedor),csvEsc(i.nFatura),csvDate(i.dtPgto),csvEsc(i.banco),
-    csvEsc(i.moeda),csvTaxa(i.taxa),csvNum(i.valorMoeda),csvNum(i.reais),
-    csvEsc(i.statusPgto),csvEsc(i.pasta),csvEsc(i.cidade)
-  ]);
-
-  // Resumo por moeda
-  const totGeralR=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const moedaRows=MOEDAS.map(m=>{
-    const arr=dados.filter(i=>i.moeda===m);
-    if(!arr.length)return null;
-    const totM=arr.reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);
-    const totR=arr.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-    const taxaMedia=arr.reduce((s,i)=>s+(parseFloat(i.taxa)||0),0)/arr.length;
-    const taxaMin=Math.min(...arr.map(i=>parseFloat(i.taxa)||0));
-    const taxaMax=Math.max(...arr.map(i=>parseFloat(i.taxa)||0));
-    return[csvEsc(m),csvInt(arr.length),csvNum(totM),csvNum(totR),csvTaxa(taxaMedia),csvTaxa(taxaMin),csvTaxa(taxaMax),csvPct(totR,totGeralR)];
-  }).filter(Boolean);
-
-  const summaryBlocks=moedaRows.length?[{
-    title:"RESUMO CAMBIAL POR MOEDA",
-    headers:["Moeda","Qtd. Pagamentos","Volume na Moeda","Volume em R$","Taxa Média (R$)","Taxa Mínima (R$)","Taxa Máxima (R$)","Participação (%)"],
-    rows:moedaRows
-  }]:[];
-
-  dlCSV(buildCSV(headers,dataRows,summaryBlocks),"analise_cambial.csv");
+  if(f.dtIni)dados=dados.filter(i=>i.dt_pgto>=f.dtIni);
+  if(f.dtFim)dados=dados.filter(i=>i.dt_pgto<=f.dtFim);
+  const headers=["Fornecedor","Nº Invoice","Data Pgto","Banco","Moeda","Taxa Câmbio","Valor Moeda","Valor R$","Status Pgto","Pasta","Cidade"];
+  const dataRows=dados.map(i=>[csvEsc(i.fornecedor),csvEsc(i.n_fatura),csvDate(i.dt_pgto),csvEsc(i.banco),csvEsc(i.moeda),csvTaxa(i.taxa),csvNum(i.valor_moeda),csvNum(i.reais),csvEsc(i.status_pgto),csvEsc(i.pasta),csvEsc(i.cidade)]);
+  dlCSV(buildCSV(headers,dataRows),"analise_cambial.csv");
   showToast("CSV Análise Cambial exportado!");
 }
+
+// ════════════════════════════════════════════════════════
+//  PDF EXPORTS
+// ════════════════════════════════════════════════════════
+function pdfStyles(){ return `*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;background:#fff;color:#1e293b;padding:24px}.hdr{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:18px 24px;border-radius:10px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}.hdr h1{font-size:16px;margin-bottom:3px}.hdr p{font-size:11px;opacity:.8}.cards{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}.card{flex:1;min-width:110px;border-radius:8px;padding:10px 14px;border-left:4px solid}.cl{font-size:10px;color:#64748b;margin-bottom:2px;font-weight:700;text-transform:uppercase}.cv{font-size:15px;font-weight:700}table{width:100%;border-collapse:collapse;font-size:10.5px}thead tr{background:#1e3a5f;color:#fff}th{padding:7px 8px;text-align:left;font-weight:700;white-space:nowrap}td{padding:5px 8px;border-bottom:1px solid #f1f5f9;vertical-align:middle}.tot{background:#f8fafc;border-radius:8px;padding:10px 14px;margin-top:12px;display:flex;gap:20px;flex-wrap:wrap;font-size:11px}.footer{margin-top:14px;display:flex;justify-content:space-between;border-top:2px solid #e2e8f0;padding-top:10px;font-size:10px;color:#94a3b8}@media print{.hdr,.cards,thead tr{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`; }
 
 function exportPDF(){
   const filtradas=getInvFiltradas();
   const totR=filtradas.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const totPgR=filtradas.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const totAbR=filtradas.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const totME=MOEDAS.map(m=>{const t=filtradas.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);return t>0?`<b>${m}:</b> ${fmtM(t,m)}`:null;}).filter(Boolean).join(" | ");
-  const rows=filtradas.map((i,idx)=>{const cor=i.statusPgto==="Pago Total"?"#16a34a":i.statusPgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.pasta||""}</td><td>${i.cidade||""}</td><td><b>${i.fornecedor||""}</b></td><td>${i.nFatura||""}</td><td>${fmtD(i.emissaoFatura)}</td><td>${fmtD(i.vencimento)}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${i.condPgto||""}</td><td>${fmtD(i.dtPgto)}</td><td><span style="color:${cor};font-weight:700">${i.statusPgto||""}</span></td></tr>`;}).join("");
+  const rows=filtradas.map((i,idx)=>{const cor=i.status_pgto==="Pago Total"?"#16a34a":i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.pasta||""}</td><td>${i.cidade||""}</td><td><b>${i.fornecedor||""}</b></td><td>${i.n_fatura||""}</td><td>${fmtD(i.emissao_fatura)}</td><td>${fmtD(i.vencimento)}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${i.cond_pgto||""}</td><td>${fmtD(i.dt_pgto)}</td><td><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td></tr>`;}).join("");
   const w=window.open("","_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoices</title><style>${pdfStyles()}</style></head><body>
   <div class="hdr"><div><h1>🌐 Relatório de Invoices — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</p></div><div><b>${filtradas.length}</b> faturas</div></div>
-  <div class="cards"><div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${filtradas.filter(i=>i.statusPgto==="Em Aberto").length}</div></div><div class="card" style="background:#fef3c7;border-color:#d97706"><div class="cl">Pago Parcial</div><div class="cv" style="color:#d97706">${filtradas.filter(i=>i.statusPgto==="Pago Parcial").length}</div></div><div class="card" style="background:#dcfce7;border-color:#16a34a"><div class="cl">Pago Total</div><div class="cv" style="color:#16a34a">${filtradas.filter(i=>i.statusPgto==="Pago Total").length}</div></div><div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div></div>
+  <div class="cards"><div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${filtradas.filter(i=>i.status_pgto==="Em Aberto").length}</div></div><div class="card" style="background:#fef3c7;border-color:#d97706"><div class="cl">Pago Parcial</div><div class="cv" style="color:#d97706">${filtradas.filter(i=>i.status_pgto==="Pago Parcial").length}</div></div><div class="card" style="background:#dcfce7;border-color:#16a34a"><div class="cl">Pago Total</div><div class="cv" style="color:#16a34a">${filtradas.filter(i=>i.status_pgto==="Pago Total").length}</div></div><div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div></div>
   <table><thead><tr><th>Pasta</th><th>Cidade</th><th>Fornecedor</th><th>Nº Invoice</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Cond.</th><th>Dt.Pgto</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="tot"><span><b>Total R$:</b> ${fmtBRL(totR)}</span><span><b>Pago:</b> <span style="color:#16a34a">${fmtBRL(totPgR)}</span></span><span><b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(totAbR)}</span></span></div>
-  <div class="tot" style="margin-top:6px"><b>Total Moeda Estrangeira:</b> ${totME||"—"}</div>
+  <div class="tot"><span><b>Total R$:</b> ${fmtBRL(totR)}</span></div>
   <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado automaticamente</span></div>
   <script>window.print()<\/script></body></html>`);
   w.document.close();
@@ -1582,77 +1683,18 @@ function exportPDF(){
 function exportPDFPgto(){
   const f=filtros.pgto;
   let dados=invoices;
-  if(f.status&&f.status!=="Todos")dados=dados.filter(i=>i.statusPgto===f.status);
-  if(f.dtIni)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto>=f.dtIni)||(i.emissaoFatura&&i.emissaoFatura>=f.dtIni));
-  if(f.dtFim)dados=dados.filter(i=>(i.dtPgto&&i.dtPgto<=f.dtFim)||(i.emissaoFatura&&i.emissaoFatura<=f.dtFim));
+  if(f.status&&f.status!=="Todos")dados=dados.filter(i=>i.status_pgto===f.status);
+  if(f.dtIni)dados=dados.filter(i=>(i.dt_pgto&&i.dt_pgto>=f.dtIni)||(i.emissao_fatura&&i.emissao_fatura>=f.dtIni));
+  if(f.dtFim)dados=dados.filter(i=>(i.dt_pgto&&i.dt_pgto<=f.dtFim)||(i.emissao_fatura&&i.emissao_fatura<=f.dtFim));
   if(f.bancos&&f.bancos.length>0)dados=dados.filter(i=>f.bancos.includes(i.banco));
-
   const totR=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const totPgR=dados.filter(i=>i.statusPgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const totAbR=dados.filter(i=>i.statusPgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const totME=MOEDAS.map(m=>{const t=dados.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);return t>0?`<b>${m}:</b> ${fmtM(t,m)}`:null;}).filter(Boolean).join(" | ");
-  const filtroDesc=[
-    f.status&&f.status!=="Todos"?`Status: ${f.status}`:"",
-    f.bancos&&f.bancos.length>0?`Banco(s): ${f.bancos.join(", ")}`:""
-  ].filter(Boolean).join(" | ")||"Todos os status";
-
-  // Bank summary
-  const bancosNoRelatorio=[...new Set(dados.filter(i=>i.banco&&(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial")).map(i=>i.banco))].sort();
-  const resumoBancosHTML=bancosNoRelatorio.length>0?`
-    <div style="margin-top:18px;border-top:2px solid #1e3a5f;padding-top:14px">
-      <div style="font-weight:700;font-size:13px;color:#1e3a5f;margin-bottom:10px">🏦 Resumo de Pagamentos por Banco</div>
-      <table style="width:100%;border-collapse:collapse;font-size:11px">
-        <thead><tr style="background:#1e3a5f;color:#fff">
-          <th style="padding:7px 10px;text-align:left">Banco</th>
-          <th style="padding:7px 10px;text-align:center">Qtd. Pagamentos</th>
-          <th style="padding:7px 10px;text-align:right">Total Pago (R$)</th>
-          <th style="padding:7px 10px;text-align:right">% do Total</th>
-        </tr></thead>
-        <tbody>
-          ${bancosNoRelatorio.map((b,idx)=>{
-            const pagos=dados.filter(i=>i.banco===b&&(i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial"));
-            const tot=pagos.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-            const perc=totPgR>0?((tot/totPgR)*100).toFixed(1)+"%":"—";
-            return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}">
-              <td style="padding:6px 10px;font-weight:700">🏦 ${b}</td>
-              <td style="padding:6px 10px;text-align:center">${pagos.length}</td>
-              <td style="padding:6px 10px;text-align:right;font-weight:700;color:#16a34a">${fmtBRL(tot)}</td>
-              <td style="padding:6px 10px;text-align:right;color:#1d4ed8;font-weight:600">${perc}</td>
-            </tr>`;
-          }).join("")}
-          <tr style="background:#f0fdf4;font-weight:700">
-            <td style="padding:7px 10px;color:#16a34a">TOTAL GERAL PAGO</td>
-            <td style="padding:7px 10px;text-align:center;color:#16a34a">${dados.filter(i=>i.statusPgto==="Pago Total"||i.statusPgto==="Pago Parcial").length}</td>
-            <td style="padding:7px 10px;text-align:right;color:#16a34a;font-size:13px">${fmtBRL(totPgR)}</td>
-            <td style="padding:7px 10px;text-align:right;color:#16a34a">100%</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>`:"";
-
-  const rows=dados.map((i,idx)=>{
-    const cor=i.statusPgto==="Pago Total"?"#16a34a":i.statusPgto==="Em Aberto"?"#dc2626":"#d97706";
-    const pastaStyle=`font-weight:700;color:#1e3a5f;background:${idx%2===0?"#eef2ff":"#e0e7ff"};border-left:3px solid #3b82f6`;
-    return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}">
-      <td style="${pastaStyle}">${i.pasta||"—"}</td>
-      <td>${i.nFatura||""}</td><td>${i.fornecedor||""}</td><td>${i.cidade||""}</td>
-      <td>${i.moeda||""}</td><td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td>
-      <td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td>
-      <td>${fmtD(i.vencimento)}</td><td>${i.condPgto||""}</td>
-      <td><span style="color:${cor};font-weight:700">${i.statusPgto||""}</span></td>
-      <td>${fmtD(i.dtPgto)}</td><td>${i.banco||"—"}</td>
-    </tr>`;
-  }).join("");
-
+  const rows=dados.map((i,idx)=>{const cor=i.status_pgto==="Pago Total"?"#16a34a":i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.pasta||""}</td><td>${i.n_fatura||""}</td><td>${i.fornecedor||""}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${fmtD(i.vencimento)}</td><td><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td><td>${fmtD(i.dt_pgto)}</td><td>${i.banco||"—"}</td></tr>`;}).join("");
   const w=window.open("","_blank");
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pagamentos</title><style>${pdfStyles()}.col-pasta-pdf{background:#eef2ff;font-weight:700;color:#1e3a5f;border-left:3px solid #1e3a5f}</style></head><body>
-  <div class="hdr"><div><h1>💰 Relatório de Pagamentos — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} | Filtro: ${filtroDesc}${f.dtIni?" | De: "+fmtD(f.dtIni):""}${f.dtFim?" | Até: "+fmtD(f.dtFim):""}</p></div><div><b>${dados.length}</b> registros</div></div>
-  <div class="cards"><div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${dados.filter(i=>i.statusPgto==="Em Aberto").length}</div></div><div class="card" style="background:#fef3c7;border-color:#d97706"><div class="cl">Pago Parcial</div><div class="cv" style="color:#d97706">${dados.filter(i=>i.statusPgto==="Pago Parcial").length}</div></div><div class="card" style="background:#dcfce7;border-color:#16a34a"><div class="cl">Pago Total</div><div class="cv" style="color:#16a34a">${dados.filter(i=>i.statusPgto==="Pago Total").length}</div></div><div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div></div>
-  <table><thead><tr><th style="background:#0f2044;border-right:2px solid #3b82f6">Pasta</th><th>Nº Invoice</th><th>Fornecedor</th><th>Cidade</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Vencimento</th><th>Cond.</th><th>Status</th><th>Dt.Pgto</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="tot"><span><b>Total R$:</b> ${fmtBRL(totR)}</span><span><b>Pago:</b> <span style="color:#16a34a">${fmtBRL(totPgR)}</span></span><span><b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(totAbR)}</span></span></div>
-  <div class="tot" style="margin-top:6px"><b>Total Moeda Estrangeira:</b> ${totME||"—"}</div>
-  ${resumoBancosHTML}
-  <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado automaticamente</span></div>
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pagamentos</title><style>${pdfStyles()}</style></head><body>
+  <div class="hdr"><div><h1>💰 Relatório de Pagamentos — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${dados.length}</b> registros</div></div>
+  <table><thead><tr><th>Pasta</th><th>Nº Invoice</th><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Vencimento</th><th>Status</th><th>Dt.Pgto</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="tot"><b>Total R$:</b> ${fmtBRL(totR)}</div>
+  <div class="footer"><span>Sistema Controle de Invoices</span><span>Gerado automaticamente</span></div>
   <script>window.print()<\/script></body></html>`);
   w.document.close();
 }
@@ -1660,18 +1702,34 @@ function exportPDFPgto(){
 function exportPDFForn(forn){
   const f=filtros.forn;
   let invs=invoices.filter(i=>i.fornecedor===forn);
-  if(f.dtIni)invs=invs.filter(i=>i.emissaoFatura>=f.dtIni);
-  if(f.dtFim)invs=invs.filter(i=>i.emissaoFatura<=f.dtFim);
-  const totMoeda2={};MOEDAS.forEach(m=>{totMoeda2[m]=invs.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);});
+  if(f.dtIni)invs=invs.filter(i=>i.emissao_fatura>=f.dtIni);
+  if(f.dtFim)invs=invs.filter(i=>i.emissao_fatura<=f.dtFim);
   const totR=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const mStr=MOEDAS.map(m=>totMoeda2[m]>0?`<b>${m}:</b> ${fmtM(totMoeda2[m],m)}`:"").filter(Boolean).join(" | ");
-  const rows=invs.map((i,idx)=>{const cor=i.statusPgto==="Pago Total"?"#16a34a":i.statusPgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.nFatura||""}</td><td>${i.cidade||""}</td><td>${fmtD(i.emissaoFatura)}</td><td>${fmtD(i.vencimento)}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td><td>${i.taxa?`R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}`:"—"}</td><td>${fmtBRL(i.reais)}</td><td>${i.condPgto||""}</td><td><span style="color:${cor};font-weight:700">${i.statusPgto||""}</span></td></tr>`;}).join("");
+  const rows=invs.map((i,idx)=>{const cor=i.status_pgto==="Pago Total"?"#16a34a":i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.n_fatura||""}</td><td>${fmtD(i.emissao_fatura)}</td><td>${fmtD(i.vencimento)}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${i.cond_pgto||""}</td><td><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td></tr>`;}).join("");
   const w=window.open("","_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${forn}</title><style>${pdfStyles()}</style></head><body>
   <div class="hdr"><h1>🏢 Relatório — ${forn}</h1><p>Gerado em ${new Date().toLocaleDateString("pt-BR")}</p></div>
-  <table><thead><tr><th>Nº Invoice</th><th>Cidade</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor na Moeda</th><th>Taxa R$</th><th>Valor R$</th><th>Cond.</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="tot"><b>Totais por moeda:</b> ${mStr||"—"}</div>
-  <div class="tot" style="margin-top:6px"><b>Total Geral em R$:</b> <span style="color:#16a34a">${fmtBRL(totR)}</span></div>
+  <table><thead><tr><th>Nº Invoice</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Cond.</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="tot"><b>Total R$:</b> <span style="color:#16a34a">${fmtBRL(totR)}</span></div>
+  <div class="footer"><span>Sistema Controle de Invoices</span><span>Gerado automaticamente</span></div>
+  <script>window.print()<\/script></body></html>`);
+  w.document.close();
+}
+
+function exportPDFRanking(){
+  const forn=[...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
+  const rows=forn.map((fn,idx)=>{
+    const invs=invoices.filter(i=>i.fornecedor===fn);
+    const totR=invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+    const pm={};invs.forEach(i=>{if(i.moeda)pm[i.moeda]=(pm[i.moeda]||0)+parseCurrency(i.valor_moeda);});
+    const mStr=Object.entries(pm).map(([m,v])=>`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
+    return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td><b>${fn}</b></td><td>${Object.keys(pm).join("/")||"—"}</td><td>${mStr||"—"}</td><td style="text-align:center">${invs.filter(i=>i.status_pgto==="Em Aberto").length}</td><td style="text-align:center">${invs.filter(i=>i.status_pgto==="Pago Total").length}</td><td style="font-weight:700;color:#16a34a">${fmtBRL(totR)}</td></tr>`;
+  }).join("");
+  const w=window.open("","_blank");
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ranking Fornecedores</title><style>${pdfStyles()}</style></head><body>
+  <div class="hdr"><div><h1>📋 Ranking de Fornecedores — Importação</h1><p>Gerado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${forn.length}</b> fornecedores</div></div>
+  <table><thead><tr><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th style="text-align:center">Em Aberto</th><th style="text-align:center">Pago Total</th><th>Total R$</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="tot"><b>Total Geral R$:</b> <span style="color:#16a34a">${fmtBRL(invoices.reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span></div>
   <div class="footer"><span>Sistema Controle de Invoices</span><span>Gerado automaticamente</span></div>
   <script>window.print()<\/script></body></html>`);
   w.document.close();
@@ -1679,46 +1737,32 @@ function exportPDFForn(forn){
 
 function exportPDFCambial(){
   const f=filtros.cambial;
-  let dados=invoices.filter(i=>i.dtPgto&&i.taxa&&parseFloat(i.taxa)>0);
+  let dados=invoices.filter(i=>i.dt_pgto&&i.taxa&&parseFloat(i.taxa)>0);
   if(f.fornecedor)dados=dados.filter(i=>i.fornecedor===f.fornecedor);
   if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
-  if(f.dtIni)dados=dados.filter(i=>i.dtPgto>=f.dtIni);
-  if(f.dtFim)dados=dados.filter(i=>i.dtPgto<=f.dtFim);
+  if(f.dtIni)dados=dados.filter(i=>i.dt_pgto>=f.dtIni);
+  if(f.dtFim)dados=dados.filter(i=>i.dt_pgto<=f.dtFim);
   const totR=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const totMoeda={};MOEDAS.forEach(m=>{totMoeda[m]=dados.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valorMoeda),0);});
-  const taxaMedia={};MOEDAS.forEach(m=>{const arr=dados.filter(i=>i.moeda===m&&i.taxa);if(arr.length)taxaMedia[m]=(arr.reduce((s,i)=>s+(parseFloat(i.taxa)||0),0)/arr.length).toFixed(4);});
-  const mStr=MOEDAS.map(m=>totMoeda[m]>0?`<b>${m}:</b> ${fmtM(totMoeda[m],m)} (taxa média: ${taxaMedia[m]})`:"").filter(Boolean).join(" | ");
-  const rows=dados.map((i,idx)=>`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td><b>${i.fornecedor||""}</b></td><td>${fmtD(i.dtPgto)}</td><td>${i.moeda||""}</td><td>R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}</td><td>${fmtM(parseCurrency(i.valorMoeda),i.moeda)}</td><td>${fmtBRL(i.reais)}</td><td>${i.nFatura||""}</td><td>${i.banco||"—"}</td></tr>`).join("");
+  const rows=dados.map((i,idx)=>`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td><b>${i.fornecedor||""}</b></td><td>${fmtD(i.dt_pgto)}</td><td>${i.moeda}</td><td>R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}</td><td>${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td>${fmtBRL(i.reais)}</td><td>${i.n_fatura||""}</td><td>${i.banco||"—"}</td></tr>`).join("");
   const w=window.open("","_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Análise Cambial</title><style>${pdfStyles()}</style></head><body>
   <div class="hdr"><div><h1>📈 Análise Cambial — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${dados.length}</b> pagamentos</div></div>
-  <table><thead><tr><th>Fornecedor</th><th>Data Pgto</th><th>Moeda</th><th>Taxa Câmbio</th><th>Valor na Moeda</th><th>Valor R$</th><th>Nº Invoice</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="tot"><b>Total por moeda:</b> ${mStr||"—"}</div>
-  <div class="tot" style="margin-top:6px"><b>Total Geral R$:</b> <span style="color:#16a34a">${fmtBRL(totR)}</span></div>
+  <table><thead><tr><th>Fornecedor</th><th>Data Pgto</th><th>Moeda</th><th>Taxa Câmbio</th><th>Valor Moeda</th><th>Valor R$</th><th>Nº Invoice</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="tot"><b>Total Geral R$:</b> <span style="color:#16a34a">${fmtBRL(totR)}</span></div>
   <div class="footer"><span>Análise Cambial — Importação</span><span>Gerado automaticamente</span></div>
   <script>window.print()<\/script></body></html>`);
   w.document.close();
 }
 
-// ===== PWA =====
-function setupPWA(){
-  const iconUrl=window.location.origin+"/icon.png";
-  document.getElementById("appleIcon").href=iconUrl;
-  const manifest={name:"Invoices Importação",short_name:"Invoices",description:"Controle de faturas internacionais",start_url:window.location.origin+"/",display:"standalone",background_color:"#1e3a5f",theme_color:"#1e3a5f",orientation:"landscape",icons:[{src:iconUrl,sizes:"192x192",type:"image/png",purpose:"any maskable"},{src:iconUrl,sizes:"512x512",type:"image/png",purpose:"any maskable"}]};
-  const blob=new Blob([JSON.stringify(manifest)],{type:"application/json"});
-  document.getElementById("manifestLink").href=URL.createObjectURL(blob);
-  if("serviceWorker" in navigator){const swCode=`const CACHE="inv-v1";self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(["/"]))));self.addEventListener("fetch",e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));`;navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode],{type:"application/javascript"}))).catch(()=>{});}
-}
-
-// ===== DEMO =====
-function getDemoData(){return[
-  {pasta:"2024-001",cidade:"Milão",fornecedor:"Gucci SRL",marca:"Gucci",dtPedido:"2024-01-10",nProforma:"PRF-001",nFatura:"INV-2024-001",dtEmbarque:"2024-01-20",emissaoFatura:"2024-01-15",dtAntecipado:"",condPgto:"30 dias",vencimento:"2024-02-19",dtPgto:"2024-02-14",banco:"Itaú",taxa:"5.42",moeda:"EUR",valorMoeda:"15.000,00",reais:"81300",statusCambio:"Fechado",statusPgto:"Pago Total",awbBl:"AWB-12345",obs:"Entrega prioritária"},
-  {pasta:"2024-002",cidade:"Nova York",fornecedor:"Nike Inc",marca:"Nike",dtPedido:"2024-02-05",nProforma:"PRF-002",nFatura:"INV-2024-002",dtEmbarque:"2024-02-20",emissaoFatura:"2024-02-10",dtAntecipado:"",condPgto:"60 dias",vencimento:"2026-06-10",dtPgto:"",banco:"",taxa:"",moeda:"USD",valorMoeda:"22.000,00",reais:"",statusCambio:"Pendente",statusPgto:"Em Aberto",awbBl:"BL-67890",obs:""},
-  {pasta:"2024-003",cidade:"Zurique",fornecedor:"Rolex AG",marca:"Rolex",dtPedido:"2024-03-01",nProforma:"PRF-003",nFatura:"INV-2024-003",dtEmbarque:"2024-03-10",emissaoFatura:"2024-03-05",dtAntecipado:"2024-02-28",condPgto:"Antecipado",vencimento:"",dtPgto:"2024-02-28",banco:"Bradesco",taxa:"5.85",moeda:"CHF",valorMoeda:"45.000,00",reais:"263250",statusCambio:"Fechado",statusPgto:"Pago Total",awbBl:"AWB-99001",obs:""},
-  {pasta:"2024-004",cidade:"Londres",fornecedor:"Burberry Ltd",marca:"Burberry",dtPedido:"2024-04-01",nProforma:"PRF-004",nFatura:"INV-2024-004",dtEmbarque:"2024-04-15",emissaoFatura:"2024-04-10",dtAntecipado:"",condPgto:"45 dias",vencimento:"2026-05-30",dtPgto:"",banco:"",taxa:"",moeda:"GBP",valorMoeda:"18.500,00",reais:"",statusCambio:"Pendente",statusPgto:"Em Aberto",awbBl:"BL-44321",obs:"Aguardando liberação aduaneira"},
+// ════════════════════════════════════════════════════════
+//  DADOS DEMO
+// ════════════════════════════════════════════════════════
+function getDemoData(){ return [
+  {id:"d1",pasta:"2024-001",cidade:"Milão",fornecedor:"Gucci SRL",marca:"Gucci",dt_pedido:"2024-01-10",n_proforma:"PRF-001",n_fatura:"INV-2024-001",dt_embarque:"2024-01-20",emissao_fatura:"2024-01-15",dt_antecipado:"",cond_pgto:"30 dias",vencimento:"2024-02-19",dt_pgto:"2024-02-14",banco:"Itaú",taxa:5.42,moeda:"EUR",valor_moeda:15000,reais:81300,status_cambio:"Fechado",status_pgto:"Pago Total",awb_bl:"AWB-12345",obs:"Entrega prioritária",criado_por:"demo@empresa.com.br"},
+  {id:"d2",pasta:"2024-002",cidade:"Nova York",fornecedor:"Nike Inc",marca:"Nike",dt_pedido:"2024-02-05",n_proforma:"PRF-002",n_fatura:"INV-2024-002",dt_embarque:"2024-02-20",emissao_fatura:"2024-02-10",dt_antecipado:"",cond_pgto:"60 dias",vencimento:"2026-06-10",dt_pgto:"",banco:"",taxa:null,moeda:"USD",valor_moeda:22000,reais:null,status_cambio:"Pendente",status_pgto:"Em Aberto",awb_bl:"BL-67890",obs:"",criado_por:"demo@empresa.com.br"},
+  {id:"d3",pasta:"2024-003",cidade:"Zurique",fornecedor:"Rolex AG",marca:"Rolex",dt_pedido:"2024-03-01",n_proforma:"PRF-003",n_fatura:"INV-2024-003",dt_embarque:"2024-03-10",emissao_fatura:"2024-03-05",dt_antecipado:"2024-02-28",cond_pgto:"Antecipado",vencimento:"",dt_pgto:"2024-02-28",banco:"Bradesco",taxa:5.85,moeda:"CHF",valor_moeda:45000,reais:263250,status_cambio:"Fechado",status_pgto:"Pago Total",awb_bl:"AWB-99001",obs:"",criado_por:"demo@empresa.com.br"},
+  {id:"d4",pasta:"2024-004",cidade:"Londres",fornecedor:"Burberry Ltd",marca:"Burberry",dt_pedido:"2024-04-01",n_proforma:"PRF-004",n_fatura:"INV-2024-004",dt_embarque:"2024-04-15",emissao_fatura:"2024-04-10",dt_antecipado:"",cond_pgto:"45 dias",vencimento:"2026-05-30",dt_pgto:"",banco:"",taxa:null,moeda:"GBP",valor_moeda:18500,reais:null,status_cambio:"Pendente",status_pgto:"Em Aberto",awb_bl:"BL-44321",obs:"Aguardando liberação aduaneira",criado_por:"demo@empresa.com.br"}
 ];}
-
-window.onload=()=>{if(!checkAuth()){}};
 </script>
 </body>
 </html>
