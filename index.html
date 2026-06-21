@@ -320,8 +320,8 @@ let taxasAtivas    = {USD:"",EUR:"",CHF:"",GBP:""};
 let filtros = {
   inv:     {fornecedor:"",status:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_dtIni:"",_dtFim:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
   pgto:    {status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:"",bancos:[],_bancos:[],_status:"Todos"},
-  forn:    {fornecedor:"",dtIni:"",dtFim:"",_fornecedor:"",_dtIni:"",_dtFim:""},
-  cambial: {fornecedor:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_moeda:"",_dtIni:"",_dtFim:""}
+  forn:    {fornecedor:"",dtIni:"",dtFim:"",_fornecedor:"",_dtIni:"",_dtFim:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
+  cambial: {fornecedor:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_moeda:"",_dtIni:"",_dtFim:"",fornecedores:[],_fornecedores:[],_busca_forn:""}
 };
 
 // ════════════════════════════════════════════════════════
@@ -652,7 +652,9 @@ function limparFiltro(ns) {
   const f = filtros[ns];
   Object.keys(f).forEach(k => { if (Array.isArray(f[k])) f[k]=[]; else f[k]=""; });
   if (ns==="pgto") { filtros.pgto.status="Todos"; filtros.pgto._status="Todos"; filtros.pgto.bancos=[]; filtros.pgto._bancos=[]; }
-  if (ns==="inv")  { filtros.inv.fornecedores=[]; filtros.inv._fornecedores=[]; filtros.inv._busca_forn=""; }
+  if (ns==="inv")     { filtros.inv._fornecedores=[]; filtros.inv.fornecedores=[]; filtros.inv._busca_forn=""; }
+  if (ns==="forn")    { filtros.forn._fornecedores=[]; filtros.forn.fornecedores=[]; filtros.forn._busca_forn=""; relForn=""; }
+  if (ns==="cambial") { filtros.cambial._fornecedores=[]; filtros.cambial.fornecedores=[]; filtros.cambial._busca_forn=""; }
   renderTab(currentTab);
 }
 
@@ -678,8 +680,26 @@ function aplicarFiltroPgto()    {
   filtros.pgto.bancos=[...filtros.pgto._bancos];
   renderTab("Pagamentos");
 }
-function aplicarFiltroForn()    { Object.assign(filtros.forn, {fornecedor:filtros.forn._fornecedor,dtIni:filtros.forn._dtIni,dtFim:filtros.forn._dtFim}); if(filtros.forn.fornecedor) relForn=filtros.forn.fornecedor; renderTab("Fornecedores"); }
-function aplicarFiltroCambial() { Object.assign(filtros.cambial, {fornecedor:filtros.cambial._fornecedor,moeda:filtros.cambial._moeda,dtIni:filtros.cambial._dtIni,dtFim:filtros.cambial._dtFim}); renderTab("Análise Cambial"); }
+function aplicarFiltroForn() {
+  filtros.forn.dtIni = document.getElementById("f_forn_dtIni")?.value||"";
+  filtros.forn.dtFim = document.getElementById("f_forn_dtFim")?.value||"";
+  filtros.forn._dtIni = filtros.forn.dtIni;
+  filtros.forn._dtFim = filtros.forn.dtFim;
+  filtros.forn.fornecedores = [...filtros.forn._fornecedores];
+  if (filtros.forn.fornecedores.length === 1) relForn = filtros.forn.fornecedores[0];
+  else if (filtros.forn.fornecedores.length === 0) relForn = "";
+  renderTab("Fornecedores");
+}
+function aplicarFiltroCambial() {
+  filtros.cambial.moeda = document.getElementById("f_cambial_moeda")?.value||"";
+  filtros.cambial.dtIni = document.getElementById("f_cambial_dtIni")?.value||"";
+  filtros.cambial.dtFim = document.getElementById("f_cambial_dtFim")?.value||"";
+  filtros.cambial._moeda = filtros.cambial.moeda;
+  filtros.cambial._dtIni = filtros.cambial.dtIni;
+  filtros.cambial._dtFim = filtros.cambial.dtFim;
+  filtros.cambial.fornecedores = [...filtros.cambial._fornecedores];
+  renderTab("Análise Cambial");
+}
 
 function getInvFiltradas() {
   const f = filtros.inv;
@@ -700,7 +720,9 @@ function getInvFiltradas() {
 
 function filtroAtivoTxt(ns) {
   const f = filtros[ns], p = [];
-  if (f.fornecedores && f.fornecedores.length > 0)
+  if (f._fornecedores && f._fornecedores.length > 0)
+    p.push(`Fornecedor(es): ${f._fornecedores.join(", ")}`);
+  else if (f.fornecedores && f.fornecedores.length > 0)
     p.push(`Fornecedor(es): ${f.fornecedores.join(", ")}`);
   else if (f.fornecedor)
     p.push(`Fornecedor: ${f.fornecedor}`);
@@ -1858,33 +1880,199 @@ function renderPagamentos() {
   </table></div>`;
 }
 
+
+// ════════════════════════════════════════════════════════
+//  MULTI-FORNECEDOR GENÉRICO (Fornecedores + Cambial)
+// ════════════════════════════════════════════════════════
+
+// Builds the dropdown HTML for any namespace
+function buildFornDropdownHTML(ns, todosForns, placeholder) {
+  const selForns = filtros[ns]._fornecedores || [];
+  const busca    = (filtros[ns]._busca_forn||"").toLowerCase();
+  const lista    = busca ? todosForns.filter(f=>f.toLowerCase().includes(busca)) : todosForns;
+  const triggerTxt = selForns.length===0 ? (placeholder||"Todos os fornecedores")
+    : selForns.length===1 ? selForns[0]
+    : `${selForns.length} fornecedores`;
+  const dropId = `forn-dd-${ns}`;
+  const wrapId = `forn-wrap-${ns}`;
+
+  return `<div id="${wrapId}" style="position:relative;min-width:220px">
+    <label class="form-label">🏢 Fornecedor</label>
+    <button id="forn-trig-${ns}" onclick="toggleFornDD('${ns}')" type="button"
+      style="width:100%;padding:8px 10px;border:1.5px solid ${selForns.length>0?"#2563eb":"#e2e8f0"};border-radius:6px;font-size:13px;background:#fff;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:6px;${selForns.length>0?"box-shadow:0 0 0 3px #dbeafe":""}">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${triggerTxt}</span>
+      <span style="color:#64748b;font-size:10px;flex-shrink:0">▼</span>
+    </button>
+    <div id="${dropId}" style="display:none;position:absolute;top:100%;left:0;z-index:60;background:#fff;border:1.5px solid #2563eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);min-width:270px;max-height:340px;overflow:hidden;flex-direction:column;margin-top:4px">
+      <!-- Busca -->
+      <div style="padding:8px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:6px">
+        <span style="color:#64748b">🔍</span>
+        <input id="forn-busca-${ns}" type="text" placeholder="Buscar fornecedor..." value="${filtros[ns]._busca_forn||""}"
+          oninput="filtros['${ns}']._busca_forn=this.value;renderFornDDList('${ns}')"
+          style="border:none;outline:none;font-size:12px;width:100%;background:transparent">
+      </div>
+      <!-- Controles -->
+      <div style="padding:6px 10px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;color:#64748b;font-weight:600">${todosForns.length} fornecedor(es)</span>
+        <div style="display:flex;gap:6px">
+          <button onclick="selTodosFornsNS('${ns}')" style="font-size:10px;background:#dbeafe;color:#1d4ed8;border:none;border-radius:4px;padding:2px 7px;cursor:pointer;font-weight:600">✅ Todos</button>
+          ${selForns.length>0?`<button onclick="limparFornsNS('${ns}')" style="font-size:10px;background:#fee2e2;color:#dc2626;border:none;border-radius:4px;padding:2px 7px;cursor:pointer;font-weight:600">✖ Limpar</button>`:""}
+        </div>
+      </div>
+      <!-- Lista -->
+      <div id="forn-list-${ns}" style="overflow-y:auto;max-height:230px">
+        ${lista.length===0
+          ? `<div style="padding:12px;color:#94a3b8;font-size:12px;text-align:center">Nenhum resultado</div>`
+          : lista.map(fn=>{
+              const sel = selForns.includes(fn);
+              const invsFn = invoices.filter(i=>i.fornecedor===fn);
+              const abertos = invsFn.filter(i=>i.status_pgto==="Em Aberto").length;
+              return `<div onclick="toggleFornNS('${ns}','${fn.replace(/'/g,"\'")}')"
+                style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;font-size:12px;background:${sel?"#eff6ff":"#fff"};border-bottom:1px solid #f8fafc"
+                onmouseover="this.style.background='${sel?"#dbeafe":"#f8fafc"}'"
+                onmouseout="this.style.background='${sel?"#eff6ff":"#fff"}'">
+                <input type="checkbox" ${sel?"checked":""} onclick="event.stopPropagation();toggleFornNS('${ns}','${fn.replace(/'/g,"\'")}');" style="width:14px;height:14px;accent-color:#2563eb;cursor:pointer;flex-shrink:0">
+                <span style="flex:1;font-weight:${sel?"700":"400"};color:${sel?"#1d4ed8":"#1e293b"}">${fn}</span>
+                <span style="font-size:10px;color:#94a3b8;flex-shrink:0">${invsFn.length}${abertos>0?` • <span style="color:#dc2626">${abertos} ab.</span>`:""}</span>
+              </div>`;
+            }).join("")
+        }
+      </div>
+    </div>
+    <!-- Chips -->
+    ${selForns.length>0?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
+      ${selForns.map(fn=>`<span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px">
+        ${fn.length>22?fn.substring(0,20)+"…":fn}
+        <span onclick="removerFornNS('${ns}','${fn.replace(/'/g,"\'")}');event.stopPropagation()"
+          style="cursor:pointer;font-size:13px;line-height:1;color:#2563eb;font-weight:700"
+          onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#2563eb'">×</span>
+      </span>`).join("")}
+    </div>`:""}
+  </div>`;
+}
+
+function toggleFornDD(ns) {
+  const dd = document.getElementById(`forn-dd-${ns}`);
+  if (!dd) return;
+  const isOpen = dd.style.display === "flex";
+  dd.style.display = isOpen ? "none" : "flex";
+}
+
+function toggleFornNS(ns, forn) {
+  const arr = filtros[ns]._fornecedores;
+  const idx = arr.indexOf(forn);
+  if (idx===-1) arr.push(forn); else arr.splice(idx,1);
+  filtros[ns].fornecedores = [...arr];
+  // If single forn selected in forn tab, update relForn
+  if (ns==="forn") { if(arr.length===1) relForn=arr[0]; else if(arr.length===0) relForn=""; }
+  renderTab(ns==="forn"?"Fornecedores":"Análise Cambial");
+  setTimeout(()=>{ const dd=document.getElementById(`forn-dd-${ns}`); if(dd)dd.style.display="flex"; const el=document.getElementById(`forn-busca-${ns}`); if(el){el.focus();el.value=filtros[ns]._busca_forn||"";} },30);
+}
+
+function removerFornNS(ns, forn) {
+  filtros[ns]._fornecedores = filtros[ns]._fornecedores.filter(f=>f!==forn);
+  filtros[ns].fornecedores  = [...filtros[ns]._fornecedores];
+  if (ns==="forn") { if(filtros.forn._fornecedores.length===1) relForn=filtros.forn._fornecedores[0]; else relForn=""; }
+  renderTab(ns==="forn"?"Fornecedores":"Análise Cambial");
+}
+
+function selTodosFornsNS(ns) {
+  const todos = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
+  filtros[ns]._fornecedores = [...todos];
+  filtros[ns].fornecedores  = [...todos];
+  renderTab(ns==="forn"?"Fornecedores":"Análise Cambial");
+  setTimeout(()=>{ const dd=document.getElementById(`forn-dd-${ns}`); if(dd)dd.style.display="flex"; },30);
+}
+
+function limparFornsNS(ns) {
+  filtros[ns]._fornecedores = [];
+  filtros[ns].fornecedores  = [];
+  if (ns==="forn") relForn = "";
+  renderTab(ns==="forn"?"Fornecedores":"Análise Cambial");
+  setTimeout(()=>{ const dd=document.getElementById(`forn-dd-${ns}`); if(dd)dd.style.display="flex"; },30);
+}
+
+function renderFornDDList(ns) {
+  const busca = (filtros[ns]._busca_forn||"").toLowerCase();
+  const todos = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
+  const lista = busca ? todos.filter(f=>f.toLowerCase().includes(busca)) : todos;
+  const sel   = filtros[ns]._fornecedores;
+  const el    = document.getElementById(`forn-list-${ns}`);
+  if (!el) return;
+  el.innerHTML = lista.length===0
+    ? `<div style="padding:12px;color:#94a3b8;font-size:12px;text-align:center">Nenhum resultado</div>`
+    : lista.map(fn=>{
+        const s = sel.includes(fn);
+        const invsFn = invoices.filter(i=>i.fornecedor===fn);
+        const abertos = invsFn.filter(i=>i.status_pgto==="Em Aberto").length;
+        return `<div onclick="toggleFornNS('${ns}','${fn.replace(/'/g,"\'")}')"
+          style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;font-size:12px;background:${s?"#eff6ff":"#fff"};border-bottom:1px solid #f8fafc"
+          onmouseover="this.style.background='${s?"#dbeafe":"#f8fafc"}'"
+          onmouseout="this.style.background='${s?"#eff6ff":"#fff"}'">
+          <input type="checkbox" ${s?"checked":""} onclick="event.stopPropagation();toggleFornNS('${ns}','${fn.replace(/'/g,"\'")}');" style="width:14px;height:14px;accent-color:#2563eb;cursor:pointer;flex-shrink:0">
+          <span style="flex:1;font-weight:${s?"700":"400"};color:${s?"#1d4ed8":"#1e293b"}">${fn}</span>
+          <span style="font-size:10px;color:#94a3b8">${invsFn.length}${abertos>0?` • <span style="color:#dc2626">${abertos} ab.</span>`:""}</span>
+        </div>`;
+      }).join("");
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener("click", e => {
+  ["forn","cambial"].forEach(ns => {
+    const wrap = document.getElementById(`forn-wrap-${ns}`);
+    const dd   = document.getElementById(`forn-dd-${ns}`);
+    if (dd && wrap && !wrap.contains(e.target)) dd.style.display = "none";
+  });
+});
+
 // ════════════════════════════════════════════════════════
 //  FORNECEDORES
 // ════════════════════════════════════════════════════════
 function renderRelForn() {
-  const forn = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
+  const todosForns = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
   const f = filtros.forn;
-  let invsForn = relForn ? invoices.filter(i=>i.fornecedor===relForn) : [];
+  const selForns = f._fornecedores || [];
+
+  // Invoices filtradas pelos fornecedores selecionados
+  let invsForn = [];
+  if (selForns.length > 0) {
+    invsForn = invoices.filter(i=>selForns.includes(i.fornecedor));
+  } else if (relForn) {
+    invsForn = invoices.filter(i=>i.fornecedor===relForn);
+  }
   if (f.dtIni) invsForn = invsForn.filter(i=>i.emissao_fatura>=f.dtIni);
   if (f.dtFim) invsForn = invsForn.filter(i=>i.emissao_fatura<=f.dtFim);
+
   const totMoeda = {};
   MOEDAS.forEach(m => { totMoeda[m] = invsForn.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valor_moeda),0); });
   const totR = invsForn.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-
-  const barForn = filtroBar("forn",[
-    {label:"Fornecedor",key:"fornecedor",type:"select",options:[{val:"",txt:"Todos"},...forn.map(fn=>({val:fn,txt:fn}))]},
-    {label:"Data Inicial",key:"dtIni",type:"date"},
-    {label:"Data Final",key:"dtFim",type:"date"}
-  ],"aplicarFiltroForn()");
+  const fornAtivos = selForns.length > 0 ? selForns : (relForn ? [relForn] : []);
 
   return `
   <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">📊 Relatório por Fornecedor</div>
-  ${barForn}
-  ${relForn ? `<div class="card" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 16px">
-    <span style="font-weight:700;color:#1e3a5f">📌 ${relForn}</span>
-    <button class="btn btn-primary" onclick="exportPDFForn('${relForn}')">🖨️ PDF</button>
-    <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVForn('${relForn}')">⬇️ Excel</button>
-    <button class="btn btn-ghost" onclick="relForn='';filtros.forn.fornecedor='';filtros.forn._fornecedor='';renderTab('Fornecedores')">✖ Limpar</button>
+  <!-- Barra de filtros -->
+  <div class="filter-bar" style="align-items:flex-start">
+    ${buildFornDropdownHTML("forn", todosForns, "Todos os fornecedores")}
+    <div>
+      <label class="form-label">Data Inicial</label>
+      <input type="date" id="f_forn_dtIni" value="${f._dtIni||""}" onchange="filtros.forn._dtIni=this.value">
+    </div>
+    <div>
+      <label class="form-label">Data Final</label>
+      <input type="date" id="f_forn_dtFim" value="${f._dtFim||""}" onchange="filtros.forn._dtFim=this.value">
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <button class="btn-search" onclick="aplicarFiltroForn()">🔍 Buscar</button>
+      <button class="btn btn-ghost" onclick="limparFiltro('forn')">✖ Limpar</button>
+    </div>
+  </div>
+  ${fornAtivos.length>0 ? `<div class="card" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 16px">
+    <span style="font-weight:700;color:#1e3a5f">📌 ${fornAtivos.length===1?fornAtivos[0]:fornAtivos.length+" fornecedores selecionados"}</span>
+    ${fornAtivos.length===1?`<button class="btn btn-primary" onclick="exportPDFForn('${fornAtivos[0]}')">🖨️ PDF</button>
+    <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVForn('${fornAtivos[0]}')">⬇️ Excel</button>`:`
+    <button class="btn btn-primary" onclick="exportPDFMultiForn()">🖨️ PDF Consolidado</button>
+    <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVMultiForn()">⬇️ Excel Consolidado</button>`}
+    <button class="btn btn-ghost" onclick="limparFornsNS('forn')">✖ Limpar seleção</button>
   </div>` : ""}
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -1941,10 +2129,13 @@ function renderAnaliseCambial() {
   const forn = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
   const f = filtros.cambial;
   let dados = invoices.filter(i=>i.dt_pgto&&i.taxa&&parseFloat(i.taxa)>0);
-  if (f.fornecedor) dados = dados.filter(i=>i.fornecedor===f.fornecedor);
-  if (f.moeda)      dados = dados.filter(i=>i.moeda===f.moeda);
-  if (f.dtIni)      dados = dados.filter(i=>i.dt_pgto>=f.dtIni);
-  if (f.dtFim)      dados = dados.filter(i=>i.dt_pgto<=f.dtFim);
+  if (f.fornecedores && f.fornecedores.length > 0)
+    dados = dados.filter(i=>f.fornecedores.includes(i.fornecedor));
+  else if (f.fornecedor)
+    dados = dados.filter(i=>i.fornecedor===f.fornecedor);
+  if (f.moeda) dados = dados.filter(i=>i.moeda===f.moeda);
+  if (f.dtIni) dados = dados.filter(i=>i.dt_pgto>=f.dtIni);
+  if (f.dtFim) dados = dados.filter(i=>i.dt_pgto<=f.dtFim);
 
   const totMoeda={}, totReaisMoeda={}, taxaMedia={};
   MOEDAS.forEach(m=>{
@@ -1959,12 +2150,28 @@ function renderAnaliseCambial() {
 
   return `
   <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">📈 Análise Cambial</div>
-  ${filtroBar("cambial",[
-    {label:"Fornecedor",key:"fornecedor",type:"select",options:[{val:"",txt:"Todos"},...forn.map(fn=>({val:fn,txt:fn}))]},
-    {label:"Moeda",key:"moeda",type:"select",options:[{val:"",txt:"Todas"},...MOEDAS.map(m=>({val:m,txt:m}))]},
-    {label:"Data Inicial",key:"dtIni",type:"date"},
-    {label:"Data Final",key:"dtFim",type:"date"}
-  ],"aplicarFiltroCambial()")}
+  <div class="filter-bar" style="align-items:flex-start">
+    ${buildFornDropdownHTML("cambial", forn, "Todos os fornecedores")}
+    <div>
+      <label class="form-label">Moeda</label>
+      <select id="f_cambial_moeda" onchange="filtros.cambial._moeda=this.value">
+        <option value=""${!f.moeda?" selected":""}>Todas</option>
+        ${MOEDAS.map(m=>`<option value="${m}"${f.moeda===m?" selected":""}>${m}</option>`).join("")}
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Data Inicial</label>
+      <input type="date" id="f_cambial_dtIni" value="${f._dtIni||""}" onchange="filtros.cambial._dtIni=this.value">
+    </div>
+    <div>
+      <label class="form-label">Data Final</label>
+      <input type="date" id="f_cambial_dtFim" value="${f._dtFim||""}" onchange="filtros.cambial._dtFim=this.value">
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <button class="btn-search" onclick="aplicarFiltroCambial()">🔍 Buscar</button>
+      <button class="btn btn-ghost" onclick="limparFiltro('cambial')">✖ Limpar</button>
+    </div>
+  </div>
   <div style="margin:-10px 0 12px 0;padding:0 4px"><span style="font-size:11px;color:#2563eb;font-weight:600">${filtroAtivoTxt("cambial")}</span></div>
   <div class="card" style="display:flex;justify-content:flex-end;gap:8px;padding:10px 16px">
     <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVCambial()">⬇️ Excel</button>
@@ -2001,6 +2208,39 @@ function renderAnaliseCambial() {
         </tr>`).join("")
     }</tbody>
   </table></div>`;
+}
+
+
+// ── Exportações multi-fornecedor (Fornecedores tab) ──
+function exportPDFMultiForn() {
+  const selForns = filtros.forn._fornecedores;
+  const f = filtros.forn;
+  let invs = invoices.filter(i=>selForns.includes(i.fornecedor));
+  if (f.dtIni) invs = invs.filter(i=>i.emissao_fatura>=f.dtIni);
+  if (f.dtFim) invs = invs.filter(i=>i.emissao_fatura<=f.dtFim);
+  const totR = invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const rows = invs.map((i,idx)=>{const cor=i.status_pgto==="Pago Total"?"#16a34a":i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td><b>${i.fornecedor||""}</b></td><td>${i.n_fatura||""}</td><td>${fmtD(i.emissao_fatura)}</td><td>${fmtD(i.vencimento)}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${i.cond_pgto||""}</td><td><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td></tr>`;}).join("");
+  const w=window.open("","_blank");
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Fornecedores Selecionados</title><style>${pdfStyles()}</style></head><body>
+  <div class="hdr"><div><h1>🏢 Relatório — ${selForns.join(", ")}</h1><p>Gerado em ${new Date().toLocaleDateString("pt-BR")} | ${selForns.length} fornecedor(es)</p></div><div><b>${invs.length}</b> invoices</div></div>
+  ${pdfResumMoedas(invs,"Resumo por Moeda")}
+  <table><thead><tr><th>Fornecedor</th><th>Nº Invoice</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Cond.</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="tot"><b>Total R$:</b> <span style="color:#16a34a">${fmtBRL(totR)}</span></div>
+  <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado em ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span></div>
+  <script>window.print()<\/script></body></html>`);
+  w.document.close();
+}
+
+function exportCSVMultiForn() {
+  const selForns = filtros.forn._fornecedores;
+  const f = filtros.forn;
+  let invs = invoices.filter(i=>selForns.includes(i.fornecedor));
+  if (f.dtIni) invs = invs.filter(i=>i.emissao_fatura>=f.dtIni);
+  if (f.dtFim) invs = invs.filter(i=>i.emissao_fatura<=f.dtFim);
+  const headers=["Fornecedor","Nº Invoice","Pasta","Cidade","Emissão","Vencimento","Data Pgto","Moeda","Valor Moeda","Taxa Câmbio","Valor R$","Cond. Pgto","Status Pgto","Status Câmbio","Banco","AWB/BL","Observações"];
+  const dataRows=invs.map(i=>[csvEsc(i.fornecedor),csvEsc(i.n_fatura),csvEsc(i.pasta),csvEsc(i.cidade),csvDate(i.emissao_fatura),csvDate(i.vencimento),csvDate(i.dt_pgto),csvEsc(i.moeda),csvNum(i.valor_moeda),csvTaxa(i.taxa),csvNum(i.reais),csvEsc(i.cond_pgto),csvEsc(i.status_pgto),csvEsc(i.status_cambio),csvEsc(i.banco),csvEsc(i.awb_bl),csvEsc(i.obs)]);
+  dlCSV(buildCSV(headers,dataRows,[csvResumMoedas(invs)]),`fornecedores_${selForns.length}.csv`);
+  showToast("CSV exportado!");
 }
 
 // ════════════════════════════════════════════════════════
