@@ -2143,10 +2143,8 @@ document.addEventListener("click", e => {
 
 function selecionarFornecedor(fn) {
   relForn = fn;
-  if (!filtros.forn._fornecedores.includes(fn)) {
-    filtros.forn._fornecedores = [fn];
-    filtros.forn.fornecedores  = [fn];
-  }
+  filtros.forn._fornecedores = [fn];
+  filtros.forn.fornecedores  = [fn];
   renderTab("Fornecedores");
 }
 
@@ -2155,94 +2153,113 @@ function renderRelForn() {
   const f = filtros.forn;
   const selForns = f._fornecedores || [];
 
-  // Invoices filtradas pelos fornecedores selecionados
+  // Invoices filtradas
   let invsForn = [];
   if (selForns.length > 0) {
-    invsForn = invoices.filter(i=>selForns.includes(i.fornecedor));
+    invsForn = invoices.filter(i => selForns.includes(i.fornecedor));
   } else if (relForn) {
-    invsForn = invoices.filter(i=>i.fornecedor===relForn);
+    invsForn = invoices.filter(i => i.fornecedor === relForn);
   }
-  if (f.dtIni) invsForn = invsForn.filter(i=>i.emissao_fatura>=f.dtIni);
-  if (f.dtFim) invsForn = invsForn.filter(i=>i.emissao_fatura<=f.dtFim);
+  if (f.dtIni) invsForn = invsForn.filter(i => i.emissao_fatura >= f.dtIni);
+  if (f.dtFim) invsForn = invsForn.filter(i => i.emissao_fatura <= f.dtFim);
 
   const totMoeda = {};
   MOEDAS.forEach(m => { totMoeda[m] = invsForn.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valor_moeda),0); });
-  const totR = invsForn.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const totR = invsForn.reduce((s,i) => s+(parseFloat(i.reais)||0), 0);
   const fornAtivos = selForns.length > 0 ? selForns : (relForn ? [relForn] : []);
+  const tituloDetalhe = selForns.length > 1 ? selForns.length+" fornecedores" : (selForns[0]||relForn||"");
 
-  return `
-  <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">📊 Relatório por Fornecedor</div>
-  <!-- Barra de filtros -->
-  <div class="filter-bar" style="align-items:flex-start">
-    ${buildFornDropdownHTML("forn", todosForns, "Todos os fornecedores")}
-    <div>
-      <label class="form-label">Data Inicial</label>
-      <input type="date" id="f_forn_dtIni" value="${f._dtIni||""}" onchange="filtros.forn._dtIni=this.value">
-    </div>
-    <div>
-      <label class="form-label">Data Final</label>
-      <input type="date" id="f_forn_dtFim" value="${f._dtFim||""}" onchange="filtros.forn._dtFim=this.value">
-    </div>
-    <div style="display:flex;gap:8px;align-items:flex-end">
-      <button class="btn-search" onclick="aplicarFiltroForn()">🔍 Buscar</button>
-      <button class="btn btn-ghost" onclick="limparFiltro('forn')">✖ Limpar</button>
-    </div>
-  </div>
-  ${fornAtivos.length>0 ? `<div class="card" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 16px">
-    <span style="font-weight:700;color:#1e3a5f">📌 ${fornAtivos.length===1?fornAtivos[0]:fornAtivos.length+" fornecedores selecionados"}</span>
-    ${fornAtivos.length===1?`<button class="btn btn-primary" onclick="exportPDFForn('${fornAtivos[0]}')">🖨️ PDF</button>
-    <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVForn('${fornAtivos[0]}')">⬇️ Excel</button>`:`
-    <button class="btn btn-primary" onclick="exportPDFMultiForn()">🖨️ PDF Consolidado</button>
-    <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVMultiForn()">⬇️ Excel Consolidado</button>`}
-    <button class="btn btn-ghost" onclick="limparFornsNS('forn')">✖ Limpar seleção</button>
-  </div>` : ""}
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-weight:700;color:#1e3a5f">📋 Ranking de Fornecedores</div>
-      <div style="display:flex;gap:8px">
-        <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0;font-size:12px" onclick="exportCSVRanking()">⬇️ Excel Ranking</button>
-        <button class="btn btn-primary" style="font-size:12px" onclick="exportPDFRanking()">🖨️ PDF Ranking</button>
-      </div>
-    </div>
-    <div class="table-wrap"><table>
-      <thead><tr>${["Fornecedor","Moeda","Valor Moeda","Em Aberto","Pago Total","Total R$",""].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
-      <tbody>${todosForns.map(fn => {
-        const invs = invoices.filter(i=>i.fornecedor===fn);
-        const totR2= invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-        const pm   = {};
-        invs.forEach(i=>{ if(i.moeda) pm[i.moeda]=(pm[i.moeda]||0)+parseCurrency(i.valor_moeda); });
-        const mStr = Object.entries(pm).map(([m,v])=>`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
-        const fnEsc = fn.replace(/'/g,"\\'").replace(/"/g,'\\"');
-        return `<tr style="cursor:pointer;${relForn===fn?"background:#dbeafe!important":""}" onclick="selecionarFornecedor('${fnEsc}')">
-          <td style="font-weight:600;color:${relForn===fn?"#1d4ed8":"#2563eb"}">${fn} ${relForn===fn?"✅":""}</td>
-          <td>${Object.keys(pm).join("/")||"—"}</td>
-          <td style="font-weight:700;color:#1d4ed8">${mStr||"—"}</td>
-          <td><span class="badge badge-red">${invs.filter(i=>i.status_pgto==="Em Aberto").length}</span></td>
-          <td><span class="badge badge-green">${invs.filter(i=>i.status_pgto==="Pago Total").length}</span></td>
-          <td style="font-weight:700;color:#16a34a">${fmtBRL(totR2)}</td>
-          <td style="font-size:11px;color:#2563eb">Ver →</td>
-        </tr>`;
-      }).join("")}</tbody>
-    </table></div>
-  </div>
-  ${invsForn.length>0 ? `<div class="card">
-    <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:8px">🏢 Detalhes — ${selForns.length>1?selForns.length+" fornecedores":relForn||selForns[0]||""}</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-      ${MOEDAS.map(m=>totMoeda[m]>0?`<div style="background:${MOEDA_BG[m]};border-radius:8px;padding:10px 16px;border-left:3px solid ${MOEDA_COR[m]}"><div style="font-size:11px;color:#64748b">Total ${m}</div><div style="font-weight:700;color:${MOEDA_COR[m]}">${fmtM(totMoeda[m],m)}</div></div>`:"").join("")}
-      <div style="background:#dcfce7;border-radius:8px;padding:10px 16px;border-left:3px solid #16a34a"><div style="font-size:11px;color:#64748b">Total R$</div><div style="font-weight:700;color:#16a34a">${fmtBRL(totR)}</div></div>
-    </div>
-    <div class="table-wrap"><table>
-      <thead><tr>${["Nº Invoice","Emissão","Vencimento","Moeda","Valor Moeda","Taxa R$","Valor R$","Cond.","Status"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
-      <tbody>${invsForn.map(i=>`<tr>
-        <td>${i.n_fatura||""}</td><td>${fmtD(i.emissao_fatura)}</td><td>${fmtD(i.vencimento)}</td>
-        <td><span class="badge badge-blue">${i.moeda||""}</span></td>
-        <td style="font-weight:700;color:${MOEDA_COR[i.moeda]||"#1d4ed8"}">${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td>
-        <td>${i.taxa?`R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}`:"—"}</td>
-        <td style="font-weight:700;color:#16a34a">${fmtBRL(i.reais)}</td>
-        <td>${i.cond_pgto||""}</td><td>${statusBadge(i.status_pgto)}</td>
-      </tr>`).join("")}</tbody>
-    </table></div>
-  </div>` : ""}`;
+  // Ranking rows
+  const rankingRows = todosForns.map(fn => {
+    const invs  = invoices.filter(i => i.fornecedor === fn);
+    const totR2 = invs.reduce((s,i) => s+(parseFloat(i.reais)||0), 0);
+    const pm    = {};
+    invs.forEach(i => { if(i.moeda) pm[i.moeda] = (pm[i.moeda]||0) + parseCurrency(i.valor_moeda); });
+    const mStr  = Object.entries(pm).map(([m,v]) => SIMBOLO[m]+" "+Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})).join(" | ");
+    const selecionado = selForns.includes(fn) || relForn === fn;
+    return "<tr style=\"cursor:pointer;"+(selecionado?"background:#dbeafe!important":"")+"\" onclick=\"selecionarFornecedor(\x27"+fn.replace(/'/g,"\'")+"\x27)\">"
+      +"<td style=\"font-weight:600;color:"+(selecionado?"#1d4ed8":"#2563eb")+"\">"
+      +fn+" "+(selecionado?"✅":"")+"</td>"
+      +"<td>"+( Object.keys(pm).join("/")||"—")+"</td>"
+      +"<td style=\"font-weight:700;color:#1d4ed8\">"+(mStr||"—")+"</td>"
+      +"<td><span class=\"badge badge-red\">"+invs.filter(i=>i.status_pgto==="Em Aberto").length+"</span></td>"
+      +"<td><span class=\"badge badge-green\">"+invs.filter(i=>i.status_pgto==="Pago Total").length+"</span></td>"
+      +"<td style=\"font-weight:700;color:#16a34a\">"+fmtBRL(totR2)+"</td>"
+      +"<td style=\"font-size:11px;color:#2563eb\">Ver →</td>"
+      +"</tr>";
+  }).join("");
+
+  // Detalhes rows
+  const detalhesRows = invsForn.map(i =>
+    "<tr>"
+    +"<td>"+(i.n_fatura||"")+"</td>"
+    +"<td>"+fmtD(i.emissao_fatura)+"</td>"
+    +"<td>"+fmtD(i.vencimento)+"</td>"
+    +"<td><span class=\"badge badge-blue\">"+(i.moeda||"")+"</span></td>"
+    +"<td style=\"font-weight:700;color:"+(MOEDA_COR[i.moeda]||"#1d4ed8")+"\">"+fmtM(parseCurrency(i.valor_moeda),i.moeda)+"</td>"
+    +"<td>"+(i.taxa?"R$ "+parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4}):"—")+"</td>"
+    +"<td style=\"font-weight:700;color:#16a34a\">"+fmtBRL(i.reais)+"</td>"
+    +"<td>"+(i.cond_pgto||"")+"</td>"
+    +"<td>"+statusBadge(i.status_pgto)+"</td>"
+    +"</tr>"
+  ).join("");
+
+  let html = '<div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">📊 Relatório por Fornecedor</div>';
+
+  // Barra de filtros
+  html += '<div class="filter-bar" style="align-items:flex-start">'
+    + buildFornDropdownHTML("forn", todosForns, "Todos os fornecedores")
+    + '<div><label class="form-label">Data Inicial</label><input type="date" id="f_forn_dtIni" value="'+(f._dtIni||"")+'" onchange="filtros.forn._dtIni=this.value"></div>'
+    + '<div><label class="form-label">Data Final</label><input type="date" id="f_forn_dtFim" value="'+(f._dtFim||"")+'" onchange="filtros.forn._dtFim=this.value"></div>'
+    + '<div style="display:flex;gap:8px;align-items:flex-end"><button class="btn-search" onclick="aplicarFiltroForn()">🔍 Buscar</button><button class="btn btn-ghost" onclick="limparFiltro('forn')">✖ Limpar</button></div>'
+    + '</div>';
+
+  // Card fornecedor ativo
+  if (fornAtivos.length > 0) {
+    html += '<div class="card" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 16px">'
+      + '<span style="font-weight:700;color:#1e3a5f">📌 '+tituloDetalhe+'</span>';
+    if (fornAtivos.length === 1) {
+      const fn0 = fornAtivos[0];
+      html += '<button class="btn btn-primary" onclick="exportPDFForn(''+fn0.replace(/'/g,"\'")+'')">🖨️ PDF</button>'
+            + '<button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVForn(''+fn0.replace(/'/g,"\'")+'')">⬇️ Excel</button>';
+    } else {
+      html += '<button class="btn btn-primary" onclick="exportPDFMultiForn()">🖨️ PDF Consolidado</button>'
+            + '<button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVMultiForn()">⬇️ Excel Consolidado</button>';
+    }
+    html += '<button class="btn btn-ghost" onclick="limparFornsNS('forn')">✖ Limpar seleção</button></div>';
+  }
+
+  // Ranking
+  html += '<div class="card">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+    + '<div style="font-weight:700;color:#1e3a5f">📋 Ranking de Fornecedores</div>'
+    + '<div style="display:flex;gap:8px">'
+    + '<button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0;font-size:12px" onclick="exportCSVRanking()">⬇️ Excel Ranking</button>'
+    + '<button class="btn btn-primary" style="font-size:12px" onclick="exportPDFRanking()">🖨️ PDF Ranking</button>'
+    + '</div></div>'
+    + '<div class="table-wrap"><table>'
+    + '<thead><tr><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th>Em Aberto</th><th>Pago Total</th><th>Total R$</th><th></th></tr></thead>'
+    + '<tbody>' + (rankingRows || '<tr><td colspan="7" style="text-align:center;padding:20px;color:#94a3b8">Nenhum fornecedor cadastrado</td></tr>') + '</tbody>'
+    + '</table></div></div>';
+
+  // Detalhes do fornecedor selecionado
+  if (invsForn.length > 0) {
+    const kpisMoeda = MOEDAS.map(m => totMoeda[m]>0
+      ? '<div style="background:'+MOEDA_BG[m]+';border-radius:8px;padding:10px 16px;border-left:3px solid '+MOEDA_COR[m]+'"><div style="font-size:11px;color:#64748b">Total '+m+'</div><div style="font-weight:700;color:'+MOEDA_COR[m]+'">'+fmtM(totMoeda[m],m)+'</div></div>'
+      : "").join("");
+    html += '<div class="card">'
+      + '<div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:8px">🏢 Detalhes — '+tituloDetalhe+'</div>'
+      + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">'
+      + kpisMoeda
+      + '<div style="background:#dcfce7;border-radius:8px;padding:10px 16px;border-left:3px solid #16a34a"><div style="font-size:11px;color:#64748b">Total R$</div><div style="font-weight:700;color:#16a34a">'+fmtBRL(totR)+'</div></div>'
+      + '</div>'
+      + '<div class="table-wrap"><table>'
+      + '<thead><tr><th>Nº Invoice</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa R$</th><th>Valor R$</th><th>Cond.</th><th>Status</th></tr></thead>'
+      + '<tbody>'+detalhesRows+'</tbody>'
+      + '</table></div></div>';
+  }
+
+  return html;
 }
 
 // ════════════════════════════════════════════════════════
