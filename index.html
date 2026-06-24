@@ -2140,6 +2140,16 @@ document.addEventListener("click", e => {
 // ════════════════════════════════════════════════════════
 //  FORNECEDORES
 // ════════════════════════════════════════════════════════
+
+function selecionarFornecedor(fn) {
+  relForn = fn;
+  if (!filtros.forn._fornecedores.includes(fn)) {
+    filtros.forn._fornecedores = [fn];
+    filtros.forn.fornecedores  = [fn];
+  }
+  renderTab("Fornecedores");
+}
+
 function renderRelForn() {
   const todosForns = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
   const f = filtros.forn;
@@ -2196,13 +2206,14 @@ function renderRelForn() {
     </div>
     <div class="table-wrap"><table>
       <thead><tr>${["Fornecedor","Moeda","Valor Moeda","Em Aberto","Pago Total","Total R$",""].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
-      <tbody>${forn.map(fn => {
+      <tbody>${todosForns.map(fn => {
         const invs = invoices.filter(i=>i.fornecedor===fn);
         const totR2= invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
         const pm   = {};
         invs.forEach(i=>{ if(i.moeda) pm[i.moeda]=(pm[i.moeda]||0)+parseCurrency(i.valor_moeda); });
         const mStr = Object.entries(pm).map(([m,v])=>`${SIMBOLO[m]} ${Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2})}`).join(" | ");
-        return `<tr style="cursor:pointer;${relForn===fn?"background:#dbeafe!important":""}" onclick="relForn='${fn}';renderTab('Fornecedores')">
+        const fnEsc = fn.replace(/'/g,"\\'").replace(/"/g,'\\"');
+        return `<tr style="cursor:pointer;${relForn===fn?"background:#dbeafe!important":""}" onclick="selecionarFornecedor('${fnEsc}')">
           <td style="font-weight:600;color:${relForn===fn?"#1d4ed8":"#2563eb"}">${fn} ${relForn===fn?"✅":""}</td>
           <td>${Object.keys(pm).join("/")||"—"}</td>
           <td style="font-weight:700;color:#1d4ed8">${mStr||"—"}</td>
@@ -2214,8 +2225,8 @@ function renderRelForn() {
       }).join("")}</tbody>
     </table></div>
   </div>
-  ${relForn && invsForn.length>0 ? `<div class="card">
-    <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:8px">🏢 Detalhes — ${relForn}</div>
+  ${invsForn.length>0 ? `<div class="card">
+    <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:8px">🏢 Detalhes — ${selForns.length>1?selForns.length+" fornecedores":relForn||selForns[0]||""}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
       ${MOEDAS.map(m=>totMoeda[m]>0?`<div style="background:${MOEDA_BG[m]};border-radius:8px;padding:10px 16px;border-left:3px solid ${MOEDA_COR[m]}"><div style="font-size:11px;color:#64748b">Total ${m}</div><div style="font-weight:700;color:${MOEDA_COR[m]}">${fmtM(totMoeda[m],m)}</div></div>`:"").join("")}
       <div style="background:#dcfce7;border-radius:8px;padding:10px 16px;border-left:3px solid #16a34a"><div style="font-size:11px;color:#64748b">Total R$</div><div style="font-weight:700;color:#16a34a">${fmtBRL(totR)}</div></div>
