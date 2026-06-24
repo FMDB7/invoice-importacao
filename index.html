@@ -2211,7 +2211,7 @@ function renderRelForn() {
     + buildFornDropdownHTML("forn", todosForns, "Todos os fornecedores")
     + '<div><label class="form-label">Data Inicial</label><input type="date" id="f_forn_dtIni" value="'+(f._dtIni||"")+'" onchange="filtros.forn._dtIni=this.value"></div>'
     + '<div><label class="form-label">Data Final</label><input type="date" id="f_forn_dtFim" value="'+(f._dtFim||"")+'" onchange="filtros.forn._dtFim=this.value"></div>'
-    + '<div style="display:flex;gap:8px;align-items:flex-end"><button class="btn-search" onclick="aplicarFiltroForn()">🔍 Buscar</button><button class="btn btn-ghost" onclick="limparFiltro('forn')">✖ Limpar</button></div>'
+    + '<div style="display:flex;gap:8px;align-items:flex-end"><button class="btn-search" onclick="aplicarFiltroForn()">🔍 Buscar</button><button class="btn btn-ghost" onclick="limparFiltro(&quot;forn&quot;)">✖ Limpar</button></div>'
     + '</div>';
 
   // Card fornecedor ativo
@@ -2220,13 +2220,14 @@ function renderRelForn() {
       + '<span style="font-weight:700;color:#1e3a5f">📌 '+tituloDetalhe+'</span>';
     if (fornAtivos.length === 1) {
       const fn0 = fornAtivos[0];
-      html += '<button class="btn btn-primary" onclick="exportPDFForn(''+fn0.replace(/'/g,"\'")+'')">🖨️ PDF</button>'
-            + '<button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVForn(''+fn0.replace(/'/g,"\'")+'')">⬇️ Excel</button>';
+      const fn0Esc = fn0.replace(/'/g,"\'");
+      html += "<button class=\"btn btn-primary\" onclick=\"exportPDFForn('"+fn0Esc+"')\">🖨️ PDF</button>"
+            + "<button class=\"btn\" style=\"background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0\" onclick=\"exportCSVForn('"+fn0Esc+"')\">⬇️ Excel</button>";
     } else {
       html += '<button class="btn btn-primary" onclick="exportPDFMultiForn()">🖨️ PDF Consolidado</button>'
             + '<button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVMultiForn()">⬇️ Excel Consolidado</button>';
     }
-    html += '<button class="btn btn-ghost" onclick="limparFornsNS('forn')">✖ Limpar seleção</button></div>';
+    html += '<button class="btn btn-ghost" onclick="limparFornsNS(&quot;forn&quot;)">✖ Limpar seleção</button></div>';
   }
 
   // Ranking
