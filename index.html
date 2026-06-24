@@ -2544,13 +2544,58 @@ function exportPDFPgto(){
   if(f.dtFim)dados=dados.filter(i=>(i.dt_pgto&&i.dt_pgto<=f.dtFim)||(i.emissao_fatura&&i.emissao_fatura<=f.dtFim));
   if(f.bancos&&f.bancos.length>0)dados=dados.filter(i=>f.bancos.includes(i.banco));
   const totR=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const totPgR=dados.filter(i=>i.status_pgto==="Pago Total"||i.status_pgto==="Pago Parcial").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const totAbR=dados.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+
+  // Resumo por banco com cards visuais
+  const bancosNoRel=[...new Set(dados.filter(i=>i.banco&&(i.status_pgto==="Pago Total"||i.status_pgto==="Pago Parcial")).map(i=>i.banco))].sort();
+  const BANCO_CORES=[
+    {bg:"#dbeafe",c:"#1d4ed8",brd:"#1d4ed8"},
+    {bg:"#dcfce7",c:"#16a34a",brd:"#16a34a"},
+    {bg:"#fef3c7",c:"#d97706",brd:"#d97706"},
+    {bg:"#ede9fe",c:"#7c3aed",brd:"#7c3aed"},
+    {bg:"#fee2e2",c:"#dc2626",brd:"#dc2626"},
+    {bg:"#e0f2fe",c:"#0284c7",brd:"#0284c7"},
+    {bg:"#fce7f3",c:"#db2777",brd:"#db2777"},
+    {bg:"#f0fdf4",c:"#15803d",brd:"#15803d"},
+  ];
+  const resumoBancoHTML = bancosNoRel.length > 0 ? `
+    <div style="margin-top:20px;border-top:2px solid #e2e8f0;padding-top:16px">
+      <div style="font-weight:700;font-size:13px;color:#1e3a5f;margin-bottom:14px">🏦 Resumo por Banco</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+        ${bancosNoRel.map((b,idx)=>{
+          const cor=BANCO_CORES[idx%BANCO_CORES.length];
+          const pagos=dados.filter(i=>i.banco===b&&(i.status_pgto==="Pago Total"||i.status_pgto==="Pago Parcial"));
+          const tot=pagos.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+          const perc=totPgR>0?((tot/totPgR)*100).toFixed(1)+"%":"—";
+          return`<div style="background:${cor.bg};border-radius:10px;padding:14px 18px;border-left:5px solid ${cor.brd};min-width:150px;flex:1;max-width:210px">
+            <div style="font-size:11px;font-weight:700;color:${cor.c};margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">🏦 ${b}</div>
+            <div style="font-size:19px;font-weight:800;color:${cor.c};margin-bottom:4px">${fmtBRL(tot)}</div>
+            <div style="font-size:10px;color:#64748b">${pagos.length} pagamento(s) &nbsp;•&nbsp; ${perc} do total</div>
+          </div>`;
+        }).join("")}
+      </div>
+      <div style="background:#f0fdf4;border-radius:8px;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border:1px solid #bbf7d0">
+        <span style="font-weight:700;color:#16a34a;font-size:12px">✅ TOTAL GERAL PAGO</span>
+        <span style="font-weight:800;color:#16a34a;font-size:14px">${fmtBRL(totPgR)}</span>
+        <span style="color:#64748b;font-size:10px">${dados.filter(i=>i.status_pgto==="Pago Total"||i.status_pgto==="Pago Parcial").length} pagamento(s)</span>
+      </div>
+    </div>` : "";
+
   const rows=dados.map((i,idx)=>{const cor=i.status_pgto==="Pago Total"?"#16a34a":i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.pasta||""}</td><td>${i.n_fatura||""}</td><td>${i.fornecedor||""}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${fmtD(i.vencimento)}</td><td><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td><td>${fmtD(i.dt_pgto)}</td><td>${i.banco||"—"}</td></tr>`;}).join("");
   const w=window.open("","_blank");
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pagamentos</title><style>${pdfStyles()}</style></head><body>
-  <div class="hdr"><div><h1>💰 Relatório de Pagamentos — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${dados.length}</b> registros</div></div>
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pagamentos</title><style>${pdfStyles()}.banco-card{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
+  <div class="hdr"><div><h1>💰 Relatório de Pagamentos — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</p></div><div><b>${dados.length}</b> registros</div></div>
+  <div class="cards">
+    <div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${dados.filter(i=>i.status_pgto==="Em Aberto").length}</div></div>
+    <div class="card" style="background:#fef3c7;border-color:#d97706"><div class="cl">Pago Parcial</div><div class="cv" style="color:#d97706">${dados.filter(i=>i.status_pgto==="Pago Parcial").length}</div></div>
+    <div class="card" style="background:#dcfce7;border-color:#16a34a"><div class="cl">Pago Total</div><div class="cv" style="color:#16a34a">${dados.filter(i=>i.status_pgto==="Pago Total").length}</div></div>
+    <div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div>
+  </div>
+  ${resumoBancoHTML}
+  ${pdfResumMoedas(dados,"Resumo por Moeda")}
   <table><thead><tr><th>Pasta</th><th>Nº Invoice</th><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Vencimento</th><th>Status</th><th>Dt.Pgto</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
-  ${pdfResumMoedas(dados,"Resumo por Moeda — Pagamentos")}
-  <div class="tot"><b>Total R$:</b> ${fmtBRL(totR)} &nbsp;|&nbsp; <b>Pago:</b> <span style="color:#16a34a">${fmtBRL(dados.filter(i=>i.status_pgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span> &nbsp;|&nbsp; <b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(dados.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span></div>
+  <div class="tot"><b>Total R$:</b> ${fmtBRL(totR)} &nbsp;|&nbsp; <b>Pago:</b> <span style="color:#16a34a">${fmtBRL(totPgR)}</span> &nbsp;|&nbsp; <b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(totAbR)}</span></div>
   <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado em ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span></div>
   <script>window.print()<\/script></body></html>`);
   w.document.close();
