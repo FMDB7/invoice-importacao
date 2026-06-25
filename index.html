@@ -317,7 +317,7 @@ let realtimeSub    = null;
 let taxasAtivas    = {USD:"",EUR:"",CHF:"",GBP:""};
 
 let filtros = {
-  inv:     {fornecedor:"",status:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_dtIni:"",_dtFim:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
+  inv:     {fornecedor:"",status:"",moeda:"",pasta:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_pasta:"",_dtIni:"",_dtFim:"",_busca_pasta:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
   pgto:    {status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:"",bancos:[],_bancos:[],_status:"Todos"},
   forn:    {fornecedor:"",dtIni:"",dtFim:"",_fornecedor:"",_dtIni:"",_dtFim:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
   cambial: {fornecedor:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_moeda:"",_dtIni:"",_dtFim:"",fornecedores:[],_fornecedores:[],_busca_forn:""}
@@ -693,7 +693,7 @@ function limparFiltro(ns) {
   const f = filtros[ns];
   Object.keys(f).forEach(k => { if (Array.isArray(f[k])) f[k]=[]; else f[k]=""; });
   if (ns==="pgto") { filtros.pgto.status="Todos"; filtros.pgto._status="Todos"; filtros.pgto.bancos=[]; filtros.pgto._bancos=[]; }
-  if (ns==="inv")     { filtros.inv._fornecedores=[]; filtros.inv.fornecedores=[]; filtros.inv._busca_forn=""; }
+  if (ns==="inv")     { filtros.inv._fornecedores=[]; filtros.inv.fornecedores=[]; filtros.inv._busca_forn=""; filtros.inv._busca_pasta=""; filtros.inv._pasta=""; filtros.inv.pasta=""; }
   if (ns==="forn")    { filtros.forn._fornecedores=[]; filtros.forn.fornecedores=[]; filtros.forn._busca_forn=""; relForn=""; }
   if (ns==="cambial") { filtros.cambial._fornecedores=[]; filtros.cambial.fornecedores=[]; filtros.cambial._busca_forn=""; }
   renderTab(currentTab);
@@ -702,10 +702,12 @@ function limparFiltro(ns) {
 function aplicarFiltroInv() {
   filtros.inv.status   = document.getElementById("f_inv_status")?.value  || "";
   filtros.inv.moeda    = document.getElementById("f_inv_moeda")?.value   || "";
+  filtros.inv.pasta    = document.getElementById("f_inv_pasta")?.value   || "";
   filtros.inv.dtIni    = document.getElementById("f_inv_dtIni")?.value   || "";
   filtros.inv.dtFim    = document.getElementById("f_inv_dtFim")?.value   || "";
   filtros.inv._status  = filtros.inv.status;
   filtros.inv._moeda   = filtros.inv.moeda;
+  filtros.inv._pasta   = filtros.inv.pasta;
   filtros.inv._dtIni   = filtros.inv.dtIni;
   filtros.inv._dtFim   = filtros.inv.dtFim;
   filtros.inv.fornecedores = [...filtros.inv._fornecedores];
@@ -753,9 +755,14 @@ function getInvFiltradas() {
     }
     if (f.status && i.status_pgto !== f.status)             return false;
     if (f.moeda  && i.moeda !== f.moeda)                    return false;
-    if (f.dtIni  && i.emissao_fatura && i.emissao_fatura < f.dtIni) return false;
-    if (f.dtFim  && i.emissao_fatura && i.emissao_fatura > f.dtFim) return false;
+    if (f.pasta  && !(i.pasta||"").toLowerCase().includes(f.pasta.toLowerCase())) return false;
+    if (f.dtIni  && i.vencimento && i.vencimento < f.dtIni) return false;
+    if (f.dtFim  && i.vencimento && i.vencimento > f.dtFim) return false;
     return true;
+  }).sort((a,b) => {
+    const va = a.vencimento || "9999-12-31";
+    const vb = b.vencimento || "9999-12-31";
+    return va < vb ? -1 : va > vb ? 1 : 0;
   });
 }
 
@@ -769,6 +776,7 @@ function filtroAtivoTxt(ns) {
     p.push(`Fornecedor: ${f.fornecedor}`);
   if (f.moeda)                        p.push(`Moeda: ${f.moeda}`);
   if (f.status && f.status!=="Todos") p.push(`Status: ${f.status}`);
+  if (ns==="inv" && f.pasta)          p.push(`Pasta: ${f.pasta}`);
   if (f.dtIni)                        p.push(`De: ${fmtD(f.dtIni)}`);
   if (f.dtFim)                        p.push(`Até: ${fmtD(f.dtFim)}`);
   return p.length ? `✅ Filtro ativo: ${p.join(" | ")}` : "";
@@ -904,9 +912,9 @@ function alertaVcto(vcto, status) {
   if (diff <= 15)return "alerta";
   return null;
 }
-function calcVcto(embarque, cond) {
-  if (!embarque || cond==="Antecipado") return "";
-  const d = new Date(embarque+"T00:00:00");
+function calcVcto(emissao, cond) {
+  if (!emissao || cond==="Antecipado") return "";
+  const d = new Date(emissao+"T00:00:00");
   d.setDate(d.getDate() + (COND_DIAS[cond]||0));
   return d.toISOString().split("T")[0];
 }
@@ -927,8 +935,83 @@ function renderGraficoMoeda(dados, titulo) {
 }
 
 // ════════════════════════════════════════════════════════
-//  TAXAS DE CÂMBIO
+//  GRÁFICO MENSAL MULTI-MOEDAS
 // ════════════════════════════════════════════════════════
+function renderGraficoMensalMoedas(invs) {
+  if (!invs || invs.length === 0) return "";
+  // Agrupar por mês (vencimento) e moeda
+  const mesesSet = new Set();
+  invs.forEach(i => {
+    const dt = i.vencimento || i.emissao_fatura;
+    if (dt) mesesSet.add(dt.substring(0,7));
+  });
+  const meses = [...mesesSet].sort();
+  if (meses.length === 0) return "";
+
+  const moedasPresentes = MOEDAS.filter(m => invs.some(i => i.moeda === m));
+  if (moedasPresentes.length === 0) return "";
+
+  // Para cada mês calcular total por moeda (convertido para R$ para comparação da barra)
+  // Coluna por mês, cor por moeda (stacked ou grouped)
+  const dadosMes = meses.map(mes => {
+    const entry = { mes };
+    moedasPresentes.forEach(m => {
+      const arr = invs.filter(i => {
+        const dt = i.vencimento || i.emissao_fatura;
+        return i.moeda === m && dt && dt.substring(0,7) === mes;
+      });
+      entry[m] = arr.reduce((s,i) => s + parseCurrency(i.valor_moeda), 0);
+      entry[m+"_reais"] = arr.reduce((s,i) => s + (parseFloat(i.reais)||0), 0);
+    });
+    return entry;
+  });
+
+  const maxReais = Math.max(...dadosMes.map(d => moedasPresentes.reduce((s,m) => s + (d[m+"_reais"]||0), 0)), 1);
+  const H = 160; // height in px for bars
+
+  const nomeMes = mes => {
+    const [y, mo] = mes.split("-");
+    const nomes = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+    return `${nomes[parseInt(mo)-1]}/${y.substring(2)}`;
+  };
+
+  // Legenda
+  const legenda = moedasPresentes.map(m =>
+    `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:11px">
+      <span style="width:12px;height:12px;border-radius:3px;background:${MOEDA_CHART[m]||MOEDA_COR[m]};display:inline-block"></span>
+      <span style="font-weight:700;color:${MOEDA_CHART[m]||MOEDA_COR[m]}">${m}</span>
+    </span>`
+  ).join("");
+
+  const barWidth = Math.max(32, Math.min(60, Math.floor(480 / meses.length)));
+
+  const colunas = dadosMes.map(d => {
+    const totalR = moedasPresentes.reduce((s,m) => s + (d[m+"_reais"]||0), 0);
+    const pctTotal = totalR > 0 ? ((totalR/maxReais)*H).toFixed(0) : 0;
+    // Stacked segments
+    let stackedBars = "";
+    let acc = 0;
+    moedasPresentes.forEach(m => {
+      const h = totalR > 0 ? ((d[m+"_reais"]||0)/maxReais*H).toFixed(0) : 0;
+      if (parseFloat(h) > 0) {
+        stackedBars += `<div style="width:${barWidth}px;height:${h}px;background:${MOEDA_CHART[m]||MOEDA_COR[m]};${acc===0?"border-radius:6px 6px 0 0":""}" title="${m}: ${fmtM(d[m]||0,m)} | R$ ${fmtBRL(d[m+'_reais']||0)}"></div>`;
+        acc++;
+      }
+    });
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:0 0 auto">
+      <div style="font-size:10px;font-weight:700;color:#475569">${totalR>0?fmtBRL(totalR).replace("R$","").trim():""}</div>
+      <div style="display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:${H}px;width:${barWidth}px">
+        ${stackedBars || `<div style="width:${barWidth}px;height:2px;background:#e2e8f0;border-radius:2px"></div>`}
+      </div>
+      <div style="font-size:10px;color:#64748b;font-weight:600;text-align:center">${nomeMes(d.mes)}</div>
+    </div>`;
+  }).join("");
+
+  return `<div class="card"><div style="font-weight:700;color:#1e3a5f;margin-bottom:10px">📊 Distribuição por Moeda % Volume Total — por Mês</div>
+    <div style="margin-bottom:8px">${legenda}</div>
+    <div style="overflow-x:auto"><div style="display:flex;align-items:flex-end;gap:8px;padding:4px 2px;min-width:max-content">${colunas}</div></div>
+  </div>`;
+}
 function abrirModalTaxa() {
   if (!pode("taxa")) { showToast("Sem permissão para alterar taxas", "err"); return; }
   MOEDAS.forEach(m => {
@@ -1078,8 +1161,8 @@ function renderFormFields() {
 
 function updateForm(k, v) {
   formState[k] = v;
-  if (k==="dt_embarque" || k==="cond_pgto") {
-    formState.vencimento = calcVcto(formState.dt_embarque, formState.cond_pgto);
+  if (k==="emissao_fatura" || k==="cond_pgto") {
+    formState.vencimento = calcVcto(formState.emissao_fatura, formState.cond_pgto);
     const el = document.getElementById("inp_vencimento");
     if (el) el.value = formState.vencimento || "";
   }
@@ -1528,10 +1611,6 @@ function renderDashboard() {
   const alertas        = invoices.filter(i=>alertaVcto(i.vencimento,i.status_pgto));
 
   const totalGeral = MOEDAS.reduce((s,m)=>s+invoices.filter(i=>i.moeda===m).reduce((s2,i)=>s2+parseCurrency(i.valor_moeda),0),0);
-  const chartDados = MOEDAS.map(m=>{
-    const v = invoices.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
-    return { moeda:m, valor:v, pct:totalGeral>0?(v/totalGeral)*100:0, cor:MOEDA_CHART[m] };
-  }).filter(d=>d.valor>0);
 
   // Usuários online simulados (real = Supabase Presence)
   const usuariosAtivos = usuarios.filter(u=>u.ativo).length || 1;
@@ -1561,7 +1640,7 @@ function renderDashboard() {
     ].map(([ic,bg,c,lb,vl])=>`<div class="stat" style="background:${bg}"><div style="font-size:20px">${ic}</div><div style="font-size:24px;font-weight:700;color:${c}">${vl}</div><div class="stat-label" style="color:${c}">${lb}</div></div>`).join("")}
   </div>
 
-  ${chartDados.length ? renderGraficoMoeda(chartDados,"Distribuição por Moeda — % do Volume Total") : ""}
+  ${renderGraficoMensalMoedas(invoices)}
 
   ${alertas.length ? `<div class="card"><div style="font-weight:700;color:#dc2626;margin-bottom:10px">🚨 Alertas de Vencimento</div>${alertas.map(i=>{
     const a=alertaVcto(i.vencimento,i.status_pgto);
@@ -1653,11 +1732,15 @@ function renderInvoices() {
       </select>
     </div>
     <div>
-      <label class="form-label">Emissão Inicial</label>
+      <label class="form-label">Pasta</label>
+      <input type="text" id="f_inv_pasta" placeholder="Filtrar por pasta..." value="${filtros.inv._pasta||""}" oninput="filtros.inv._pasta=this.value" style="min-width:140px">
+    </div>
+    <div>
+      <label class="form-label">Vcto Inicial</label>
       <input type="date" id="f_inv_dtIni" value="${filtros.inv._dtIni||""}" onchange="filtros.inv._dtIni=this.value">
     </div>
     <div>
-      <label class="form-label">Emissão Final</label>
+      <label class="form-label">Vcto Final</label>
       <input type="date" id="f_inv_dtFim" value="${filtros.inv._dtFim||""}" onchange="filtros.inv._dtFim=this.value">
     </div>
     <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:2px;margin-top:auto">
@@ -1869,9 +1952,10 @@ function renderPagamentos() {
 
   let dados = invoices;
   if (f.status && f.status!=="Todos") dados = dados.filter(i=>i.status_pgto===f.status);
-  if (f.dtIni) dados = dados.filter(i=>(i.dt_pgto&&i.dt_pgto>=f.dtIni)||(i.emissao_fatura&&i.emissao_fatura>=f.dtIni));
-  if (f.dtFim) dados = dados.filter(i=>(i.dt_pgto&&i.dt_pgto<=f.dtFim)||(i.emissao_fatura&&i.emissao_fatura<=f.dtFim));
+  if (f.dtIni) dados = dados.filter(i=>i.vencimento&&i.vencimento>=f.dtIni);
+  if (f.dtFim) dados = dados.filter(i=>i.vencimento&&i.vencimento<=f.dtFim);
   if (f.bancos&&f.bancos.length>0) dados = dados.filter(i=>f.bancos.includes(i.banco));
+  dados = dados.slice().sort((a,b)=>{ const va=a.vencimento||"9999-12-31",vb=b.vencimento||"9999-12-31"; return va<vb?-1:va>vb?1:0; });
 
   const bancoDropdownHTML = `
     <div id="banco-filter-wrap" class="banco-filter-wrap" style="min-width:200px">
@@ -1927,8 +2011,8 @@ function renderPagamentos() {
         ${STATUS_PGTO.map(s=>`<option value="${s}"${f._status===s?" selected":""}>${s}</option>`).join("")}
       </select>
     </div>
-    <div><label class="form-label">Data Inicial</label><input type="date" id="f_pgto_dtIni" value="${f._dtIni||""}" onchange="filtros.pgto._dtIni=this.value"></div>
-    <div><label class="form-label">Data Final</label><input type="date" id="f_pgto_dtFim" value="${f._dtFim||""}" onchange="filtros.pgto._dtFim=this.value"></div>
+    <div><label class="form-label">Vcto Inicial</label><input type="date" id="f_pgto_dtIni" value="${f._dtIni||""}" onchange="filtros.pgto._dtIni=this.value"></div>
+    <div><label class="form-label">Vcto Final</label><input type="date" id="f_pgto_dtFim" value="${f._dtFim||""}" onchange="filtros.pgto._dtFim=this.value"></div>
     ${bancoDropdownHTML}
     <div style="display:flex;gap:8px;align-items:flex-end">
       <button class="btn-search" onclick="aplicarFiltroPgto()">🔍 Buscar</button>
@@ -2159,8 +2243,9 @@ function renderRelForn() {
   } else if (relForn) {
     invsForn = invoices.filter(i => i.fornecedor === relForn);
   }
-  if (f.dtIni) invsForn = invsForn.filter(i => i.emissao_fatura >= f.dtIni);
-  if (f.dtFim) invsForn = invsForn.filter(i => i.emissao_fatura <= f.dtFim);
+  if (f.dtIni) invsForn = invsForn.filter(i => i.vencimento >= f.dtIni);
+  if (f.dtFim) invsForn = invsForn.filter(i => i.vencimento <= f.dtFim);
+  invsForn = invsForn.slice().sort((a,b)=>{ const va=a.vencimento||"9999-12-31",vb=b.vencimento||"9999-12-31"; return va<vb?-1:va>vb?1:0; });
 
   const totMoeda = {};
   MOEDAS.forEach(m => { totMoeda[m] = invsForn.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valor_moeda),0); });
@@ -2208,8 +2293,8 @@ function renderRelForn() {
   // Barra de filtros
   html += '<div class="filter-bar" style="align-items:flex-start">'
     + buildFornDropdownHTML("forn", todosForns, "Todos os fornecedores")
-    + '<div><label class="form-label">Data Inicial</label><input type="date" id="f_forn_dtIni" value="'+(f._dtIni||"")+'" onchange="filtros.forn._dtIni=this.value"></div>'
-    + '<div><label class="form-label">Data Final</label><input type="date" id="f_forn_dtFim" value="'+(f._dtFim||"")+'" onchange="filtros.forn._dtFim=this.value"></div>'
+    + '<div><label class="form-label">Vcto Inicial</label><input type="date" id="f_forn_dtIni" value="'+(f._dtIni||"")+'" onchange="filtros.forn._dtIni=this.value"></div>'
+    + '<div><label class="form-label">Vcto Final</label><input type="date" id="f_forn_dtFim" value="'+(f._dtFim||"")+'" onchange="filtros.forn._dtFim=this.value"></div>'
     + '<div style="display:flex;gap:8px;align-items:flex-end"><button class="btn-search" onclick="aplicarFiltroForn()">🔍 Buscar</button><button class="btn btn-ghost" onclick="limparFiltro(&quot;forn&quot;)">✖ Limpar</button></div>'
     + '</div>';
 
@@ -2274,8 +2359,9 @@ function renderAnaliseCambial() {
   else if (f.fornecedor)
     dados = dados.filter(i=>i.fornecedor===f.fornecedor);
   if (f.moeda) dados = dados.filter(i=>i.moeda===f.moeda);
-  if (f.dtIni) dados = dados.filter(i=>i.dt_pgto>=f.dtIni);
-  if (f.dtFim) dados = dados.filter(i=>i.dt_pgto<=f.dtFim);
+  if (f.dtIni) dados = dados.filter(i=>i.vencimento>=f.dtIni);
+  if (f.dtFim) dados = dados.filter(i=>i.vencimento<=f.dtFim);
+  dados = dados.slice().sort((a,b)=>{ const va=a.vencimento||"9999-12-31",vb=b.vencimento||"9999-12-31"; return va<vb?-1:va>vb?1:0; });
 
   const totMoeda={}, totReaisMoeda={}, taxaMedia={};
   MOEDAS.forEach(m=>{
@@ -2300,11 +2386,11 @@ function renderAnaliseCambial() {
       </select>
     </div>
     <div>
-      <label class="form-label">Data Inicial</label>
+      <label class="form-label">Vcto Inicial</label>
       <input type="date" id="f_cambial_dtIni" value="${f._dtIni||""}" onchange="filtros.cambial._dtIni=this.value">
     </div>
     <div>
-      <label class="form-label">Data Final</label>
+      <label class="form-label">Vcto Final</label>
       <input type="date" id="f_cambial_dtFim" value="${f._dtFim||""}" onchange="filtros.cambial._dtFim=this.value">
     </div>
     <div style="display:flex;gap:8px;align-items:flex-end">
