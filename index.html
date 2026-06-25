@@ -991,35 +991,57 @@ function renderGraficoMensalMoedas(invs) {
     </span>`;
   }).join("");
 
-  const barWidth = Math.max(32, Math.min(60, Math.floor(480 / meses.length)));
+  const barWidth = Math.max(44, Math.min(68, Math.floor(520 / meses.length)));
 
   // Total geral em R$ (todos os meses) para % do mês
   const totalGeralReais = dadosMes.reduce((s,d) => s + moedasPresentes.reduce((s2,m) => s2+(d[m+"_reais"]||0), 0), 0);
 
+  // Valor compacto com prefixo R$
+  const fmtCompact = v => {
+    if (!v || v === 0) return "";
+    if (v >= 1000000) return "R$\u00a0" + (v/1000000).toFixed(1).replace(".",",") + "M";
+    if (v >= 1000)    return "R$\u00a0" + (v/1000).toFixed(1).replace(".",",") + "k";
+    return "R$\u00a0" + v.toFixed(0);
+  };
+
   const colunas = dadosMes.map(d => {
     const totalR = moedasPresentes.reduce((s,m) => s + (d[m+"_reais"]||0), 0);
     const pctMes = totalGeralReais > 0 ? ((totalR/totalGeralReais)*100).toFixed(1) : "0.0";
+    const colH   = totalR > 0 ? Math.max((totalR/maxReais)*H, 4) : 0;
+
     // Stacked segments
     let stackedBars = "";
     let acc = 0;
     moedasPresentes.forEach(m => {
-      const h = totalR > 0 ? ((d[m+"_reais"]||0)/maxReais*H).toFixed(0) : 0;
-      const pctSeg = totalR > 0 && (d[m+"_reais"]||0) > 0 ? ((d[m+"_reais"]/totalR)*100).toFixed(0) : "";
+      const hRaw   = totalR > 0 ? (d[m+"_reais"]||0)/maxReais*H : 0;
+      const h      = Math.max(hRaw, 0).toFixed(0);
+      const pctSeg = totalR > 0 && (d[m+"_reais"]||0) > 0
+        ? ((d[m+"_reais"]/totalR)*100).toFixed(0) : "";
       if (parseFloat(h) > 0) {
-        const showLabel = parseFloat(h) >= 18;
-        stackedBars += `<div style="position:relative;width:${barWidth}px;height:${h}px;background:${MOEDA_CHART[m]||MOEDA_COR[m]};${acc===0?"border-radius:6px 6px 0 0":""}display:flex;align-items:center;justify-content:center" title="${m}: ${fmtM(d[m]||0,m)} | R$ ${fmtBRL(d[m+"_reais"]||0)} (${pctSeg}% do mês)">
-          ${showLabel ? `<span style="font-size:9px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);line-height:1">${pctSeg}%</span>` : ""}
-        </div>`;
+        const isTop   = acc === 0;
+        const showPct = parseFloat(h) >= 16;
+        stackedBars += `<div style="width:${barWidth}px;height:${h}px;background:${MOEDA_CHART[m]||MOEDA_COR[m]};${isTop?"border-radius:6px 6px 0 0;":""}display:flex;align-items:center;justify-content:center;overflow:hidden;" title="${m}: ${fmtM(d[m]||0,m)} | R$ ${fmtBRL(d[m+"_reais"]||0)} (${pctSeg}% do mês)">
+            ${showPct ? `<span style="font-size:9px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55);display:block;text-align:center;width:100%">${pctSeg}%</span>` : ""}
+          </div>`;
         acc++;
       }
     });
-    return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:0 0 auto">
-      <div style="font-size:9px;font-weight:700;color:#7c3aed;background:#ede9fe;border-radius:8px;padding:1px 5px;line-height:1.5">${totalR>0?pctMes+"%":""}</div>
-      <div style="font-size:10px;font-weight:700;color:#475569">${totalR>0?fmtBRL(totalR).replace("R$","").trim():""}</div>
-      <div style="display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:${H}px;width:${barWidth}px">
-        ${stackedBars || `<div style="width:${barWidth}px;height:2px;background:#e2e8f0;border-radius:2px"></div>`}
+
+    return `<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;width:${barWidth}px">
+      <!-- container relativo para a barra + labels acima dela -->
+      <div style="position:relative;height:${H}px;width:${barWidth}px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center">
+        <!-- labels grudados imediatamente acima da barra -->
+        ${totalR > 0 ? `<div style="position:absolute;bottom:${colH.toFixed(0)}px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding-bottom:2px;z-index:1">
+          <span style="font-size:9px;font-weight:800;color:#7c3aed;background:#ede9fe;border-radius:8px;padding:0 5px;line-height:1.6;white-space:nowrap">${pctMes}%</span>
+          <span style="font-size:9px;font-weight:700;color:#334155;white-space:nowrap">${fmtCompact(totalR)}</span>
+        </div>` : ""}
+        <!-- barra empilhada -->
+        <div style="display:flex;flex-direction:column;align-items:center;width:${barWidth}px">
+          ${stackedBars || `<div style="width:${barWidth}px;height:2px;background:#e2e8f0;border-radius:2px"></div>`}
+        </div>
       </div>
-      <div style="font-size:10px;color:#64748b;font-weight:600;text-align:center">${nomeMes(d.mes)}</div>
+      <!-- label do mês -->
+      <div style="font-size:10px;color:#64748b;font-weight:600;text-align:center;margin-top:4px;width:${barWidth}px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nomeMes(d.mes)}</div>
     </div>`;
   }).join("");
 
