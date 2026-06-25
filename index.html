@@ -1852,7 +1852,7 @@ function renderInvoiceRow(i) {
   return `<tr id="row-${sid}">
     <td ${cellAttr} style="position:relative">${hint}${i.pasta||"—"}</td>
     <td ${cellAttr} style="position:relative">${hint}${i.cidade||"—"}</td>
-    <td ${cellAttr} style="position:relative">${hint}<b>${i.fornecedor||""}</b><br><span style="color:#94a3b8;font-size:10px">${i.marca||""}</span></td>
+    <td ${cellAttr} style="position:relative">${hint}<b>${i.fornecedor||""}</b></td>
     <td ${cellAttr} style="position:relative">${hint}${i.n_fatura||""}</td>
     <td ${cellAttr} style="position:relative">${hint}${fmtD(i.emissao_fatura)}</td>
     <td ${cellAttr} style="position:relative">${hint}${a==="vencido"?'<span style="color:#dc2626">⛔</span> ':a==="urgente"?'<span style="color:#d97706">🚨</span> ':a==="alerta"?'<span>⚠️</span> ':""}${fmtD(i.vencimento)}</td>
