@@ -866,6 +866,10 @@ function getInvFiltradas() {
     }
     if (f.statuses && f.statuses.length > 0 && !f.statuses.includes(i.status_pgto)) return false;
     else if ((!f.statuses || f.statuses.length === 0) && f.status && f.status !== "__multi__" && i.status_pgto !== f.status) return false;
+    const isEmAberto = i.status_pgto === "Em Aberto";
+    const statusesAtivos = f.statuses && f.statuses.length > 0 ? f.statuses : (f.status && f.status !== "__multi__" && f.status ? [f.status] : []);
+    const filtraEmAberto = statusesAtivos.includes("Em Aberto") || statusesAtivos.length === 0;
+    if (filtraEmAberto && isEmAberto && !i.vencimento) return false;
     if (f.moeda  && i.moeda !== f.moeda)                    return false;
     if (f.pasta  && !(i.pasta||"").toLowerCase().includes(f.pasta.toLowerCase())) return false;
     if (f.dtIni  && i.vencimento && i.vencimento < f.dtIni) return false;
@@ -2137,6 +2141,9 @@ function renderPagamentos() {
   let dados = invoices;
   if (f.statuses && f.statuses.length > 0) dados = dados.filter(i=>f.statuses.includes(i.status_pgto));
   else if (f.status && f.status!=="Todos" && f.status!=="__multi__") dados = dados.filter(i=>i.status_pgto===f.status);
+  const pgtoStatusesAtivos = f.statuses && f.statuses.length > 0 ? f.statuses : (f.status && f.status!=="Todos" && f.status!=="__multi__" ? [f.status] : []);
+  const pgtoFiltraEmAberto = pgtoStatusesAtivos.includes("Em Aberto") || pgtoStatusesAtivos.length === 0;
+  if (pgtoFiltraEmAberto) dados = dados.filter(i => i.status_pgto !== "Em Aberto" || !!i.vencimento);
   if (f.dtIni) dados = dados.filter(i=>i.vencimento&&i.vencimento>=f.dtIni);
   if (f.dtFim) dados = dados.filter(i=>i.vencimento&&i.vencimento<=f.dtFim);
   if (f.bancos&&f.bancos.length>0) dados = dados.filter(i=>f.bancos.includes(i.banco));
