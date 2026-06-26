@@ -967,7 +967,7 @@ function renderGraficoMensalMoedas(invs) {
   });
 
   const maxReais = Math.max(...dadosMes.map(d => moedasPresentes.reduce((s,m) => s + (d[m+"_reais"]||0), 0)), 1);
-  const H = 160; // height in px for bars
+  const H = 210; // height in px for bars — increased for readability
 
   const nomeMes = mes => {
     const [y, mo] = mes.split("-");
@@ -991,7 +991,7 @@ function renderGraficoMensalMoedas(invs) {
     </span>`;
   }).join("");
 
-  const barWidth = Math.max(44, Math.min(68, Math.floor(520 / meses.length)));
+  const barWidth = Math.max(52, Math.min(80, Math.floor(600 / meses.length)));
 
   // Total geral em R$ (todos os meses) para % do mês
   const totalGeralReais = dadosMes.reduce((s,d) => s + moedasPresentes.reduce((s2,m) => s2+(d[m+"_reais"]||0), 0), 0);
@@ -1021,7 +1021,7 @@ function renderGraficoMensalMoedas(invs) {
         const isTop   = acc === 0;
         const showPct = parseFloat(h) >= 16;
         stackedBars += `<div style="width:${barWidth}px;height:${h}px;background:${MOEDA_CHART[m]||MOEDA_COR[m]};${isTop?"border-radius:6px 6px 0 0;":""}display:flex;align-items:center;justify-content:center;overflow:hidden;" title="${m}: ${fmtM(d[m]||0,m)} | R$ ${fmtBRL(d[m+"_reais"]||0)} (${pctSeg}% do mês)">
-            ${showPct ? `<span style="font-size:9px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55);display:block;text-align:center;width:100%">${pctSeg}%</span>` : ""}
+            ${showPct ? `<span style="font-size:10px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6);display:block;text-align:center;width:100%;letter-spacing:.2px">${pctSeg}%</span>` : ""}
           </div>`;
         acc++;
       }
@@ -1031,9 +1031,9 @@ function renderGraficoMensalMoedas(invs) {
       <!-- container relativo para a barra + labels acima dela -->
       <div style="position:relative;height:${H}px;width:${barWidth}px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center">
         <!-- labels grudados imediatamente acima da barra -->
-        ${totalR > 0 ? `<div style="position:absolute;bottom:${colH.toFixed(0)}px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding-bottom:2px;z-index:1">
-          <span style="font-size:9px;font-weight:800;color:#7c3aed;background:#ede9fe;border-radius:8px;padding:0 5px;line-height:1.6;white-space:nowrap">${pctMes}%</span>
-          <span style="font-size:9px;font-weight:700;color:#334155;white-space:nowrap">${fmtCompact(totalR)}</span>
+        ${totalR > 0 ? `<div style="position:absolute;bottom:${(colH+2).toFixed(0)}px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:2px;z-index:2;pointer-events:none">
+          <span style="font-size:10px;font-weight:800;color:#7c3aed;background:#ede9fe;border:1px solid #c4b5fd;border-radius:10px;padding:1px 7px;line-height:1.7;white-space:nowrap;box-shadow:0 1px 3px rgba(109,40,217,.12)">${pctMes}%</span>
+          <span style="font-size:10px;font-weight:800;color:#1e3a5f;white-space:nowrap;text-shadow:0 0 0 transparent">${fmtCompact(totalR)}</span>
         </div>` : ""}
         <!-- barra empilhada -->
         <div style="display:flex;flex-direction:column;align-items:center;width:${barWidth}px">
@@ -1047,7 +1047,7 @@ function renderGraficoMensalMoedas(invs) {
 
   return `<div class="card"><div style="font-weight:700;color:#1e3a5f;margin-bottom:10px">📊 Distribuição por Moeda % Volume Total — por Mês</div>
     <div style="margin-bottom:8px">${legenda}</div>
-    <div style="overflow-x:auto"><div style="display:flex;align-items:flex-end;gap:8px;padding:4px 2px;min-width:max-content">${colunas}</div></div>
+    <div style="overflow-x:auto;padding-bottom:4px"><div style="display:flex;align-items:flex-end;gap:16px;padding:28px 8px 4px 8px;min-width:max-content">${colunas}</div></div>
   </div>`;
 }
 function abrirModalTaxa() {
@@ -1656,7 +1656,7 @@ function renderDashboard() {
       <div style="margin-bottom:6px">
         <div class="kpi-label">Total</div>
         <div style="font-size:20px;font-weight:800;color:${MOEDA_COR[m]};line-height:1">${fmtM(total,m)}</div>
-        <div style="font-size:11px;color:#64748b;margin-top:2px">${fmtBRL(reaisM)}</div>
+        <div style="font-size:12px;font-weight:800;color:#16a34a;margin-top:3px;letter-spacing:-.2px">${fmtBRL(reaisM)}</div>
       </div>
       <div style="margin-bottom:6px">
         <div style="display:flex;justify-content:space-between;align-items:center">
@@ -1682,7 +1682,7 @@ function renderDashboard() {
 
 
   <!-- KPIs por Moeda -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:16px">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:22px">
     ${kpisMoeda}
     <div class="kpi-moeda" style="background:#dcfce7;border-color:#16a34a">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -1708,17 +1708,17 @@ function renderDashboard() {
   </div>
 
   <!-- Stats -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
     ${[["📄","#dbeafe","#1d4ed8","Total Invoices",""+invoices.length],
        ["⏳","#fee2e2","#dc2626","Em Aberto",""+invoices.filter(i=>i.status_pgto==="Em Aberto").length],
        ["⚠️","#fef3c7","#d97706","Pago Parcial",""+invoices.filter(i=>i.status_pgto==="Pago Parcial").length],
        ["✅","#dcfce7","#16a34a","Pago Total",""+invoices.filter(i=>i.status_pgto==="Pago Total").length],
        ["🚨","#fecaca","#991b1b","Vencidos",""+vencidos.length],
-       ["👥","#ede9fe","#7c3aed","Usuários",""+usuarios.filter(u=>u.ativo).length]
+       ...(currentUser?.perfil==="admin"?[["👥","#ede9fe","#7c3aed","Usuários",""+usuarios.filter(u=>u.ativo).length]]:[])
     ].map(([ic,bg,c,lb,vl])=>`<div class="stat" style="background:${bg}"><div style="font-size:20px">${ic}</div><div style="font-size:24px;font-weight:700;color:${c}">${vl}</div><div class="stat-label" style="color:${c}">${lb}</div></div>`).join("")}
   </div>
 
-  ${renderGraficoMensalMoedas(invoices)}
+  <div style="margin-bottom:20px">${renderGraficoMensalMoedas(invoices)}</div>
 
   ${alertas.length ? `<div class="card"><div style="font-weight:700;color:#dc2626;margin-bottom:10px">🚨 Alertas de Vencimento</div>${alertas.map(i=>{
     const a=alertaVcto(i.vencimento,i.status_pgto);
