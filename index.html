@@ -317,8 +317,8 @@ let realtimeSub    = null;
 let taxasAtivas    = {USD:"",EUR:"",CHF:"",GBP:""};
 
 let filtros = {
-  inv:     {fornecedor:"",status:"",moeda:"",pasta:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_pasta:"",_dtIni:"",_dtFim:"",_busca_pasta:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
-  pgto:    {status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:"",bancos:[],_bancos:[],_status:"Todos"},
+  inv:     {fornecedor:"",status:"",moeda:"",pasta:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_pasta:"",_dtIni:"",_dtFim:"",_busca_pasta:"",fornecedores:[],_fornecedores:[],_busca_forn:"",statuses:[],_statuses:[]},
+  pgto:    {status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:"",bancos:[],_bancos:[],_status:"Todos",statuses:[],_statuses:[]},
   forn:    {fornecedor:"",dtIni:"",dtFim:"",_fornecedor:"",_dtIni:"",_dtFim:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
   cambial: {fornecedor:"",moeda:"",dtIni:"",dtFim:"",_fornecedor:"",_moeda:"",_dtIni:"",_dtFim:"",fornecedores:[],_fornecedores:[],_busca_forn:""}
 };
@@ -692,20 +692,129 @@ function filtroBar(ns, campos, onBuscar) {
 function limparFiltro(ns) {
   const f = filtros[ns];
   Object.keys(f).forEach(k => { if (Array.isArray(f[k])) f[k]=[]; else f[k]=""; });
-  if (ns==="pgto") { filtros.pgto.status="Todos"; filtros.pgto._status="Todos"; filtros.pgto.bancos=[]; filtros.pgto._bancos=[]; }
-  if (ns==="inv")     { filtros.inv._fornecedores=[]; filtros.inv.fornecedores=[]; filtros.inv._busca_forn=""; filtros.inv._busca_pasta=""; filtros.inv._pasta=""; filtros.inv.pasta=""; }
+  if (ns==="pgto") { filtros.pgto.status="Todos"; filtros.pgto._status="Todos"; filtros.pgto.statuses=[]; filtros.pgto._statuses=[]; filtros.pgto.bancos=[]; filtros.pgto._bancos=[]; }
+  if (ns==="inv")     { filtros.inv._fornecedores=[]; filtros.inv.fornecedores=[]; filtros.inv._busca_forn=""; filtros.inv._busca_pasta=""; filtros.inv._pasta=""; filtros.inv.pasta=""; filtros.inv._statuses=[]; filtros.inv.statuses=[]; }
   if (ns==="forn")    { filtros.forn._fornecedores=[]; filtros.forn.fornecedores=[]; filtros.forn._busca_forn=""; relForn=""; }
   if (ns==="cambial") { filtros.cambial._fornecedores=[]; filtros.cambial.fornecedores=[]; filtros.cambial._busca_forn=""; }
   renderTab(currentTab);
 }
 
+// ════════════════════════════════════════════════════════
+//  STATUS DROPDOWN CHECKBOXES
+// ════════════════════════════════════════════════════════
+function toggleStatusDD(ns) {
+  const dd = document.getElementById(`status-dd-${ns}`);
+  if (!dd) return;
+  const isOpen = dd.style.display === "block";
+  document.querySelectorAll(".status-dd-menu").forEach(el => el.style.display = "none");
+  dd.style.display = isOpen ? "none" : "block";
+  if (!isOpen) setTimeout(() => document.addEventListener("click", closeStatusDDOnce, {once:true,capture:false}), 10);
+}
+function closeStatusDDOnce(e) {
+  document.querySelectorAll(".status-dd-menu").forEach(el => {
+    if (!el.parentElement.contains(e.target)) el.style.display = "none";
+  });
+}
+function toggleStatusSel(ns, s) {
+  const f = filtros[ns];
+  const idx = f._statuses.indexOf(s);
+  if (idx === -1) f._statuses.push(s); else f._statuses.splice(idx, 1);
+  renderStatusBtn(ns);
+}
+function renderStatusBtn(ns) {
+  const f   = filtros[ns];
+  const btn = document.getElementById(`status-btn-${ns}`);
+  const chk = document.getElementById(`status-chips-${ns}`);
+  if (btn) {
+    btn.textContent = f._statuses.length === 0 ? "Todos ▾" : f._statuses.length === 1 ? f._statuses[0] + " ▾" : f._statuses.length + " selecionados ▾";
+    btn.style.background = f._statuses.length > 0 ? "#eff6ff" : "";
+    btn.style.color      = f._statuses.length > 0 ? "#1d4ed8" : "";
+    btn.style.fontWeight = f._statuses.length > 0 ? "700" : "";
+  }
+  if (chk) {
+    chk.innerHTML = f._statuses.map(s => {
+      const cor = s === "Pago Total" ? "#16a34a" : s === "Em Aberto" ? "#dc2626" : "#d97706";
+      const bg  = s === "Pago Total" ? "#dcfce7" : s === "Em Aberto" ? "#fee2e2" : "#fef3c7";
+      return `<span style="background:${bg};color:${cor};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:4px">
+        ${s}<span onclick="removerStatusSel('${ns}','${s}');event.stopPropagation()" style="cursor:pointer;font-size:13px;line-height:1;font-weight:700" onmouseover="this.style.color='#1e293b'" onmouseout="this.style.color=''">×</span>
+      </span>`;
+    }).join("");
+  }
+  // Re-render checkboxes inside dropdown
+  STATUS_PGTO.forEach(s => {
+    const el = document.getElementById(`status-chk-${ns}-${s.replace(/ /g,"_")}`);
+    if (el) {
+      el.checked = f._statuses.includes(s);
+      const row = el.closest("div");
+      if (row) {
+        const sel = f._statuses.includes(s);
+        const cor = s === "Pago Total" ? "#16a34a" : s === "Em Aberto" ? "#dc2626" : "#d97706";
+        row.style.background  = sel ? (s === "Pago Total" ? "#f0fdf4" : s === "Em Aberto" ? "#fef2f2" : "#fffbeb") : "#fff";
+        row.querySelector("span").style.fontWeight = sel ? "700" : "400";
+        row.querySelector("span").style.color      = sel ? cor : "#1e293b";
+      }
+    }
+  });
+}
+function removerStatusSel(ns, s) {
+  const f = filtros[ns];
+  f._statuses = f._statuses.filter(x => x !== s);
+  renderStatusBtn(ns);
+}
+function limparStatusSel(ns) {
+  filtros[ns]._statuses = [];
+  renderStatusBtn(ns);
+  document.querySelectorAll(".status-dd-menu").forEach(el => el.style.display = "none");
+}
+
+function buildStatusDropdown(ns) {
+  const f   = filtros[ns];
+  const sel = f._statuses || [];
+  const btnLabel = sel.length === 0 ? "Todos ▾" : sel.length === 1 ? sel[0] + " ▾" : sel.length + " selecionados ▾";
+  const hasSel   = sel.length > 0;
+  const COR   = {["Em Aberto"]:"#dc2626",["Pago Parcial"]:"#d97706",["Pago Total"]:"#16a34a"};
+  const BG    = {["Em Aberto"]:"#fee2e2",["Pago Parcial"]:"#fef3c7",["Pago Total"]:"#dcfce7"};
+  const IC    = {["Em Aberto"]:"⏳",["Pago Parcial"]:"⚠️",["Pago Total"]:"✅"};
+  const rows  = STATUS_PGTO.map(s => {
+    const isSel = sel.includes(s);
+    return `<div id="status-row-${ns}-${s.replace(/ /g,"_")}"
+      onclick="toggleStatusSel('${ns}','${s}');event.stopPropagation()"
+      style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;font-size:12px;background:${isSel?BG[s]:"#fff"};border-bottom:1px solid #f8fafc;transition:background .12s"
+      onmouseover="this.style.background='${isSel?BG[s]:"#f8fafc"}'" onmouseout="this.style.background='${isSel?BG[s]:"#fff"}'">
+      <input type="checkbox" id="status-chk-${ns}-${s.replace(/ /g,"_")}" ${isSel?"checked":""} onclick="event.stopPropagation();toggleStatusSel('${ns}','${s}')" style="width:15px;height:15px;accent-color:${COR[s]};cursor:pointer;flex-shrink:0">
+      <span style="flex:1;font-weight:${isSel?"700":"400"};color:${isSel?COR[s]:"#1e293b"}">${IC[s]} ${s}</span>
+      <span style="font-size:10px;font-weight:700;color:${COR[s]};background:${BG[s]};padding:1px 7px;border-radius:8px">${invoices.filter(i=>i.status_pgto===s).length}</span>
+    </div>`;
+  }).join("");
+  const chips = hasSel ? `<div id="status-chips-${ns}" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${sel.map(s=>{
+    const cor=COR[s],bg=BG[s];
+    return `<span style="background:${bg};color:${cor};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:4px">${s}<span onclick="removerStatusSel('${ns}','${s}');event.stopPropagation()" style="cursor:pointer;font-size:13px;line-height:1;font-weight:700">×</span></span>`;
+  }).join("")}</div>` : `<div id="status-chips-${ns}"></div>`;
+  return `<div style="position:relative">
+    <label class="form-label">Status</label>
+    <button id="status-btn-${ns}" onclick="toggleStatusDD('${ns}');event.stopPropagation()" style="display:flex;align-items:center;gap:6px;min-width:160px;padding:7px 12px;border:1px solid #e2e8f0;border-radius:8px;background:${hasSel?"#eff6ff":"#fff"};color:${hasSel?"#1d4ed8":"#374151"};font-weight:${hasSel?"700":"400"};font-size:12px;cursor:pointer;white-space:nowrap;text-align:left">
+      ${btnLabel}
+    </button>
+    <div id="status-dd-${ns}" class="status-dd-menu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.12);min-width:220px;overflow:hidden">
+      <div style="padding:8px 12px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;color:#64748b;font-weight:600">${STATUS_PGTO.length} status</span>
+        ${hasSel?`<button onclick="limparStatusSel('${ns}')" style="font-size:10px;background:#fee2e2;color:#dc2626;border:none;border-radius:4px;padding:2px 7px;cursor:pointer;font-weight:600">✖ Limpar</button>`:""}
+      </div>
+      ${rows}
+    </div>
+    ${chips}
+  </div>`;
+}
+
 function aplicarFiltroInv() {
-  filtros.inv.status   = document.getElementById("f_inv_status")?.value  || "";
+  filtros.inv.statuses  = [...filtros.inv._statuses];
+  filtros.inv.status     = filtros.inv.statuses.length === 1 ? filtros.inv.statuses[0] : filtros.inv.statuses.length > 1 ? "__multi__" : "";
   filtros.inv.moeda    = document.getElementById("f_inv_moeda")?.value   || "";
   filtros.inv.pasta    = document.getElementById("f_inv_pasta")?.value   || "";
   filtros.inv.dtIni    = document.getElementById("f_inv_dtIni")?.value   || "";
   filtros.inv.dtFim    = document.getElementById("f_inv_dtFim")?.value   || "";
   filtros.inv._status  = filtros.inv.status;
+  filtros.inv._statuses = [...filtros.inv.statuses];
   filtros.inv._moeda   = filtros.inv.moeda;
   filtros.inv._pasta   = filtros.inv.pasta;
   filtros.inv._dtIni   = filtros.inv.dtIni;
@@ -714,10 +823,12 @@ function aplicarFiltroInv() {
   renderTab("Invoices");
 }
 function aplicarFiltroPgto()    {
-  filtros.pgto.status=document.getElementById("f_pgto_status")?.value||"Todos";
+  filtros.pgto.statuses = [...filtros.pgto._statuses];
+  filtros.pgto.status   = filtros.pgto.statuses.length === 1 ? filtros.pgto.statuses[0] : filtros.pgto.statuses.length > 1 ? "__multi__" : "Todos";
   filtros.pgto.dtIni=document.getElementById("f_pgto_dtIni")?.value||"";
   filtros.pgto.dtFim=document.getElementById("f_pgto_dtFim")?.value||"";
-  filtros.pgto._status=filtros.pgto.status;
+  filtros.pgto._status  = filtros.pgto.status;
+  filtros.pgto._statuses = [...filtros.pgto.statuses];
   filtros.pgto._dtIni=filtros.pgto.dtIni;
   filtros.pgto._dtFim=filtros.pgto.dtFim;
   filtros.pgto.bancos=[...filtros.pgto._bancos];
@@ -753,7 +864,8 @@ function getInvFiltradas() {
     } else if (f.fornecedor && i.fornecedor !== f.fornecedor) {
       return false;
     }
-    if (f.status && i.status_pgto !== f.status)             return false;
+    if (f.statuses && f.statuses.length > 0 && !f.statuses.includes(i.status_pgto)) return false;
+    else if ((!f.statuses || f.statuses.length === 0) && f.status && f.status !== "__multi__" && i.status_pgto !== f.status) return false;
     if (f.moeda  && i.moeda !== f.moeda)                    return false;
     if (f.pasta  && !(i.pasta||"").toLowerCase().includes(f.pasta.toLowerCase())) return false;
     if (f.dtIni  && i.vencimento && i.vencimento < f.dtIni) return false;
@@ -1795,13 +1907,7 @@ function renderInvoices() {
   <!-- BARRA DE FILTROS INVOICES -->
   <div class="filter-bar" style="align-items:flex-start">
     ${fornDropdownHTML}
-    <div>
-      <label class="form-label">Status</label>
-      <select id="f_inv_status" onchange="filtros.inv._status=this.value">
-        <option value=""${!filtros.inv._status?" selected":""}>Todos</option>
-        ${STATUS_PGTO.map(s=>`<option value="${s}"${filtros.inv._status===s?" selected":""}>${s}</option>`).join("")}
-      </select>
-    </div>
+    ${buildStatusDropdown("inv")}
     <div>
       <label class="form-label">Moeda</label>
       <select id="f_inv_moeda" onchange="filtros.inv._moeda=this.value">
@@ -2029,7 +2135,8 @@ function renderPagamentos() {
   const bancoBtnTxt = selBancos.length===0 ? "Todos os bancos" : selBancos.length===1 ? selBancos[0] : `${selBancos.length} bancos`;
 
   let dados = invoices;
-  if (f.status && f.status!=="Todos") dados = dados.filter(i=>i.status_pgto===f.status);
+  if (f.statuses && f.statuses.length > 0) dados = dados.filter(i=>f.statuses.includes(i.status_pgto));
+  else if (f.status && f.status!=="Todos" && f.status!=="__multi__") dados = dados.filter(i=>i.status_pgto===f.status);
   if (f.dtIni) dados = dados.filter(i=>i.vencimento&&i.vencimento>=f.dtIni);
   if (f.dtFim) dados = dados.filter(i=>i.vencimento&&i.vencimento<=f.dtFim);
   if (f.bancos&&f.bancos.length>0) dados = dados.filter(i=>f.bancos.includes(i.banco));
@@ -2083,12 +2190,7 @@ function renderPagamentos() {
   return `
   <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">💰 Controle de Pagamentos</div>
   <div class="filter-bar">
-    <div><label class="form-label">Status</label>
-      <select id="f_pgto_status" onchange="filtros.pgto._status=this.value">
-        <option value="Todos"${f._status==="Todos"?" selected":""}>Todos</option>
-        ${STATUS_PGTO.map(s=>`<option value="${s}"${f._status===s?" selected":""}>${s}</option>`).join("")}
-      </select>
-    </div>
+    ${buildStatusDropdown("pgto")}
     <div><label class="form-label">Vcto Inicial</label><input type="date" id="f_pgto_dtIni" value="${f._dtIni||""}" onchange="filtros.pgto._dtIni=this.value"></div>
     <div><label class="form-label">Vcto Final</label><input type="date" id="f_pgto_dtFim" value="${f._dtFim||""}" onchange="filtros.pgto._dtFim=this.value"></div>
     ${bancoDropdownHTML}
