@@ -1029,7 +1029,7 @@ function renderGraficoMensalMoedas(invs) {
 
     return `<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;width:${barWidth}px">
       <!-- container relativo para a barra + labels acima dela -->
-      <div style="position:relative;height:${H}px;width:${barWidth}px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center">
+      <div style="position:relative;height:${H}px;width:${barWidth}px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;overflow:visible">
         <!-- labels grudados imediatamente acima da barra -->
         ${totalR > 0 ? `<div style="position:absolute;bottom:${(colH+2).toFixed(0)}px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:2px;z-index:2;pointer-events:none">
           <span style="font-size:10px;font-weight:800;color:#7c3aed;background:#ede9fe;border:1px solid #c4b5fd;border-radius:10px;padding:1px 7px;line-height:1.7;white-space:nowrap;box-shadow:0 1px 3px rgba(109,40,217,.12)">${pctMes}%</span>
@@ -1047,7 +1047,7 @@ function renderGraficoMensalMoedas(invs) {
 
   return `<div class="card"><div style="font-weight:700;color:#1e3a5f;margin-bottom:10px">📊 Distribuição por Moeda % Volume Total — por Mês</div>
     <div style="margin-bottom:8px">${legenda}</div>
-    <div style="overflow-x:auto;padding-bottom:4px"><div style="display:flex;align-items:flex-end;gap:16px;padding:28px 8px 4px 8px;min-width:max-content">${colunas}</div></div>
+    <div style="overflow-x:auto;padding-bottom:4px;overflow-y:visible"><div style="display:flex;align-items:flex-end;gap:16px;padding:48px 8px 4px 8px;min-width:max-content;overflow:visible">${colunas}</div></div>
   </div>`;
 }
 function abrirModalTaxa() {
