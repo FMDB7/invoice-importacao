@@ -869,9 +869,10 @@ function getInvFiltradas() {
     if (f.statuses && f.statuses.length > 0 && !f.statuses.includes(i.status_pgto)) return false;
     else if ((!f.statuses || f.statuses.length === 0) && f.status && f.status !== "__multi__" && i.status_pgto !== f.status) return false;
     const isEmAberto = i.status_pgto === "Em Aberto";
+    const semVctoPermitido = ["À Vista","Antecipado","Contra B/L"].includes(i.cond_pgto);
     const statusesAtivos = f.statuses && f.statuses.length > 0 ? f.statuses : (f.status && f.status !== "__multi__" && f.status ? [f.status] : []);
     const filtraEmAberto = statusesAtivos.includes("Em Aberto") || statusesAtivos.length === 0;
-    if (filtraEmAberto && isEmAberto && !i.vencimento) return false;
+    if (filtraEmAberto && isEmAberto && !i.vencimento && !semVctoPermitido) return false;
     if (f.moeda  && i.moeda !== f.moeda)                    return false;
     if (f.pasta  && !(i.pasta||"").toLowerCase().includes(f.pasta.toLowerCase())) return false;
     if (f.dtIni  && i.vencimento && i.vencimento < f.dtIni) return false;
@@ -1825,7 +1826,7 @@ function renderDashboard() {
   <!-- Stats -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
     ${[["📄","#dbeafe","#1d4ed8","Total Invoices",""+invoices.length],
-       ["⏳","#fee2e2","#dc2626","Em Aberto",""+invoices.filter(i=>i.status_pgto==="Em Aberto"&&i.vencimento&&i.vencimento.trim()!=="").length],
+       ["⏳","#fee2e2","#dc2626","Em Aberto",""+invoices.filter(i=>i.status_pgto==="Em Aberto"&&(i.vencimento||["À Vista","Antecipado","Contra B/L"].includes(i.cond_pgto))).length],
        ["⚠️","#fef3c7","#d97706","Pago Parcial",""+invoices.filter(i=>i.status_pgto==="Pago Parcial").length],
        ["✅","#dcfce7","#16a34a","Pago Total",""+invoices.filter(i=>i.status_pgto==="Pago Total").length],
        ["🚨","#fecaca","#991b1b","Vencidos",""+vencidos.length],
@@ -2142,7 +2143,7 @@ function renderPagamentos() {
   else if (f.status && f.status!=="Todos" && f.status!=="__multi__") dados = dados.filter(i=>i.status_pgto===f.status);
   const pgtoStatusesAtivos = f.statuses && f.statuses.length > 0 ? f.statuses : (f.status && f.status!=="Todos" && f.status!=="__multi__" ? [f.status] : []);
   const pgtoFiltraEmAberto = pgtoStatusesAtivos.includes("Em Aberto") || pgtoStatusesAtivos.length === 0;
-  if (pgtoFiltraEmAberto) dados = dados.filter(i => i.status_pgto !== "Em Aberto" || !!i.vencimento);
+  if (pgtoFiltraEmAberto) dados = dados.filter(i => i.status_pgto !== "Em Aberto" || !!i.vencimento || ["À Vista","Antecipado","Contra B/L"].includes(i.cond_pgto));
   if (f.dtIni) dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto>=f.dtIni);
   if (f.dtFim) dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto<=f.dtFim);
   if (f.bancos&&f.bancos.length>0) dados = dados.filter(i=>f.bancos.includes(i.banco));
