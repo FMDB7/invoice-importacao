@@ -2140,8 +2140,8 @@ function renderPagamentos() {
   const pgtoStatusesAtivos = f.statuses && f.statuses.length > 0 ? f.statuses : (f.status && f.status!=="Todos" && f.status!=="__multi__" ? [f.status] : []);
   const pgtoFiltraEmAberto = pgtoStatusesAtivos.includes("Em Aberto") || pgtoStatusesAtivos.length === 0;
   if (pgtoFiltraEmAberto) dados = dados.filter(i => i.status_pgto !== "Em Aberto" || !!i.vencimento);
-  if (f.dtIni) dados = dados.filter(i=>i.vencimento&&i.vencimento>=f.dtIni);
-  if (f.dtFim) dados = dados.filter(i=>i.vencimento&&i.vencimento<=f.dtFim);
+  if (f.dtIni) dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto>=f.dtIni);
+  if (f.dtFim) dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto<=f.dtFim);
   if (f.bancos&&f.bancos.length>0) dados = dados.filter(i=>f.bancos.includes(i.banco));
   dados = dados.slice().sort((a,b)=>{ const va=a.vencimento||"9999-12-31",vb=b.vencimento||"9999-12-31"; return va<vb?-1:va>vb?1:0; });
 
@@ -2223,8 +2223,8 @@ function renderPagamentos() {
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">${cardsMoeda}</div>
   <div class="filter-bar">
     ${buildStatusDropdown("pgto")}
-    <div><label class="form-label">Vcto Inicial</label><input type="date" id="f_pgto_dtIni" value="${f._dtIni||""}" onchange="filtros.pgto._dtIni=this.value"></div>
-    <div><label class="form-label">Vcto Final</label><input type="date" id="f_pgto_dtFim" value="${f._dtFim||""}" onchange="filtros.pgto._dtFim=this.value"></div>
+    <div><label class="form-label">Pgto Inicial</label><input type="date" id="f_pgto_dtIni" value="${f._dtIni||""}" onchange="filtros.pgto._dtIni=this.value"></div>
+    <div><label class="form-label">Pgto Final</label><input type="date" id="f_pgto_dtFim" value="${f._dtFim||""}" onchange="filtros.pgto._dtFim=this.value"></div>
     ${bancoDropdownHTML}
     <div style="display:flex;gap:8px;align-items:flex-end">
       <button class="btn-search" onclick="aplicarFiltroPgto()">🔍 Buscar</button>
