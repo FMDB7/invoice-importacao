@@ -290,8 +290,8 @@ const MOEDA_BG     = {USD:"#dbeafe",EUR:"#ede9fe",CHF:"#fee2e2",GBP:"#d1fae5"};
 const MOEDA_CHART  = {USD:"#3b82f6",EUR:"#8b5cf6",CHF:"#ef4444",GBP:"#10b981"};
 const STATUS_PGTO  = ["Em Aberto","Pago Parcial","Pago Total"];
 const STATUS_CAM   = ["Pendente","Fechado"];
-const COND_PGTO    = ["À Vista","Antecipado","30 dias","45 dias","60 dias","90 dias","120 dias"];
-const COND_DIAS    = {"À Vista":0,"Antecipado":0,"30 dias":30,"45 dias":45,"60 dias":60,"90 dias":90,"120 dias":120};
+const COND_PGTO    = ["À Vista","Antecipado","Contra B/L","30 dias","45 dias","60 dias","90 dias","120 dias"];
+const COND_DIAS    = {"À Vista":0,"Antecipado":0,"Contra B/L":0,"30 dias":30,"45 dias":45,"60 dias":60,"90 dias":90,"120 dias":120};
 const PERFIS       = ["admin","financeiro","visualizador"];
 const TABS_POR_PERFIL = {
   admin:        ["Dashboard","Nova Invoice","Invoices","Pagamentos","Fornecedores","Análise Cambial","Usuários"],
@@ -1028,7 +1028,7 @@ function alertaVcto(vcto, status) {
   return null;
 }
 function calcVcto(emissao, cond) {
-  if (!emissao || cond==="Antecipado") return "";
+  if (!emissao || cond==="Antecipado" || cond==="Contra B/L") return "";
   const d = new Date(emissao+"T00:00:00");
   d.setDate(d.getDate() + (COND_DIAS[cond]||0));
   return d.toISOString().split("T")[0];
