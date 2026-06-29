@@ -306,6 +306,7 @@ const TABS_POR_PERFIL = {
 let supabaseClient = null;
 let invoices       = [];
 let usuarios       = [];
+let fornecedoresCadastrados = []; // fornecedores da tabela fornecedores
 let currentTab     = "Dashboard";
 let currentUser    = null;   // { id, nome, email, perfil }
 let msAccessToken  = null;
@@ -483,6 +484,8 @@ async function carregarDados() {
 
     const { data: usrs } = await supabaseClient.from("usuarios").select("*").order("nome");
     usuarios = usrs || [];
+    const { data: forns } = await supabaseClient.from("fornecedores").select("nome").order("nome");
+    fornecedoresCadastrados = (forns || []).map(f => f.nome).filter(Boolean);
   } catch(e) {
     showToast("Erro ao carregar dados: " + e.message, "err");
     invoices = [];
@@ -1290,7 +1293,7 @@ function renderFormFields() {
   document.getElementById("formFields").innerHTML = `
     <div>${flabel("Pasta")}<input value="${f.pasta||""}" onchange="updateForm('pasta',this.value)"></div>
     <div>${flabel("Cidade")}<input value="${f.cidade||""}" onchange="updateForm('cidade',this.value)"></div>
-    <div>${flabel("Fornecedor ★")}<input value="${f.fornecedor||""}" onchange="updateForm('fornecedor',this.value)"></div>
+    <div>${flabel("Fornecedor ★")}<input list="dl-fornecedores" value="${f.fornecedor||""}" onchange="updateForm('fornecedor',this.value)" oninput="updateForm('fornecedor',this.value)"><datalist id="dl-fornecedores">${[...new Set([...fornecedoresCadastrados,...invoices.map(i=>i.fornecedor).filter(Boolean)])].sort().map(n=>`<option value="${n}">`).join("")}</datalist></div>
     <div>${flabel("Marca")}<input value="${f.marca||""}" onchange="updateForm('marca',this.value)"></div>
     <div>${flabel("Nº Proforma")}<input value="${f.n_proforma||""}" onchange="updateForm('n_proforma',this.value)"></div>
     <div>${flabel("Nº Invoice ★")}<input value="${f.n_fatura||""}" onchange="updateForm('n_fatura',this.value)"></div>
