@@ -1822,7 +1822,7 @@ function renderDashboard() {
   <!-- Stats -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
     ${[["📄","#dbeafe","#1d4ed8","Total Invoices",""+invoices.length],
-       ["⏳","#fee2e2","#dc2626","Em Aberto",""+invoices.filter(i=>i.status_pgto==="Em Aberto").length],
+       ["⏳","#fee2e2","#dc2626","Em Aberto",""+invoices.filter(i=>i.status_pgto==="Em Aberto"&&i.vencimento&&i.vencimento.trim()!=="").length],
        ["⚠️","#fef3c7","#d97706","Pago Parcial",""+invoices.filter(i=>i.status_pgto==="Pago Parcial").length],
        ["✅","#dcfce7","#16a34a","Pago Total",""+invoices.filter(i=>i.status_pgto==="Pago Total").length],
        ["🚨","#fecaca","#991b1b","Vencidos",""+vencidos.length],
@@ -2190,8 +2190,37 @@ function renderPagamentos() {
     </div>
   </div>` : "";
 
+  // Cards por moeda — Em Aberto e Pago
+  const cardsMoeda = MOEDAS.map(m => {
+    const todos    = invoices.filter(i => i.moeda === m);
+    const aberto   = todos.filter(i => i.status_pgto === "Em Aberto" && !!i.vencimento);
+    const pago     = todos.filter(i => i.status_pgto === "Pago Total" || i.status_pgto === "Pago Parcial");
+    const vlAberto = aberto.reduce((s,i) => s + parseCurrency(i.valor_moeda), 0);
+    const vlPago   = pago.reduce((s,i)   => s + parseCurrency(i.valor_moeda), 0);
+    const rlAberto = aberto.reduce((s,i) => s + (parseFloat(i.reais)||0), 0);
+    const rlPago   = pago.reduce((s,i)   => s + (parseFloat(i.reais)||0), 0);
+    if (!vlAberto && !vlPago) return "";
+    return `<div class="kpi-moeda" style="background:${MOEDA_BG[m]};border-color:${MOEDA_COR[m]}">
+      <div style="font-size:13px;font-weight:800;color:${MOEDA_COR[m]};margin-bottom:10px">${SIMBOLO[m]} ${m}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:11px;color:#dc2626;font-weight:600">⏳ Em Aberto</span>
+        <span style="font-size:10px;color:#64748b">${aberto.length} título(s)</span>
+      </div>
+      <div style="font-size:16px;font-weight:800;color:#dc2626;margin-bottom:1px">${fmtM(vlAberto,m)}</div>
+      <div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:8px">${fmtBRL(rlAberto)}</div>
+      <div style="height:1px;background:${MOEDA_COR[m]}33;margin-bottom:8px"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:11px;color:#16a34a;font-weight:600">✅ Pago</span>
+        <span style="font-size:10px;color:#64748b">${pago.length} título(s)</span>
+      </div>
+      <div style="font-size:16px;font-weight:800;color:#16a34a;margin-bottom:1px">${fmtM(vlPago,m)}</div>
+      <div style="font-size:11px;font-weight:700;color:#16a34a">${fmtBRL(rlPago)}</div>
+    </div>`;
+  }).join("");
+
   return `
   <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">💰 Controle de Pagamentos</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">${cardsMoeda}</div>
   <div class="filter-bar">
     ${buildStatusDropdown("pgto")}
     <div><label class="form-label">Vcto Inicial</label><input type="date" id="f_pgto_dtIni" value="${f._dtIni||""}" onchange="filtros.pgto._dtIni=this.value"></div>
