@@ -850,8 +850,10 @@ function aplicarFiltroForn() {
 function aplicarFiltroCambial() {
   filtros.cambial.moeda = document.getElementById("f_cambial_moeda")?.value||"";
   filtros.cambial.ano   = document.getElementById("f_cambial_ano")?.value||"";
+  filtros.cambial.mes   = document.getElementById("f_cambial_mes")?.value||"";
   filtros.cambial._moeda = filtros.cambial.moeda;
   filtros.cambial._ano   = filtros.cambial.ano;
+  filtros.cambial._mes   = filtros.cambial.mes;
   filtros.cambial.fornecedores = [...filtros.cambial._fornecedores];
   renderTab("Análise Cambial");
 }
@@ -2735,6 +2737,13 @@ function renderAnaliseCambial() {
       <select id="f_cambial_ano" onchange="filtros.cambial._ano=this.value">
         <option value=""${!f.ano?" selected":""}>Todos</option>
         ${anosDisponiveis.map(a=>`<option value="${a}"${f.ano===a?" selected":""}>${a}</option>`).join("")}
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Mês Pagamento</label>
+      <select id="f_cambial_mes" onchange="filtros.cambial._mes=this.value">
+        <option value=""${!f.mes?" selected":""}>Todos</option>
+        ${MESES_NOMES.map((nome,idx)=>{const num=String(idx+1).padStart(2,"0");return `<option value="${num}"${f.mes===num?" selected":""}>${nome}</option>`;}).join("")}
       </select>
     </div>
     <div style="display:flex;gap:8px;align-items:flex-end">
