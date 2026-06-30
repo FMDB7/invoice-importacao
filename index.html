@@ -1050,64 +1050,66 @@ function calcVcto(emissao, cond) {
 // ════════════════════════════════════════════════════════
 //  GRÁFICO DE PARETO — Distribuição por Moeda (Análise Cambial)
 // ════════════════════════════════════════════════════════
-function renderGraficoPareto(dados, titulo) {
+function renderGraficoPizzaMoeda(dados, titulo) {
   if (!dados || dados.length === 0) return "";
-  const ordenados = dados.slice().sort((a,b) => b.valorReais - a.valorReais);
-  const totalGeral = ordenados.reduce((s,d) => s + d.valorReais, 0);
-  let acumulado = 0;
-  const pontos = ordenados.map(d => {
-    acumulado += d.valorReais;
-    return { ...d, pctIndividual: totalGeral>0?(d.valorReais/totalGeral)*100:0, pctAcumulado: totalGeral>0?(acumulado/totalGeral)*100:0 };
-  });
+  const totalGeral = dados.reduce((s,d) => s + d.valorReais, 0);
+  if (totalGeral <= 0) return "";
 
-  const W = 560, H = 230, padL = 50, padR = 50, padT = 20, padB = 36;
-  const chartW = W - padL - padR, chartH = H - padT - padB;
-  const barGap = 14;
-  const barW = Math.max(40, Math.min(80, (chartW - barGap*(pontos.length-1)) / pontos.length));
-  const maxVal = Math.max(...pontos.map(p=>p.valorReais), 1);
-
-  const barsX = pontos.map((p,idx) => padL + idx*(barW+barGap));
-  const bars = pontos.map((p, idx) => {
-    const x = barsX[idx];
-    const h = Math.max((p.valorReais/maxVal)*chartH, 3);
-    const y = padT + chartH - h;
-    return `<g>
-      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${p.cor}" rx="5" opacity="0.92"/>
-      <text x="${(x+barW/2).toFixed(1)}" y="${(y-7).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="800" fill="${p.cor}">${p.pctIndividual.toFixed(1)}%</text>
-      <text x="${(x+barW/2).toFixed(1)}" y="${(padT+chartH+18).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="#334155">${p.moeda}</text>
-      <text x="${(x+barW/2).toFixed(1)}" y="${(padT+chartH+31).toFixed(1)}" text-anchor="middle" font-size="9" fill="#64748b">${fmtBRL(p.valorReais).replace("R$","").trim()}</text>
+  const cx = 110, cy = 110, r = 95;
+  let anguloAtual = -90;
+  const fatias = dados.map((d, idx) => {
+    const pctV = (d.valorReais/totalGeral)*100;
+    const anguloFatia = (d.valorReais/totalGeral)*360;
+    const anguloInicio = anguloAtual;
+    const anguloFim = anguloAtual + anguloFatia;
+    anguloAtual = anguloFim;
+    const toRad = a => (a*Math.PI)/180;
+    const x1 = cx + r*Math.cos(toRad(anguloInicio));
+    const y1 = cy + r*Math.sin(toRad(anguloInicio));
+    const x2 = cx + r*Math.cos(toRad(anguloFim));
+    const y2 = cy + r*Math.sin(toRad(anguloFim));
+    const largeArc = anguloFatia > 180 ? 1 : 0;
+    const path = `M ${cx} ${cy} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`;
+    const midAngle = toRad((anguloInicio+anguloFim)/2);
+    const labelR = r*0.66;
+    const lx = cx + labelR*Math.cos(midAngle);
+    const ly = cy + labelR*Math.sin(midAngle);
+    const tooltipTxt = `${d.moeda}: ${fmtM(d.valorMoeda,d.moeda)} (${pctV.toFixed(1)}%) = ${fmtBRL(d.valorReais)}`;
+    return `<g class="pizza-fatia" style="cursor:pointer">
+      <path d="${path}" fill="${d.cor}" stroke="#fff" stroke-width="2" opacity="0.92"
+        onmouseover="this.style.opacity='1';this.parentElement.querySelector('.pizza-tip').style.display='block';this.setAttribute('transform','')"
+        onmouseout="this.style.opacity='0.92';this.parentElement.querySelector('.pizza-tip').style.display='none'">
+        <title>${tooltipTxt}</title>
+      </path>
+      ${pctV >= 5 ? `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="12" font-weight="800" fill="#fff" style="pointer-events:none;text-shadow:0 1px 2px rgba(0,0,0,.4)">${pctV.toFixed(1)}%</text>` : ""}
     </g>`;
   }).join("");
 
-  const lineX = pontos.map((p,idx) => barsX[idx] + barW/2);
-  const lineY = pontos.map(p => padT + chartH - (p.pctAcumulado/100)*chartH);
-  const linePoints = lineX.map((x,idx) => `${x.toFixed(1)},${lineY[idx].toFixed(1)}`).join(" ");
-  const lineDots = lineX.map((x,idx) => `<circle cx="${x.toFixed(1)}" cy="${lineY[idx].toFixed(1)}" r="4" fill="#fff" stroke="#7c3aed" stroke-width="2.5"/>
-    <text x="${x.toFixed(1)}" y="${(lineY[idx]-10).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="800" fill="#7c3aed">${pontos[idx].pctAcumulado.toFixed(0)}%</text>`).join("");
-
-  const grid80Y = padT + chartH - 0.8*chartH;
-  const gridLine80 = `<line x1="${padL}" y1="${grid80Y.toFixed(1)}" x2="${(padL+chartW)}" y2="${grid80Y.toFixed(1)}" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4,3"/>
-    <text x="${(padL+chartW+4)}" y="${(grid80Y+3).toFixed(1)}" font-size="9" fill="#d97706" font-weight="700">80%</text>`;
+  const legenda = dados.map(d => {
+    const pctV = (d.valorReais/totalGeral)*100;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;transition:background .15s;cursor:default"
+      onmouseover="this.style.background='${d.cor}15'" onmouseout="this.style.background='transparent'"
+      title="${d.moeda}: ${fmtM(d.valorMoeda,d.moeda)} (${pctV.toFixed(1)}%) = ${fmtBRL(d.valorReais)}">
+      <span style="width:13px;height:13px;border-radius:4px;background:${d.cor};flex-shrink:0"></span>
+      <span style="font-size:12px;font-weight:700;color:${d.cor};min-width:36px">${d.moeda}</span>
+      <span style="font-size:11px;color:#475569;flex:1">${fmtM(d.valorMoeda,d.moeda)}</span>
+      <span style="font-size:12px;font-weight:800;color:#1e3a5f;background:${d.cor}1a;padding:1px 8px;border-radius:10px">${pctV.toFixed(1)}%</span>
+    </div>`;
+  }).join("");
 
   return `<div class="card">
-    <div style="font-weight:700;color:#1e3a5f;margin-bottom:10px">📊 ${titulo}</div>
-    <svg viewBox="0 0 ${W} ${H+10}" style="width:100%;max-width:600px;display:block;margin:0 auto;overflow:visible">
-      ${gridLine80}
-      <line x1="${padL}" y1="${(padT+chartH)}" x2="${(padL+chartW)}" y2="${(padT+chartH)}" stroke="#e2e8f0" stroke-width="1.5"/>
-      ${bars}
-      <polyline points="${linePoints}" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linejoin="round"/>
-      ${lineDots}
-    </svg>
-    <div style="display:flex;justify-content:center;gap:18px;margin-top:6px;font-size:11px;color:#64748b">
-      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#94a3b8;margin-right:4px"></span>Valor em R$ por moeda</span>
-      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#7c3aed;margin-right:4px"></span>% Acumulado</span>
+    <div style="font-weight:700;color:#1e3a5f;margin-bottom:10px">🥧 ${titulo}</div>
+    <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;justify-content:center">
+      <svg viewBox="0 0 220 220" style="width:200px;height:200px;flex-shrink:0">${fatias}</svg>
+      <div style="flex:1;min-width:180px;display:flex;flex-direction:column;gap:3px">${legenda}</div>
     </div>
+    <div style="font-size:10px;color:#94a3b8;margin-top:8px;text-align:center">Passe o mouse sobre a fatia ou a legenda para ver os detalhes</div>
   </div>`;
 }
 
 // ════════════════════════════════════════════════════════
 //  GRÁFICO DE COLUNAS — Pagamentos Mensais em R$ (Análise Cambial)
-//  Comunica com Pareto via clique no mês (filtro de mês ativo)
+//  Comunica com pizza via clique no mês (filtro de mês ativo)
 // ════════════════════════════════════════════════════════
 function renderGraficoMesesCambial(dadosTodos, mesSelecionado) {
   if (!dadosTodos || dadosTodos.length === 0) return "";
@@ -1123,7 +1125,7 @@ function renderGraficoMesesCambial(dadosTodos, mesSelecionado) {
 
   const totalGeral = Object.values(porMes).reduce((s,v)=>s+v,0);
   const maxVal = Math.max(...Object.values(porMes), 1);
-  const H = 170;
+  const H = 200;
   const barW = Math.max(38, Math.min(56, Math.floor(480 / mesesComDados.length)));
 
   const fmtCompact = v => {
@@ -1139,13 +1141,14 @@ function renderGraficoMesesCambial(dadosTodos, mesSelecionado) {
     const h = Math.max((val/maxVal)*H, 4);
     const isSel = mesSelecionado === mesNum;
     const cor = isSel ? "#7c3aed" : "#3b82f6";
-    return `<div onclick="selecionarMesCambial('${mesNum}')" style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;width:${barW}px;cursor:pointer">
+    const tip = `${MESES_NOMES[parseInt(mesNum)-1]}: ${fmtBRL(val)} (${pct.toFixed(1)}%)`;
+    return `<div onclick="selecionarMesCambial('${mesNum}')" title="${tip}" style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;width:${barW}px;cursor:pointer">
       <div style="position:relative;height:${H}px;width:${barW}px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;overflow:visible">
         <div style="position:absolute;bottom:${(h+2).toFixed(0)}px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:2px;z-index:2;pointer-events:none">
           <span style="font-size:10px;font-weight:800;color:${isSel?"#7c3aed":"#1d4ed8"};background:${isSel?"#ede9fe":"#dbeafe"};border:1px solid ${isSel?"#c4b5fd":"#bfdbfe"};border-radius:10px;padding:1px 7px;line-height:1.7;white-space:nowrap">${pct.toFixed(1)}%</span>
           <span style="font-size:10px;font-weight:800;color:#1e3a5f;white-space:nowrap">${fmtCompact(val)}</span>
         </div>
-        <div style="width:${barW}px;height:${h.toFixed(0)}px;background:${cor};border-radius:6px 6px 0 0;transition:background .15s,height .25s;${isSel?"box-shadow:0 0 0 2px #7c3aed":""}"></div>
+        <div style="width:${barW}px;height:${h.toFixed(0)}px;background:${cor};border-radius:6px 6px 0 0;transition:background .15s,height .25s,opacity .15s;${isSel?"box-shadow:0 0 0 2px #7c3aed":""}" onmouseover="this.style.opacity='0.78'" onmouseout="this.style.opacity='1'"></div>
       </div>
       <div style="font-size:10px;color:${isSel?"#7c3aed":"#64748b"};font-weight:${isSel?"800":"600"};text-align:center;margin-top:4px">${MESES_NOMES[parseInt(mesNum)-1].substring(0,3)}</div>
     </div>`;
@@ -1156,8 +1159,8 @@ function renderGraficoMesesCambial(dadosTodos, mesSelecionado) {
       <div style="font-weight:700;color:#1e3a5f">📅 Pagamentos por Mês (R$) ${mesSelecionado?`<span style="font-size:11px;color:#7c3aed;font-weight:700">— filtrando ${MESES_NOMES[parseInt(mesSelecionado)-1]}</span>`:""}</div>
       ${mesSelecionado ? `<button onclick="selecionarMesCambial('${mesSelecionado}')" style="font-size:10px;background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:3px 9px;cursor:pointer;font-weight:600">✖ Limpar mês</button>` : ""}
     </div>
-    <div style="overflow-x:auto;padding-bottom:4px"><div style="display:flex;align-items:flex-end;gap:12px;padding:28px 8px 4px 8px;min-width:max-content">${cols}</div></div>
-    <div style="font-size:10px;color:#94a3b8;margin-top:6px;text-align:center">Clique em um mês para filtrar a tabela e o gráfico de Pareto</div>
+    <div style="overflow-x:auto;padding-bottom:4px"><div style="display:flex;align-items:flex-end;gap:12px;padding:40px 8px 4px 8px;min-width:max-content">${cols}</div></div>
+    <div style="font-size:10px;color:#94a3b8;margin-top:6px;text-align:center">Clique em um mês para filtrar a tabela e o gráfico de pizza • Passe o mouse para ver detalhes</div>
   </div>`;
 }
 
@@ -2714,7 +2717,7 @@ function renderAnaliseCambial() {
   });
   const totReais = dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totalMoedaGeral = MOEDAS.reduce((s,m)=>s+totMoeda[m],0);
-  const paretoDados = MOEDAS.map(m=>({moeda:m,valorReais:totReaisMoeda[m],cor:MOEDA_CHART[m]})).filter(d=>d.valorReais>0);
+  const pizzaDados = MOEDAS.map(m=>({moeda:m,valorReais:totReaisMoeda[m],valorMoeda:totMoeda[m],cor:MOEDA_CHART[m]})).filter(d=>d.valorReais>0);
 
   return `
   <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">📈 Análise Cambial</div>
@@ -2762,7 +2765,7 @@ function renderAnaliseCambial() {
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:14px;align-items:start">
     ${renderGraficoMesesCambial(dadosGrafico, f.mes)}
-    ${paretoDados.length ? renderGraficoPareto(paretoDados,"Distribuição por Moeda — Pareto (% do Volume Pago)") : ""}
+    ${pizzaDados.length ? renderGraficoPizzaMoeda(pizzaDados,"Distribuição por Moeda — % do Volume Pago") : ""}
   </div>
   <div class="table-wrap"><table>
     <thead><tr>${["Fornecedor","Data Pgto","Moeda","Taxa de Câmbio","Valor na Moeda","Valor em R$","Nº Invoice","Banco","Status"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
@@ -2954,12 +2957,12 @@ function pdfStyles(){ return `*{box-sizing:border-box;margin:0;padding:0}body{fo
 function exportPDF(){
   const filtradas=getInvFiltradas();
   const totR=filtradas.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const rows=filtradas.map((i,idx)=>{const cor=i.status_pgto==="Pago Total"?"#16a34a":i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.pasta||""}</td><td>${i.cidade||""}</td><td><b>${i.fornecedor||""}</b></td><td>${i.n_fatura||""}</td><td>${fmtD(i.emissao_fatura)}</td><td>${fmtD(i.vencimento)}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${i.cond_pgto||""}</td><td>${fmtD(i.dt_pgto)}</td><td><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td></tr>`;}).join("");
+  const rows=filtradas.map((i,idx)=>{const cor=i.status_pgto==="Pago Total"?"#16a34a":i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.pasta||""}</td><td>${i.cidade||""}</td><td><b>${i.fornecedor||""}</b></td><td>${i.n_fatura||""}</td><td>${fmtD(i.emissao_fatura)}</td><td>${fmtD(i.vencimento)}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${i.cond_pgto||""}</td><td>${fmtD(i.dt_pgto)}</td><td><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td><td style="font-size:10px;max-width:160px">${i.obs||"—"}</td></tr>`;}).join("");
   const w=window.open("","_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoices</title><style>${pdfStyles()}</style></head><body>
   <div class="hdr"><div><h1>🌐 Relatório de Invoices — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</p></div><div><b>${filtradas.length}</b> faturas</div></div>
   <div class="cards"><div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${filtradas.filter(i=>i.status_pgto==="Em Aberto").length}</div></div><div class="card" style="background:#fef3c7;border-color:#d97706"><div class="cl">Pago Parcial</div><div class="cv" style="color:#d97706">${filtradas.filter(i=>i.status_pgto==="Pago Parcial").length}</div></div><div class="card" style="background:#dcfce7;border-color:#16a34a"><div class="cl">Pago Total</div><div class="cv" style="color:#16a34a">${filtradas.filter(i=>i.status_pgto==="Pago Total").length}</div></div><div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div></div>
-  <table><thead><tr><th>Pasta</th><th>Cidade</th><th>Fornecedor</th><th>Nº Invoice</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Cond.</th><th>Dt.Pgto</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
+  <table><thead><tr><th>Pasta</th><th>Cidade</th><th>Fornecedor</th><th>Nº Invoice</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Cond.</th><th>Dt.Pgto</th><th>Status</th><th>Observação</th></tr></thead><tbody>${rows}</tbody></table>
   ${pdfResumMoedas(filtradas,"Resumo por Moeda — Invoices")}
   <div class="tot"><span><b>Total R$:</b> ${fmtBRL(totR)}</span><span><b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(filtradas.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span></span><span><b>Pago Total:</b> <span style="color:#16a34a">${fmtBRL(filtradas.filter(i=>i.status_pgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span></span></div>
   <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado em ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span></div>
