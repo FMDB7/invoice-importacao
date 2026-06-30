@@ -351,7 +351,7 @@ let taxasAtivas    = {USD:"",EUR:"",CHF:"",GBP:""};
 
 let filtros = {
   inv:     {fornecedor:"",status:"",moeda:"",pasta:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_pasta:"",_dtIni:"",_dtFim:"",_busca_pasta:"",fornecedores:[],_fornecedores:[],_busca_forn:"",statuses:["Em Aberto"],_statuses:["Em Aberto"],ocultarSemVcto:true,mesVcto:""},
-  pgto:    {status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:"",bancos:[],_bancos:[],_status:"Todos",statuses:[],_statuses:[]},
+  pgto:    {status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:"",bancos:[],_bancos:[],_status:"Todos",statuses:[],_statuses:[],ano:"",mes:""},
   forn:    {fornecedor:"",dtIni:"",dtFim:"",_fornecedor:"",_dtIni:"",_dtFim:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
   cambial: {fornecedor:"",moeda:"",ano:"",mes:"",_fornecedor:"",_moeda:"",_ano:"",_mes:"",fornecedores:[],_fornecedores:[],_busca_forn:""}
 };
@@ -727,7 +727,7 @@ function filtroBar(ns, campos, onBuscar) {
 function limparFiltro(ns) {
   const f = filtros[ns];
   Object.keys(f).forEach(k => { if (Array.isArray(f[k])) f[k]=[]; else f[k]=""; });
-  if (ns==="pgto") { filtros.pgto.status="Todos"; filtros.pgto._status="Todos"; filtros.pgto.statuses=[]; filtros.pgto._statuses=[]; filtros.pgto.bancos=[]; filtros.pgto._bancos=[]; }
+  if (ns==="pgto") { filtros.pgto.status="Todos"; filtros.pgto._status="Todos"; filtros.pgto.statuses=[]; filtros.pgto._statuses=[]; filtros.pgto.bancos=[]; filtros.pgto._bancos=[]; filtros.pgto.ano=""; filtros.pgto.mes=""; }
   if (ns==="inv")     { filtros.inv._fornecedores=[]; filtros.inv.fornecedores=[]; filtros.inv._busca_forn=""; filtros.inv._busca_pasta=""; filtros.inv._pasta=""; filtros.inv.pasta=""; filtros.inv._statuses=[]; filtros.inv.statuses=[]; filtros.inv.ocultarSemVcto=true; filtros.inv.mesVcto=""; }
   if (ns==="forn")    { filtros.forn._fornecedores=[]; filtros.forn.fornecedores=[]; filtros.forn._busca_forn=""; relForn=""; }
   if (ns==="cambial") { filtros.cambial._fornecedores=[]; filtros.cambial.fornecedores=[]; filtros.cambial._busca_forn=""; filtros.cambial.ano=""; filtros.cambial._ano=""; filtros.cambial.mes=""; filtros.cambial._mes=""; }
@@ -851,6 +851,17 @@ function selecionarMesInv(mes) {
   filtros.inv.mesVcto = (filtros.inv.mesVcto === mes) ? "" : mes;
   paginaAtual.inv = 1;
   renderTab("Invoices");
+}
+function selecionarAnoPgto(ano) {
+  filtros.pgto.ano = (filtros.pgto.ano === ano) ? "" : ano;
+  filtros.pgto.mes = "";
+  paginaAtual.pgto = 1;
+  renderTab("Pagamentos");
+}
+function selecionarMesPgto(mes) {
+  filtros.pgto.mes = (filtros.pgto.mes === mes) ? "" : mes;
+  paginaAtual.pgto = 1;
+  renderTab("Pagamentos");
 }
 function aplicarFiltroInv() {
   filtros.inv.statuses  = [...filtros.inv._statuses];
@@ -2387,6 +2398,8 @@ function renderPagamentos() {
   if (pgtoFiltraEmAberto) dados = dados.filter(i => i.status_pgto !== "Em Aberto" || !!i.vencimento || ["À Vista","Antecipado","Contra B/L"].includes(i.cond_pgto));
   if (f.dtIni) dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto>=f.dtIni);
   if (f.dtFim) dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto<=f.dtFim);
+  if (f.ano)   dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto.substring(0,4)===f.ano);
+  if (f.mes)   dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto.substring(5,7)===f.mes);
   if (f.bancos&&f.bancos.length>0) dados = dados.filter(i=>f.bancos.includes(i.banco));
   dados = dados.slice().sort((a,b)=>{ const va=a.vencimento||"9999-12-31",vb=b.vencimento||"9999-12-31"; return va<vb?-1:va>vb?1:0; });
   const pgPgto = paginar(dados, "pgto");
@@ -2464,8 +2477,86 @@ function renderPagamentos() {
     </div>`;
   }).join("");
 
+  // Anos e meses disponíveis nos pagamentos (dt_pgto preenchido)
+  const pgtoComDt = invoices.filter(i=>i.dt_pgto&&(i.status_pgto==="Pago Total"||i.status_pgto==="Pago Parcial"));
+  const anosDisp  = [...new Set(pgtoComDt.map(i=>i.dt_pgto.substring(0,4)))].sort().reverse();
+  const anoAtivo  = f.ano;
+  const mesAtivo  = f.mes;
+
+  // Meses disponíveis para o ano ativo (ou todos se nenhum ano selecionado)
+  const pgtoBase  = anoAtivo ? pgtoComDt.filter(i=>i.dt_pgto.substring(0,4)===anoAtivo) : pgtoComDt;
+  const mesesDisp = [...new Set(pgtoBase.map(i=>i.dt_pgto.substring(5,7)))].sort();
+
+  const botoesAnoHTML = anosDisp.length > 0 ? `
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Ano</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${anosDisp.map(a => {
+          const isSel = anoAtivo === a;
+          const tot = pgtoComDt.filter(i=>i.dt_pgto.substring(0,4)===a).reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+          return `<button onclick="selecionarAnoPgto('${a}')" style="padding:7px 16px;border-radius:10px;border:2px solid ${isSel?"#2563eb":"#e2e8f0"};background:${isSel?"#2563eb":"#fff"};color:${isSel?"#fff":"#475569"};cursor:pointer;font-size:13px;font-weight:700;transition:all .15s;box-shadow:${isSel?"0 4px 12px rgba(37,99,235,.3)":"none"}">
+            ${a} <span style="font-size:10px;opacity:.8">${fmtBRL(tot).replace("R$","").trim()}</span>
+          </button>`;
+        }).join("")}
+      </div>
+    </div>` : "";
+
+  const botoesMesHTML = mesesDisp.length > 0 ? `
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Mês${anoAtivo?" — "+anoAtivo:""}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${mesesDisp.map(m => {
+          const isSel = mesAtivo === m;
+          const invM  = pgtoBase.filter(i=>i.dt_pgto.substring(5,7)===m);
+          const tot   = invM.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+          const label = MESES_NOMES[parseInt(m)-1].substring(0,3);
+          return `<button onclick="selecionarMesPgto('${m}')" style="display:flex;flex-direction:column;align-items:center;padding:8px 14px;border-radius:10px;border:2px solid ${isSel?"#16a34a":"#e2e8f0"};background:${isSel?"#16a34a":"#fff"};color:${isSel?"#fff":"#475569"};cursor:pointer;font-size:12px;font-weight:700;min-width:64px;transition:all .15s;box-shadow:${isSel?"0 4px 12px rgba(22,163,74,.3)":"none"}">
+            <span>${label}</span>
+            <span style="font-size:9px;opacity:${isSel?".85":".55"};margin-top:2px">${invM.length} pg.</span>
+            <span style="font-size:9px;font-weight:700;opacity:${isSel?".85":".5"}">${fmtBRL(tot).replace("R$","").trim()}</span>
+          </button>`;
+        }).join("")}
+        ${mesAtivo ? `<button onclick="selecionarMesPgto('${mesAtivo}')" style="padding:8px 14px;border-radius:10px;border:2px solid #fee2e2;background:#fee2e2;color:#dc2626;cursor:pointer;font-size:12px;font-weight:700;align-self:center">✖</button>` : ""}
+      </div>
+    </div>` : "";
+
+  // Resumo do mês selecionado
+  let resumoPgtoHTML = "";
+  if (mesAtivo) {
+    const base = anoAtivo ? pgtoComDt.filter(i=>i.dt_pgto.substring(0,4)===anoAtivo) : pgtoComDt;
+    const invMes = base.filter(i=>i.dt_pgto.substring(5,7)===mesAtivo);
+    const totR   = invMes.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+    const nomeMesLabel = MESES_NOMES[parseInt(mesAtivo)-1] + (anoAtivo?" / "+anoAtivo:"");
+    const kpis = MOEDAS.map(m=>{
+      const v = invMes.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
+      if(!v) return "";
+      return `<div style="background:${MOEDA_BG[m]};border-radius:10px;padding:10px 16px;border-left:4px solid ${MOEDA_COR[m]};min-width:130px">
+        <div style="font-size:11px;color:#64748b;font-weight:600">${m}</div>
+        <div style="font-size:16px;font-weight:800;color:${MOEDA_COR[m]}">${fmtM(v,m)}</div>
+      </div>`;
+    }).join("");
+    resumoPgtoHTML = `
+    <div style="background:linear-gradient(135deg,#064e3b 0%,#16a34a 100%);border-radius:14px;padding:18px 22px;margin-bottom:16px;color:#fff">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+        <div>
+          <div style="font-size:11px;opacity:.75;font-weight:600;letter-spacing:.5px;text-transform:uppercase">Pagamentos Realizados</div>
+          <div style="font-size:20px;font-weight:800;margin-top:2px">📅 ${nomeMesLabel}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;opacity:.75">Total Pago em R$</div>
+          <div style="font-size:26px;font-weight:800;color:#bbf7d0">${fmtBRL(totR)}</div>
+          <div style="font-size:11px;opacity:.75">${invMes.length} pagamento(s)</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">${kpis}</div>
+    </div>`;
+  }
+
   return `
   <div style="font-weight:700;font-size:15px;color:#1e3a5f;margin-bottom:12px">💰 Controle de Pagamentos</div>
+  ${botoesAnoHTML}
+  ${botoesMesHTML}
+  ${resumoPgtoHTML}
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">${cardsMoeda}</div>
   <div class="filter-bar">
     ${buildStatusDropdown("pgto")}
