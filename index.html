@@ -350,7 +350,7 @@ let realtimeSub    = null;
 let taxasAtivas    = {USD:"",EUR:"",CHF:"",GBP:""};
 
 let filtros = {
-  inv:     {fornecedor:"",status:"",moeda:"",pasta:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_pasta:"",_dtIni:"",_dtFim:"",_busca_pasta:"",fornecedores:[],_fornecedores:[],_busca_forn:"",statuses:["Em Aberto"],_statuses:["Em Aberto"]},
+  inv:     {fornecedor:"",status:"",moeda:"",pasta:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_pasta:"",_dtIni:"",_dtFim:"",_busca_pasta:"",fornecedores:[],_fornecedores:[],_busca_forn:"",statuses:["Em Aberto"],_statuses:["Em Aberto"],ocultarSemVcto:true},
   pgto:    {status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:"",bancos:[],_bancos:[],_status:"Todos",statuses:[],_statuses:[]},
   forn:    {fornecedor:"",dtIni:"",dtFim:"",_fornecedor:"",_dtIni:"",_dtFim:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
   cambial: {fornecedor:"",moeda:"",ano:"",mes:"",_fornecedor:"",_moeda:"",_ano:"",_mes:"",fornecedores:[],_fornecedores:[],_busca_forn:""}
@@ -728,7 +728,7 @@ function limparFiltro(ns) {
   const f = filtros[ns];
   Object.keys(f).forEach(k => { if (Array.isArray(f[k])) f[k]=[]; else f[k]=""; });
   if (ns==="pgto") { filtros.pgto.status="Todos"; filtros.pgto._status="Todos"; filtros.pgto.statuses=[]; filtros.pgto._statuses=[]; filtros.pgto.bancos=[]; filtros.pgto._bancos=[]; }
-  if (ns==="inv")     { filtros.inv._fornecedores=[]; filtros.inv.fornecedores=[]; filtros.inv._busca_forn=""; filtros.inv._busca_pasta=""; filtros.inv._pasta=""; filtros.inv.pasta=""; filtros.inv._statuses=[]; filtros.inv.statuses=[]; }
+  if (ns==="inv")     { filtros.inv._fornecedores=[]; filtros.inv.fornecedores=[]; filtros.inv._busca_forn=""; filtros.inv._busca_pasta=""; filtros.inv._pasta=""; filtros.inv.pasta=""; filtros.inv._statuses=[]; filtros.inv.statuses=[]; filtros.inv.ocultarSemVcto=true; }
   if (ns==="forn")    { filtros.forn._fornecedores=[]; filtros.forn.fornecedores=[]; filtros.forn._busca_forn=""; relForn=""; }
   if (ns==="cambial") { filtros.cambial._fornecedores=[]; filtros.cambial.fornecedores=[]; filtros.cambial._busca_forn=""; filtros.cambial.ano=""; filtros.cambial._ano=""; filtros.cambial.mes=""; filtros.cambial._mes=""; }
   paginaAtual[ns] = 1;
@@ -842,6 +842,11 @@ function buildStatusDropdown(ns) {
   </div>`;
 }
 
+function toggleOcultarSemVcto() {
+  filtros.inv.ocultarSemVcto = !filtros.inv.ocultarSemVcto;
+  paginaAtual.inv = 1;
+  renderTab("Invoices");
+}
 function aplicarFiltroInv() {
   filtros.inv.statuses  = [...filtros.inv._statuses];
   filtros.inv.status     = filtros.inv.statuses.length === 1 ? filtros.inv.statuses[0] : filtros.inv.statuses.length > 1 ? "__multi__" : "";
@@ -916,7 +921,7 @@ function getInvFiltradas() {
     const semVctoPermitido = ["À Vista","Antecipado","Contra B/L"].includes(i.cond_pgto);
     const statusesAtivos = f.statuses && f.statuses.length > 0 ? f.statuses : (f.status && f.status !== "__multi__" && f.status ? [f.status] : []);
     const filtraEmAberto = statusesAtivos.includes("Em Aberto") || statusesAtivos.length === 0;
-    if (filtraEmAberto && isEmAberto && !i.vencimento && !semVctoPermitido) return false;
+    if (filtraEmAberto && isEmAberto && !i.vencimento && !semVctoPermitido && f.ocultarSemVcto) return false;
     if (f.moeda  && i.moeda !== f.moeda)                    return false;
     if (f.pasta  && !(i.pasta||"").toLowerCase().includes(f.pasta.toLowerCase())) return false;
     if (f.dtIni  && i.vencimento && i.vencimento < f.dtIni) return false;
@@ -2099,6 +2104,9 @@ function renderInvoices() {
     <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:2px;margin-top:auto">
       <button class="btn-search" onclick="aplicarFiltroInv()">🔍 Buscar</button>
       <button class="btn btn-ghost" onclick="limparFiltro('inv')">✖ Limpar</button>
+      <button onclick="toggleOcultarSemVcto()" style="display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;border:1px solid ${filtros.inv.ocultarSemVcto?"#e2e8f0":"#fbbf24"};background:${filtros.inv.ocultarSemVcto?"#fff":"#fffbeb"};color:${filtros.inv.ocultarSemVcto?"#475569":"#d97706"};font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
+        ${filtros.inv.ocultarSemVcto ? "👁️‍🗨️ Mostrar sem vencimento" : "🙈 Ocultar sem vencimento"}
+      </button>
     </div>
   </div>
   <div style="margin:-10px 0 12px 0;padding:0 4px"><span style="font-size:11px;color:#2563eb;font-weight:600">${filtroAtivoTxt("inv")}</span></div>
