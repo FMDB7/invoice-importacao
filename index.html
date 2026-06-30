@@ -2011,7 +2011,7 @@ function renderDashboard() {
 
   <div style="margin-bottom:20px">${renderGraficoMensalMoedas(invoices)}</div>
 
-  ${alertas.length ? `<div class="card"><div style="font-weight:700;color:#dc2626;margin-bottom:10px">🚨 Alertas de Vencimento</div>${alertas.map(i=>{
+  ${alertas.length ? `<div class="card"><div style="font-weight:700;color:#dc2626;margin-bottom:10px">🚨 Alertas de Vencimento</div>${alertas.slice().sort((a,b)=>(a.vencimento||"9999-12-31")<(b.vencimento||"9999-12-31")?-1:1).map(i=>{
     const a=alertaVcto(i.vencimento,i.status_pgto);
     return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9"><span><b>${i.n_fatura}</b> — ${i.fornecedor}</span><span style="color:${a==="vencido"?"#dc2626":"#d97706"};font-weight:700">${a==="vencido"?"⛔ VENCIDO":"🚨 Vence em breve"} ${fmtD(i.vencimento)}</span></div>`;
   }).join("")}</div>` : ""}`;
