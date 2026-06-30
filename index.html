@@ -312,13 +312,45 @@ let currentTab     = "Dashboard";
 let currentUser    = null;   // { id, nome, email, perfil }
 let msAccessToken  = null;
 let editIndex      = null;
+const PAGE_SIZE = 15;
+let paginaAtual = { inv:1, pgto:1, forn:1, cambial:1 };
+function irParaPagina(ns, pg) { paginaAtual[ns] = pg; renderTab(currentTab); }
+function paginar(arr, ns) {
+  const totalPg = Math.max(1, Math.ceil(arr.length / PAGE_SIZE));
+  if (paginaAtual[ns] > totalPg) paginaAtual[ns] = totalPg;
+  if (paginaAtual[ns] < 1) paginaAtual[ns] = 1;
+  const ini = (paginaAtual[ns]-1) * PAGE_SIZE;
+  return { pageItems: arr.slice(ini, ini+PAGE_SIZE), totalPg, pgAtual: paginaAtual[ns], totalItens: arr.length, ini: arr.length===0?0:ini+1, fim: Math.min(ini+PAGE_SIZE, arr.length) };
+}
+function renderPaginacao(ns, info) {
+  if (info.totalItens === 0) return "";
+  const { totalPg, pgAtual, ini, fim, totalItens } = info;
+  const btn = (pg, label, ativo, disabled) => `<button onclick="${disabled?"":`irParaPagina('${ns}',${pg})`}" ${disabled?"disabled":""} style="min-width:30px;padding:5px 9px;border-radius:6px;border:1px solid ${ativo?"#2563eb":"#e2e8f0"};background:${ativo?"#2563eb":"#fff"};color:${ativo?"#fff":disabled?"#cbd5e1":"#334155"};font-size:12px;font-weight:${ativo?"700":"500"};cursor:${disabled?"default":"pointer"}">${label}</button>`;
+  let pgBtns = "";
+  const janela = 2;
+  for (let p=1; p<=totalPg; p++) {
+    if (p===1 || p===totalPg || (p>=pgAtual-janela && p<=pgAtual+janela)) {
+      pgBtns += btn(p, p, p===pgAtual, false);
+    } else if (p===pgAtual-janela-1 || p===pgAtual+janela+1) {
+      pgBtns += `<span style="padding:0 4px;color:#94a3b8">…</span>`;
+    }
+  }
+  return `<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:12px 4px 4px 4px">
+    <span style="font-size:12px;color:#64748b">Mostrando <b>${ini}–${fim}</b> de <b>${totalItens}</b> registro(s)</span>
+    <div style="display:flex;gap:4px;align-items:center">
+      ${btn(pgAtual-1,"‹ Anterior",false,pgAtual===1)}
+      ${pgBtns}
+      ${btn(pgAtual+1,"Próxima ›",false,pgAtual===totalPg)}
+    </div>
+  </div>`;
+}
 let pgtoTarget     = null;
 let relForn        = "";
 let realtimeSub    = null;
 let taxasAtivas    = {USD:"",EUR:"",CHF:"",GBP:""};
 
 let filtros = {
-  inv:     {fornecedor:"",status:"",moeda:"",pasta:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_pasta:"",_dtIni:"",_dtFim:"",_busca_pasta:"",fornecedores:[],_fornecedores:[],_busca_forn:"",statuses:[],_statuses:[]},
+  inv:     {fornecedor:"",status:"",moeda:"",pasta:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_pasta:"",_dtIni:"",_dtFim:"",_busca_pasta:"",fornecedores:[],_fornecedores:[],_busca_forn:"",statuses:["Em Aberto"],_statuses:["Em Aberto"]},
   pgto:    {status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:"",bancos:[],_bancos:[],_status:"Todos",statuses:[],_statuses:[]},
   forn:    {fornecedor:"",dtIni:"",dtFim:"",_fornecedor:"",_dtIni:"",_dtFim:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
   cambial: {fornecedor:"",moeda:"",ano:"",mes:"",_fornecedor:"",_moeda:"",_ano:"",_mes:"",fornecedores:[],_fornecedores:[],_busca_forn:""}
@@ -699,6 +731,7 @@ function limparFiltro(ns) {
   if (ns==="inv")     { filtros.inv._fornecedores=[]; filtros.inv.fornecedores=[]; filtros.inv._busca_forn=""; filtros.inv._busca_pasta=""; filtros.inv._pasta=""; filtros.inv.pasta=""; filtros.inv._statuses=[]; filtros.inv.statuses=[]; }
   if (ns==="forn")    { filtros.forn._fornecedores=[]; filtros.forn.fornecedores=[]; filtros.forn._busca_forn=""; relForn=""; }
   if (ns==="cambial") { filtros.cambial._fornecedores=[]; filtros.cambial.fornecedores=[]; filtros.cambial._busca_forn=""; filtros.cambial.ano=""; filtros.cambial._ano=""; filtros.cambial.mes=""; filtros.cambial._mes=""; }
+  paginaAtual[ns] = 1;
   renderTab(currentTab);
 }
 
@@ -823,6 +856,7 @@ function aplicarFiltroInv() {
   filtros.inv._dtIni   = filtros.inv.dtIni;
   filtros.inv._dtFim   = filtros.inv.dtFim;
   filtros.inv.fornecedores = [...filtros.inv._fornecedores];
+  paginaAtual.inv = 1;
   renderTab("Invoices");
 }
 function aplicarFiltroPgto()    {
@@ -835,6 +869,7 @@ function aplicarFiltroPgto()    {
   filtros.pgto._dtIni=filtros.pgto.dtIni;
   filtros.pgto._dtFim=filtros.pgto.dtFim;
   filtros.pgto.bancos=[...filtros.pgto._bancos];
+  paginaAtual.pgto = 1;
   renderTab("Pagamentos");
 }
 function aplicarFiltroForn() {
@@ -845,6 +880,7 @@ function aplicarFiltroForn() {
   filtros.forn.fornecedores = [...filtros.forn._fornecedores];
   if (filtros.forn.fornecedores.length === 1) relForn = filtros.forn.fornecedores[0];
   else if (filtros.forn.fornecedores.length === 0) relForn = "";
+  paginaAtual.forn = 1;
   renderTab("Fornecedores");
 }
 function aplicarFiltroCambial() {
@@ -855,11 +891,13 @@ function aplicarFiltroCambial() {
   filtros.cambial._ano   = filtros.cambial.ano;
   filtros.cambial._mes   = filtros.cambial.mes;
   filtros.cambial.fornecedores = [...filtros.cambial._fornecedores];
+  paginaAtual.cambial = 1;
   renderTab("Análise Cambial");
 }
 function selecionarMesCambial(mes) {
   filtros.cambial.mes = (filtros.cambial.mes === mes) ? "" : mes;
   filtros.cambial._mes = filtros.cambial.mes;
+  paginaAtual.cambial = 1;
   renderTab("Análise Cambial");
 }
 
@@ -1974,6 +2012,7 @@ function renderDashboard() {
 function renderInvoices() {
   const todosForns = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
   const filtradas  = getInvFiltradas();
+  const pgInv      = paginar(filtradas, "inv");
   const selForns   = filtros.inv._fornecedores || [];
   const busca      = (filtros.inv._busca_forn||"").toLowerCase();
   const fornsFiltrados = busca
@@ -2093,9 +2132,10 @@ function renderInvoices() {
     </tr></thead>
     <tbody>${filtradas.length===0
       ? `<tr><td colspan="16" style="text-align:center;padding:24px;color:#94a3b8">Nenhuma invoice encontrada</td></tr>`
-      : filtradas.map(i => renderInvoiceRow(i)).join("")
+      : pgInv.pageItems.map(i => renderInvoiceRow(i)).join("")
     }</tbody>
-  </table></div>`;
+  </table></div>
+  ${renderPaginacao("inv", pgInv)}`;
 }
 
 // Verifica se o perfil pode editar inline
@@ -2274,6 +2314,7 @@ function renderPagamentos() {
   if (f.dtFim) dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto<=f.dtFim);
   if (f.bancos&&f.bancos.length>0) dados = dados.filter(i=>f.bancos.includes(i.banco));
   dados = dados.slice().sort((a,b)=>{ const va=a.vencimento||"9999-12-31",vb=b.vencimento||"9999-12-31"; return va<vb?-1:va>vb?1:0; });
+  const pgPgto = paginar(dados, "pgto");
 
   const bancoDropdownHTML = `
     <div id="banco-filter-wrap" class="banco-filter-wrap" style="min-width:200px">
@@ -2394,7 +2435,7 @@ function renderPagamentos() {
     </tr></thead>
     <tbody>${dados.length===0
       ? `<tr><td colspan="14" style="text-align:center;padding:24px;color:#94a3b8">Nenhum registro encontrado</td></tr>`
-      : dados.map(i => `<tr>
+      : pgPgto.pageItems.map(i => `<tr>
           <td class="col-pasta" style="font-weight:600;color:#1e3a5f">${i.pasta||""}</td>
           <td class="col-invoice">${i.n_fatura||""}</td>
           <td class="col-fornecedor">${i.fornecedor||""}</td>
@@ -2414,7 +2455,8 @@ function renderPagamentos() {
           </td>
         </tr>`).join("")
     }</tbody>
-  </table></div>`;
+  </table></div>
+  ${renderPaginacao("pgto", pgPgto)}`;
 }
 
 
@@ -2525,6 +2567,7 @@ function limparFornsNS(ns) {
   filtros[ns]._fornecedores = [];
   filtros[ns].fornecedores  = [];
   if (ns==="forn") relForn = "";
+  paginaAtual[ns] = 1;
   renderTab(ns==="forn"?"Fornecedores":"Análise Cambial");
   setTimeout(()=>{ const dd=document.getElementById(`forn-dd-${ns}`); if(dd)dd.style.display="flex"; },30);
 }
@@ -2570,6 +2613,7 @@ function selecionarFornecedor(fn) {
   relForn = fn;
   filtros.forn._fornecedores = [fn];
   filtros.forn.fornecedores  = [fn];
+  paginaAtual.forn = 1;
   renderTab("Fornecedores");
 }
 
@@ -2616,7 +2660,8 @@ function renderRelForn() {
   }).join("");
 
   // Detalhes rows
-  const detalhesRows = invsForn.map(i =>
+  const pgForn = paginar(invsForn, "forn");
+  const detalhesRows = pgForn.pageItems.map(i =>
     "<tr>"
     +"<td>"+(i.n_fatura||"")+"</td>"
     +"<td>"+fmtD(i.emissao_fatura)+"</td>"
@@ -2683,7 +2728,9 @@ function renderRelForn() {
       + '<div class="table-wrap"><table>'
       + '<thead><tr><th>Nº Invoice</th><th>Emissão</th><th>Vencimento</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa R$</th><th>Valor R$</th><th>Cond.</th><th>Status</th></tr></thead>'
       + '<tbody>'+detalhesRows+'</tbody>'
-      + '</table></div></div>';
+      + '</table></div>'
+      + renderPaginacao("forn", pgForn)
+      + '</div>';
   }
 
   return html;
@@ -2707,6 +2754,7 @@ function renderAnaliseCambial() {
   let dados = dadosBase.slice();
   if (f.mes) dados = dados.filter(i=>i.dt_pgto && i.dt_pgto.substring(5,7)===f.mes);
   dados = dados.sort((a,b)=>{ const va=a.dt_pgto||"9999-12-31",vb=b.dt_pgto||"9999-12-31"; return va<vb?-1:va>vb?1:0; });
+  const pgCambial = paginar(dados, "cambial");
 
   const anosDisponiveis = [...new Set(invoices.filter(i=>i.dt_pgto).map(i=>i.dt_pgto.substring(0,4)))].sort().reverse();
 
@@ -2780,7 +2828,7 @@ function renderAnaliseCambial() {
     <thead><tr>${["Fornecedor","Data Pgto","Moeda","Taxa de Câmbio","Valor na Moeda","Valor em R$","Nº Invoice","Banco","Status"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
     <tbody>${dados.length===0
       ? `<tr><td colspan="9" style="text-align:center;padding:24px;color:#94a3b8">Nenhum pagamento encontrado.</td></tr>`
-      : dados.map(i=>`<tr>
+      : pgCambial.pageItems.map(i=>`<tr>
           <td><b>${i.fornecedor||""}</b></td><td>${fmtD(i.dt_pgto)}</td>
           <td><span class="badge" style="background:${MOEDA_BG[i.moeda]};color:${MOEDA_COR[i.moeda]}">${i.moeda||""}</span></td>
           <td style="font-weight:600">R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}</td>
@@ -2789,7 +2837,8 @@ function renderAnaliseCambial() {
           <td>${i.n_fatura||""}</td><td>${i.banco||"—"}</td><td>${statusBadge(i.status_pgto)}</td>
         </tr>`).join("")
     }</tbody>
-  </table></div>`;
+  </table></div>
+  ${renderPaginacao("cambial", pgCambial)}`;
 }
 
 
