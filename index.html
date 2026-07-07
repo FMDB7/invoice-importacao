@@ -3252,7 +3252,7 @@ function exportPDFPgto(){
       </div>
     </div>` : "";
 
-  const rows=dados.map((i,idx)=>{const cor=i.status_pgto==="Pago Total"?"#16a34a":i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.pasta||""}</td><td>${i.cidade||""}</td><td>${i.n_fatura||""}</td><td>${i.fornecedor||""}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${fmtD(i.vencimento)}</td><td><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td><td>${fmtD(i.dt_pgto)}</td><td>${i.banco||"—"}</td></tr>`;}).join("");
+  const rows=dados.map((i,idx)=>{const cor=i.status_pgto==="Pago Total"?"#16a34a":i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.pasta||""}</td><td>${i.cidade||""}</td><td>${i.n_fatura||""}</td><td>${i.fornecedor||""}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${fmtD(i.vencimento)}</td><td>${i.cond_pgto||"—"}</td><td><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td><td>${fmtD(i.dt_pgto)}</td><td>${i.banco||"—"}</td></tr>`;}).join("");
   const w=window.open("","_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pagamentos</title><style>${pdfStyles()}.banco-card{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
   <div class="hdr"><div><h1>💰 Relatório de Pagamentos — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</p></div><div><b>${dados.length}</b> registros</div></div>
@@ -3264,7 +3264,7 @@ function exportPDFPgto(){
   </div>
   ${resumoBancoHTML}
   ${pdfResumMoedas(dados,"Resumo por Moeda")}
-  <table><thead><tr><th>Pasta</th><th>Cidade</th><th>Nº Invoice</th><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Vencimento</th><th>Status</th><th>Dt.Pgto</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
+  <table><thead><tr><th>Pasta</th><th>Cidade</th><th>Nº Invoice</th><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Vencimento</th><th>Cond.</th><th>Status</th><th>Dt.Pgto</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="tot"><b>Total R$:</b> ${fmtBRL(totR)} &nbsp;|&nbsp; <b>Pago:</b> <span style="color:#16a34a">${fmtBRL(totPgR)}</span> &nbsp;|&nbsp; <b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(totAbR)}</span></div>
   <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado em ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span></div>
   <script>window.print()<\/script></body></html>`);
