@@ -284,12 +284,13 @@ const CONFIG = {
 //  CONSTANTES
 // ════════════════════════════════════════════════════════
 const MOEDAS       = ["USD","EUR","CHF","GBP"];
+const CIDADES      = ["MANAUS","MACAPÁ","GUAJARÁ","EXTREMA"];
 const MESES_NOMES  = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const SIMBOLO      = {USD:"US$",EUR:"€",CHF:"Fr",GBP:"£"};
 const MOEDA_COR    = {USD:"#1d4ed8",EUR:"#7c3aed",CHF:"#dc2626",GBP:"#065f46"};
 const MOEDA_BG     = {USD:"#dbeafe",EUR:"#ede9fe",CHF:"#fee2e2",GBP:"#d1fae5"};
 const MOEDA_CHART  = {USD:"#3b82f6",EUR:"#8b5cf6",CHF:"#ef4444",GBP:"#10b981"};
-const STATUS_PGTO  = ["Em Aberto","Pago Parcial","Pago Total"];
+const STATUS_PGTO  = ["Em Aberto","Pago Parcial","Pago Total","Pago Câmbio Futuro Parcial","Pago Câmbio Futuro"];
 const STATUS_CAM   = ["Pendente","Fechado"];
 const COND_PGTO    = ["À Vista","Antecipado","Antecipado 50%","Contra B/L","30 dias","45 dias","60 dias","60DDI 50%","90 dias","120 dias"];
 const COND_DIAS    = {"À Vista":0,"Antecipado":0,"Antecipado 50%":0,"Contra B/L":0,"30 dias":30,"45 dias":45,"60 dias":60,"60DDI 50%":60,"90 dias":90,"120 dias":120};
@@ -684,7 +685,7 @@ function fmtCurrencyDisplay(v) {
 }
 
 function statusBadge(s) {
-  const cls = s==="Pago Total" ? "badge-green" : s==="Em Aberto" ? "badge-red" : "badge-yellow";
+  const cls = s==="Pago Total" ? "badge-green" : s==="Em Aberto" ? "badge-red" : (s==="Pago Câmbio Futuro"||s==="Pago Câmbio Futuro Parcial") ? "badge-blue" : "badge-yellow";
   return `<span class="badge ${cls}">${s||"Em Aberto"}</span>`;
 }
 
@@ -809,9 +810,9 @@ function buildStatusDropdown(ns) {
   const sel = f._statuses || [];
   const btnLabel = sel.length === 0 ? "Todos ▾" : sel.length === 1 ? sel[0] + " ▾" : sel.length + " selecionados ▾";
   const hasSel   = sel.length > 0;
-  const COR   = {["Em Aberto"]:"#dc2626",["Pago Parcial"]:"#d97706",["Pago Total"]:"#16a34a"};
-  const BG    = {["Em Aberto"]:"#fee2e2",["Pago Parcial"]:"#fef3c7",["Pago Total"]:"#dcfce7"};
-  const IC    = {["Em Aberto"]:"⏳",["Pago Parcial"]:"⚠️",["Pago Total"]:"✅"};
+  const COR   = {["Em Aberto"]:"#dc2626",["Pago Parcial"]:"#d97706",["Pago Total"]:"#16a34a",["Pago Câmbio Futuro Parcial"]:"#2563eb",["Pago Câmbio Futuro"]:"#1d4ed8"};
+  const BG    = {["Em Aberto"]:"#fee2e2",["Pago Parcial"]:"#fef3c7",["Pago Total"]:"#dcfce7",["Pago Câmbio Futuro Parcial"]:"#dbeafe",["Pago Câmbio Futuro"]:"#bfdbfe"};
+  const IC    = {["Em Aberto"]:"⏳",["Pago Parcial"]:"⚠️",["Pago Total"]:"✅",["Pago Câmbio Futuro Parcial"]:"🔷",["Pago Câmbio Futuro"]:"💱"};
   const rows  = STATUS_PGTO.map(s => {
     const isSel = sel.includes(s);
     return `<div id="status-row-${ns}-${s.replace(/ /g,"_")}"
@@ -847,6 +848,23 @@ function toggleOcultarSemVcto() {
   filtros.inv.ocultarSemVcto = !filtros.inv.ocultarSemVcto;
   paginaAtual.inv = 1;
   renderTab("Invoices");
+}
+function filtrarConds(busca) {
+  const dd = document.getElementById("cond-dd");
+  if (!dd) return;
+  dd.style.display = "block";
+  const b = busca.toLowerCase();
+  dd.querySelectorAll(".cond-opt").forEach(el => {
+    el.style.display = el.dataset.val.toLowerCase().includes(b) ? "block" : "none";
+  });
+  updateForm("cond_pgto", busca);
+}
+function selecionarCond(val) {
+  const inp = document.getElementById("cond-search");
+  if (inp) inp.value = val;
+  updateForm("cond_pgto", val);
+  const dd = document.getElementById("cond-dd");
+  if (dd) dd.style.display = "none";
 }
 function selecionarMesInv(mes) {
   filtros.inv.mesVcto = (filtros.inv.mesVcto === mes) ? "" : mes;
@@ -1094,7 +1112,7 @@ document.addEventListener("click", e => {
 //  ALERTAS DE VENCIMENTO
 // ════════════════════════════════════════════════════════
 function alertaVcto(vcto, status) {
-  if (!vcto || status==="Pago Total") return null;
+  if (!vcto || ["Pago Total","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(status)) return null;
   const diff = (new Date(vcto+"T00:00:00") - new Date()) / 86400000;
   if (diff < 0)  return "vencido";
   if (diff <= 7) return "urgente";
@@ -1481,7 +1499,7 @@ function renderFormFields() {
 
   document.getElementById("formFields").innerHTML = `
     <div>${flabel("Pasta")}<input value="${f.pasta||""}" onchange="updateForm('pasta',this.value)"></div>
-    <div>${flabel("Cidade")}<input value="${f.cidade||""}" onchange="updateForm('cidade',this.value)"></div>
+    <div>${flabel("Cidade")}<select onchange="updateForm('cidade',this.value)" style="min-width:130px"><option value="">Selecione...</option>${CIDADES.map(cd=>`<option value="${cd}"${f.cidade===cd?" selected":""}>${cd}</option>`).join("")}</select></div>
     <div>${flabel("Fornecedor ★")}<input list="dl-fornecedores" value="${f.fornecedor||""}" onchange="updateForm('fornecedor',this.value)" oninput="updateForm('fornecedor',this.value)"><datalist id="dl-fornecedores">${[...new Set([...fornecedoresCadastrados,...invoices.map(i=>i.fornecedor).filter(Boolean)])].sort().map(n=>`<option value="${n}">`).join("")}</datalist></div>
     <div>${flabel("Marca")}<input value="${f.marca||""}" onchange="updateForm('marca',this.value)"></div>
     <div>${flabel("Nº Proforma")}<input value="${f.n_proforma||""}" onchange="updateForm('n_proforma',this.value)"></div>
@@ -1491,7 +1509,21 @@ function renderFormFields() {
     <div>${flabel("Emissão da Fatura")}<input type="date" value="${f.emissao_fatura||""}" onchange="updateForm('emissao_fatura',this.value)"></div>
     <div>${flabel("Data de Embarque")}<input type="date" value="${f.dt_embarque||""}" onchange="updateForm('dt_embarque',this.value)"></div>
     <div>${flabel("Data Antecipado")}<input type="date" value="${f.dt_antecipado||""}" onchange="updateForm('dt_antecipado',this.value)"></div>
-    <div>${flabel("Condição de Pagamento")}<input list="dl-cond-pgto" value="${f.cond_pgto||""}" oninput="updateForm('cond_pgto',this.value)" onchange="updateForm('cond_pgto',this.value)" placeholder="Selecione ou digite..." style="min-width:170px"><datalist id="dl-cond-pgto">${COND_PGTO.map(c=>`<option value="${c}">`).join("")}</datalist></div>
+    <div style="position:relative">
+      ${flabel("Condição de Pagamento")}
+      <div style="position:relative">
+        <input id="cond-search" type="text" value="${f.cond_pgto||""}"
+          placeholder="🔍 Pesquisar condição..."
+          oninput="filtrarConds(this.value)"
+          onfocus="document.getElementById('cond-dd').style.display='block'"
+          onblur="setTimeout(()=>{const d=document.getElementById('cond-dd');if(d)d.style.display='none'},200)"
+          style="min-width:200px;padding-right:28px">
+        <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:12px;color:#94a3b8;pointer-events:none">▾</span>
+      </div>
+      <div id="cond-dd" style="display:none;position:absolute;top:calc(100% + 2px);left:0;z-index:300;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.12);min-width:220px;max-height:240px;overflow-y:auto">
+        ${COND_PGTO.map(cond=>`<div class="cond-opt" data-val="${cond}" onmousedown="selecionarCond('${cond}')" style="padding:9px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f8fafc" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#fff'">${cond}</div>`).join("")}
+      </div>
+    </div>
     <div>${flabel("Vencimento (automático)")}<input type="date" id="inp_vencimento" value="${f.vencimento||""}" onchange="updateForm('vencimento',this.value)" style="background:#f0fdf4"></div>
     <div>${flabel("Moeda")}<select onchange="updateForm('moeda',this.value)">${MOEDAS.map(m=>`<option${f.moeda===m?" selected":""}>${m}</option>`).join("")}</select></div>
     <div>${flabel("Valor na Moeda")}<input id="inp_valor_moeda" type="text" inputmode="numeric" value="${vmFmt}" placeholder="0,00" oninput="handleCurrencyInput(this,'valor_moeda')"></div>
@@ -2401,7 +2433,8 @@ function renderPagamentos() {
   else if (f.status && f.status!=="Todos" && f.status!=="__multi__") dados = dados.filter(i=>i.status_pgto===f.status);
   const pgtoStatusesAtivos = f.statuses && f.statuses.length > 0 ? f.statuses : (f.status && f.status!=="Todos" && f.status!=="__multi__" ? [f.status] : []);
   const pgtoFiltraEmAberto = pgtoStatusesAtivos.includes("Em Aberto") || pgtoStatusesAtivos.length === 0;
-  if (pgtoFiltraEmAberto) dados = dados.filter(i => i.status_pgto !== "Em Aberto" || !!i.vencimento || ["À Vista","Antecipado","Contra B/L"].includes(i.cond_pgto));
+  const PAGOS_STATUS = ["Pago Total","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"];
+  if (pgtoFiltraEmAberto) dados = dados.filter(i => i.status_pgto !== "Em Aberto" || !!i.vencimento || ["À Vista","Antecipado","Antecipado 50%","Contra B/L","60DDI 50%"].includes(i.cond_pgto));
   if (f.dtIni) dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto>=f.dtIni);
   if (f.dtFim) dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto<=f.dtFim);
   if (f.ano)   dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto.substring(0,4)===f.ano);
@@ -2715,9 +2748,9 @@ function toggleFornNS(ns, forn) {
   const idx = arr.indexOf(forn);
   if (idx===-1) arr.push(forn); else arr.splice(idx,1);
   filtros[ns].fornecedores = [...arr];
-  // If single forn selected in forn tab, update relForn
   if (ns==="forn") { if(arr.length===1) relForn=arr[0]; else if(arr.length===0) relForn=""; }
-  renderTab(ns==="forn"?"Fornecedores":"Análise Cambial");
+  const tabMap = { forn:"Fornecedores", cambial:"Análise Cambial", pgto:"Pagamentos", inv:"Invoices" };
+  renderTab(tabMap[ns] || currentTab);
   setTimeout(()=>{ const dd=document.getElementById(`forn-dd-${ns}`); if(dd)dd.style.display="flex"; const el=document.getElementById(`forn-busca-${ns}`); if(el){el.focus();el.value=filtros[ns]._busca_forn||"";} },30);
 }
 
@@ -2725,14 +2758,16 @@ function removerFornNS(ns, forn) {
   filtros[ns]._fornecedores = filtros[ns]._fornecedores.filter(f=>f!==forn);
   filtros[ns].fornecedores  = [...filtros[ns]._fornecedores];
   if (ns==="forn") { if(filtros.forn._fornecedores.length===1) relForn=filtros.forn._fornecedores[0]; else relForn=""; }
-  renderTab(ns==="forn"?"Fornecedores":"Análise Cambial");
+  const tabMap = { forn:"Fornecedores", cambial:"Análise Cambial", pgto:"Pagamentos", inv:"Invoices" };
+  renderTab(tabMap[ns] || currentTab);
 }
 
 function selTodosFornsNS(ns) {
   const todos = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
   filtros[ns]._fornecedores = [...todos];
   filtros[ns].fornecedores  = [...todos];
-  renderTab(ns==="forn"?"Fornecedores":"Análise Cambial");
+  const tabMap = { forn:"Fornecedores", cambial:"Análise Cambial", pgto:"Pagamentos", inv:"Invoices" };
+  renderTab(tabMap[ns] || currentTab);
   setTimeout(()=>{ const dd=document.getElementById(`forn-dd-${ns}`); if(dd)dd.style.display="flex"; },30);
 }
 
@@ -2741,7 +2776,8 @@ function limparFornsNS(ns) {
   filtros[ns].fornecedores  = [];
   if (ns==="forn") relForn = "";
   paginaAtual[ns] = 1;
-  renderTab(ns==="forn"?"Fornecedores":"Análise Cambial");
+  const tabMap = { forn:"Fornecedores", cambial:"Análise Cambial", pgto:"Pagamentos", inv:"Invoices" };
+  renderTab(tabMap[ns] || currentTab);
   setTimeout(()=>{ const dd=document.getElementById(`forn-dd-${ns}`); if(dd)dd.style.display="flex"; },30);
 }
 
