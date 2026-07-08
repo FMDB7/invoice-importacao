@@ -2710,7 +2710,7 @@ function buildFornDropdownHTML(ns, todosForns, placeholder) {
       <div id="forn-list-${ns}" style="overflow-y:auto;max-height:230px">
         ${lista.length===0
           ? `<div style="padding:12px;color:#94a3b8;font-size:12px;text-align:center">Nenhum resultado</div>`
-          : lista.map(fn=>{
+          : lista.map((fn, idx)=>{
               const sel = selForns.includes(fn);
               const invsFn = invoices.filter(i=>i.fornecedor===fn);
               const abertos = invsFn.filter(i=>i.status_pgto==="Em Aberto").length;
