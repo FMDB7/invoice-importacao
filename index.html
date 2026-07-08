@@ -2714,11 +2714,13 @@ function buildFornDropdownHTML(ns, todosForns, placeholder) {
               const sel = selForns.includes(fn);
               const invsFn = invoices.filter(i=>i.fornecedor===fn);
               const abertos = invsFn.filter(i=>i.status_pgto==="Em Aberto").length;
-              return `<div onclick="toggleFornNS('${ns}','${fn.replace(/'/g,"\'")}')"
+              const fnId = `forn-opt-${ns}-${idx}`;
+              return `<div id="${fnId}" data-ns="${ns}" data-fn="${fn.replace(/"/g,'&quot;')}"
+                onclick="toggleFornByEl(this)"
                 style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;font-size:12px;background:${sel?"#eff6ff":"#fff"};border-bottom:1px solid #f8fafc"
                 onmouseover="this.style.background='${sel?"#dbeafe":"#f8fafc"}'"
                 onmouseout="this.style.background='${sel?"#eff6ff":"#fff"}'">
-                <input type="checkbox" ${sel?"checked":""} onclick="event.stopPropagation();toggleFornNS('${ns}','${fn.replace(/'/g,"\'")}');" style="width:14px;height:14px;accent-color:#2563eb;cursor:pointer;flex-shrink:0">
+                <input type="checkbox" ${sel?"checked":""} onclick="event.stopPropagation();toggleFornByEl(this.closest('[data-fn]'));" style="width:14px;height:14px;accent-color:#2563eb;cursor:pointer;flex-shrink:0">
                 <span style="flex:1;font-weight:${sel?"700":"400"};color:${sel?"#1d4ed8":"#1e293b"}">${fn}</span>
                 <span style="font-size:10px;color:#94a3b8;flex-shrink:0">${invsFn.length}${abertos>0?` • <span style="color:#dc2626">${abertos} ab.</span>`:""}</span>
               </div>`;
@@ -2730,7 +2732,7 @@ function buildFornDropdownHTML(ns, todosForns, placeholder) {
     ${selForns.length>0?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
       ${selForns.map(fn=>`<span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px">
         ${fn.length>22?fn.substring(0,20)+"…":fn}
-        <span onclick="removerFornNS('${ns}','${fn.replace(/'/g,"\'")}');event.stopPropagation()"
+        <span data-ns="${ns}" data-fn="${fn.replace(/"/g,'&quot;')}" onclick="removerFornByEl(this);event.stopPropagation()"
           style="cursor:pointer;font-size:13px;line-height:1;color:#2563eb;font-weight:700"
           onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#2563eb'">×</span>
       </span>`).join("")}
@@ -2745,6 +2747,18 @@ function toggleFornDD(ns) {
   dd.style.display = isOpen ? "none" : "flex";
 }
 
+function toggleFornByEl(el) {
+  if (!el) return;
+  const ns   = el.dataset.ns;
+  const forn = el.dataset.fn;
+  if (ns && forn) toggleFornNS(ns, forn);
+}
+function removerFornByEl(el) {
+  if (!el) return;
+  const ns   = el.dataset.ns;
+  const forn = el.dataset.fn;
+  if (ns && forn) removerFornNS(ns, forn);
+}
 function toggleFornNS(ns, forn) {
   const arr = filtros[ns]._fornecedores;
   const idx = arr.indexOf(forn);
@@ -2823,11 +2837,12 @@ function renderFornDDList(ns) {
         const s = sel.includes(fn);
         const invsFn = invoices.filter(i=>i.fornecedor===fn);
         const abertos = invsFn.filter(i=>i.status_pgto==="Em Aberto").length;
-        return `<div onclick="toggleFornNS('${ns}','${fn.replace(/'/g,"\'")}')"
+        return `<div data-ns="${ns}" data-fn="${fn.replace(/"/g,'&quot;')}"
+          onclick="toggleFornByEl(this)"
           style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;font-size:12px;background:${s?"#eff6ff":"#fff"};border-bottom:1px solid #f8fafc"
           onmouseover="this.style.background='${s?"#dbeafe":"#f8fafc"}'"
           onmouseout="this.style.background='${s?"#eff6ff":"#fff"}'">
-          <input type="checkbox" ${s?"checked":""} onclick="event.stopPropagation();toggleFornNS('${ns}','${fn.replace(/'/g,"\'")}');" style="width:14px;height:14px;accent-color:#2563eb;cursor:pointer;flex-shrink:0">
+          <input type="checkbox" ${s?"checked":""} onclick="event.stopPropagation();toggleFornByEl(this.closest('[data-fn]'));" style="width:14px;height:14px;accent-color:#2563eb;cursor:pointer;flex-shrink:0">
           <span style="flex:1;font-weight:${s?"700":"400"};color:${s?"#1d4ed8":"#1e293b"}">${fn}</span>
           <span style="font-size:10px;color:#94a3b8">${invsFn.length}${abertos>0?` • <span style="color:#dc2626">${abertos} ab.</span>`:""}</span>
         </div>`;
