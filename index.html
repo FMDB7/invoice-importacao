@@ -1539,9 +1539,12 @@ function renderFormFields() {
 function updateForm(k, v) {
   formState[k] = v;
   if (k==="emissao_fatura" || k==="cond_pgto") {
-    formState.vencimento = calcVcto(formState.emissao_fatura, formState.cond_pgto);
-    const el = document.getElementById("inp_vencimento");
-    if (el) el.value = formState.vencimento || "";
+    // Só recalcula vencimento se não estiver editando (editIndex nulo) ou se for mudança de emissão
+    if (k==="emissao_fatura" || !editIndex) {
+      formState.vencimento = calcVcto(formState.emissao_fatura, formState.cond_pgto);
+      const el = document.getElementById("inp_vencimento");
+      if (el) el.value = formState.vencimento || "";
+    }
     // Preserve valor_moeda, taxa and reais — do NOT recalculate them
     const vm = document.getElementById("inp_valor_moeda");
     const tx = document.getElementById("inp_taxa");
