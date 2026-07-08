@@ -703,13 +703,18 @@ function renderTab(tab) {
   currentTab = tab;
   renderTabBar();
   const el = document.getElementById("mainContent");
-  if      (tab === "Dashboard")       el.innerHTML = renderDashboard();
-  else if (tab === "Nova Invoice")    { abrirFormInvoice(); el.innerHTML = renderInvoices(); }
-  else if (tab === "Invoices")        el.innerHTML = renderInvoices();
-  else if (tab === "Pagamentos")      el.innerHTML = renderPagamentos();
-  else if (tab === "Fornecedores")    el.innerHTML = renderRelForn();
-  else if (tab === "Análise Cambial") el.innerHTML = renderAnaliseCambial();
-  else if (tab === "Usuários")        el.innerHTML = renderUsuarios();
+  try {
+    if      (tab === "Dashboard")       el.innerHTML = renderDashboard();
+    else if (tab === "Nova Invoice")    { abrirFormInvoice(); renderTab("Invoices"); return; }
+    else if (tab === "Invoices")        el.innerHTML = renderInvoices();
+    else if (tab === "Pagamentos")      el.innerHTML = renderPagamentos();
+    else if (tab === "Fornecedores")    el.innerHTML = renderRelForn();
+    else if (tab === "Análise Cambial") el.innerHTML = renderAnaliseCambial();
+    else if (tab === "Usuários")        el.innerHTML = renderUsuarios();
+  } catch(e) {
+    el.innerHTML = `<div style="padding:24px;color:#dc2626;font-size:13px;font-family:monospace">❌ Erro ao carregar <b>${tab}</b>:<br>${e.message}</div>`;
+    console.error("renderTab error [" + tab + "]:", e);
+  }
 }
 
 // ════════════════════════════════════════════════════════
