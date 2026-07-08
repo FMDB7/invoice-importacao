@@ -1542,6 +1542,13 @@ function updateForm(k, v) {
     formState.vencimento = calcVcto(formState.emissao_fatura, formState.cond_pgto);
     const el = document.getElementById("inp_vencimento");
     if (el) el.value = formState.vencimento || "";
+    // Preserve valor_moeda, taxa and reais — do NOT recalculate them
+    const vm = document.getElementById("inp_valor_moeda");
+    const tx = document.getElementById("inp_taxa");
+    const rs = document.getElementById("inp_reais");
+    if (vm && formState.valor_moeda) vm.value = fmtCurrencyDisplay(formState.valor_moeda);
+    if (tx && formState.taxa) tx.value = parseFloat(formState.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4});
+    if (rs && formState.reais) rs.value = fmtBRL(formState.reais);
   }
   if (k==="taxa" || k==="valor_moeda") {
     const t  = parseFloat(formState.taxa) || 0;
@@ -2342,7 +2349,7 @@ function renderInvoiceRow(i) {
     <td ${cellAttr} style="position:relative">${hint}${i.awb_bl||"—"}</td>
     <td ${cellAttr} style="position:relative;max-width:160px;font-size:11px;color:#475569">${hint}${i.obs&&i.obs.trim()?`<span title="${i.obs}">${i.obs.length>35?i.obs.substring(0,33)+"…":i.obs}</span>`:"—"}</td>
     <td style="white-space:nowrap">
-      ${canInline?`<button class="btn-sm" style="background:#dbeafe;color:#1d4ed8;font-weight:600" onclick="ativarEdicaoInline('${sid}')">✏️ Editar</button>`:`<button class="btn-sm" style="background:#f1f5f9" onclick="editarInvoice('${sid}')">✏️</button>`}
+      <button class="btn-sm" style="background:#dbeafe;color:#1d4ed8;font-weight:600" onclick="editarInvoice('${sid}')">✏️ Editar</button>
       ${pode("pagamento") && i.status_pgto!=="Pago Total" ? `<button class="btn-sm" style="background:#dcfce7;color:#16a34a" onclick="abrirPgto('${sid}')">💰</button>` : ""}
       ${pode("excluir") ? `<button class="btn-sm" style="background:#fee2e2;color:#dc2626" onclick="excluirInvoice('${sid}')">🗑️</button>` : ""}
     </td>
@@ -2490,29 +2497,19 @@ function renderPagamentos() {
 
   // Cards por moeda — Em Aberto e Pago
   const cardsMoeda = MOEDAS.map(m => {
-    const todos    = invoices.filter(i => i.moeda === m);
-    const aberto   = todos.filter(i => i.status_pgto === "Em Aberto" && !!i.vencimento);
-    const pago     = todos.filter(i => i.status_pgto === "Pago Total" || i.status_pgto === "Pago Parcial");
-    const vlAberto = aberto.reduce((s,i) => s + parseCurrency(i.valor_moeda), 0);
-    const vlPago   = pago.reduce((s,i)   => s + parseCurrency(i.valor_moeda), 0);
-    const rlAberto = aberto.reduce((s,i) => s + (parseFloat(i.reais)||0), 0);
-    const rlPago   = pago.reduce((s,i)   => s + (parseFloat(i.reais)||0), 0);
-    if (!vlAberto && !vlPago) return "";
+    const todos  = invoices.filter(i => i.moeda === m);
+    const pago   = todos.filter(i => ["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto));
+    const vlPago = pago.reduce((s,i) => s + parseCurrency(i.valor_moeda), 0);
+    const rlPago = pago.reduce((s,i) => s + (parseFloat(i.reais)||0), 0);
+    if (!vlPago) return "";
     return `<div class="kpi-moeda" style="background:${MOEDA_BG[m]};border-color:${MOEDA_COR[m]}">
       <div style="font-size:13px;font-weight:800;color:${MOEDA_COR[m]};margin-bottom:10px">${SIMBOLO[m]} ${m}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="font-size:11px;color:#dc2626;font-weight:600">⏳ Em Aberto</span>
-        <span style="font-size:10px;color:#64748b">${aberto.length} título(s)</span>
-      </div>
-      <div style="font-size:16px;font-weight:800;color:#dc2626;margin-bottom:1px">${fmtM(vlAberto,m)}</div>
-      <div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:8px">${fmtBRL(rlAberto)}</div>
-      <div style="height:1px;background:${MOEDA_COR[m]}33;margin-bottom:8px"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="font-size:11px;color:#16a34a;font-weight:600">✅ Pago</span>
+        <span style="font-size:11px;color:#16a34a;font-weight:600">✅ Total Pago</span>
         <span style="font-size:10px;color:#64748b">${pago.length} título(s)</span>
       </div>
-      <div style="font-size:16px;font-weight:800;color:#16a34a;margin-bottom:1px">${fmtM(vlPago,m)}</div>
-      <div style="font-size:11px;font-weight:700;color:#16a34a">${fmtBRL(rlPago)}</div>
+      <div style="font-size:22px;font-weight:800;color:${MOEDA_COR[m]};margin-bottom:2px">${fmtM(vlPago,m)}</div>
+      <div style="font-size:13px;font-weight:800;color:#16a34a">${fmtBRL(rlPago)}</div>
     </div>`;
   }).join("");
 
