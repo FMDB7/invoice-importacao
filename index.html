@@ -291,6 +291,7 @@ const MOEDA_COR    = {USD:"#1d4ed8",EUR:"#7c3aed",CHF:"#dc2626",GBP:"#065f46"};
 const MOEDA_BG     = {USD:"#dbeafe",EUR:"#ede9fe",CHF:"#fee2e2",GBP:"#d1fae5"};
 const MOEDA_CHART  = {USD:"#3b82f6",EUR:"#8b5cf6",CHF:"#ef4444",GBP:"#10b981"};
 const STATUS_PGTO  = ["Em Aberto","Pago Parcial","Pago Total","Pago Câmbio Futuro Parcial","Pago Câmbio Futuro"];
+const STATUS_PGTO_PGTO = ["Pago Parcial","Pago Total","Pago Câmbio Futuro Parcial","Pago Câmbio Futuro"];
 const STATUS_CAM   = ["Pendente","Fechado"];
 const COND_PGTO    = ["À Vista","Antecipado","Antecipado 50%","Contra B/L","30 dias","45 dias","60 dias","60DDI 50%","90 dias","120 dias"];
 const COND_DIAS    = {"À Vista":0,"Antecipado":0,"Antecipado 50%":0,"Contra B/L":0,"30 dias":30,"45 dias":45,"60 dias":60,"60DDI 50%":60,"90 dias":90,"120 dias":120};
@@ -779,7 +780,7 @@ function renderStatusBtn(ns) {
     }).join("");
   }
   // Re-render checkboxes inside dropdown
-  STATUS_PGTO.forEach(s => {
+  (ns==="pgto" ? STATUS_PGTO_PGTO : STATUS_PGTO).forEach(s => {
     const el = document.getElementById(`status-chk-${ns}-${s.replace(/ /g,"_")}`);
     if (el) {
       el.checked = f._statuses.includes(s);
@@ -813,7 +814,8 @@ function buildStatusDropdown(ns) {
   const COR   = {["Em Aberto"]:"#dc2626",["Pago Parcial"]:"#d97706",["Pago Total"]:"#16a34a",["Pago Câmbio Futuro Parcial"]:"#2563eb",["Pago Câmbio Futuro"]:"#1d4ed8"};
   const BG    = {["Em Aberto"]:"#fee2e2",["Pago Parcial"]:"#fef3c7",["Pago Total"]:"#dcfce7",["Pago Câmbio Futuro Parcial"]:"#dbeafe",["Pago Câmbio Futuro"]:"#bfdbfe"};
   const IC    = {["Em Aberto"]:"⏳",["Pago Parcial"]:"⚠️",["Pago Total"]:"✅",["Pago Câmbio Futuro Parcial"]:"🔷",["Pago Câmbio Futuro"]:"💱"};
-  const rows  = STATUS_PGTO.map(s => {
+  const statusList = ns==="pgto" ? STATUS_PGTO_PGTO : STATUS_PGTO;
+  const rows  = statusList.map(s => {
     const isSel = sel.includes(s);
     return `<div id="status-row-${ns}-${s.replace(/ /g,"_")}"
       onclick="toggleStatusSel('${ns}','${s}');event.stopPropagation()"
@@ -835,7 +837,7 @@ function buildStatusDropdown(ns) {
     </button>
     <div id="status-dd-${ns}" class="status-dd-menu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.12);min-width:220px;overflow:hidden">
       <div style="padding:8px 12px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:11px;color:#64748b;font-weight:600">${STATUS_PGTO.length} status</span>
+        <span style="font-size:11px;color:#64748b;font-weight:600">${statusList.length} status</span>
         ${hasSel?`<button onclick="limparStatusSel('${ns}')" style="font-size:10px;background:#fee2e2;color:#dc2626;border:none;border-radius:4px;padding:2px 7px;cursor:pointer;font-weight:600">✖ Limpar</button>`:""}
       </div>
       ${rows}
