@@ -2749,27 +2749,54 @@ function toggleFornNS(ns, forn) {
   const arr = filtros[ns]._fornecedores;
   const idx = arr.indexOf(forn);
   if (idx===-1) arr.push(forn); else arr.splice(idx,1);
-  filtros[ns].fornecedores = [...arr];
-  if (ns==="forn") { if(arr.length===1) relForn=arr[0]; else if(arr.length===0) relForn=""; }
-  const tabMap = { forn:"Fornecedores", cambial:"Análise Cambial", pgto:"Pagamentos", inv:"Invoices" };
-  renderTab(tabMap[ns] || currentTab);
+  if (ns==="forn") {
+    filtros.forn.fornecedores = [...arr];
+    if(arr.length===1) relForn=arr[0]; else if(arr.length===0) relForn="";
+    renderTab("Fornecedores");
+  } else if (ns==="cambial") {
+    filtros.cambial.fornecedores = [...arr];
+    renderTab("Análise Cambial");
+  } else {
+    // pgto and inv: just refresh dropdown UI without full re-render
+    renderFornDDList(ns);
+    const trig = document.getElementById(`forn-trig-${ns}`);
+    if (trig) {
+      const trigTxt = arr.length===0 ? "Todos os fornecedores" : arr.length===1 ? arr[0] : `${arr.length} fornecedores`;
+      trig.querySelector("span").textContent = trigTxt;
+      trig.style.border = arr.length>0 ? "1.5px solid #2563eb" : "1.5px solid #e2e8f0";
+      trig.style.boxShadow = arr.length>0 ? "0 0 0 3px #dbeafe" : "";
+    }
+  }
   setTimeout(()=>{ const dd=document.getElementById(`forn-dd-${ns}`); if(dd)dd.style.display="flex"; const el=document.getElementById(`forn-busca-${ns}`); if(el){el.focus();el.value=filtros[ns]._busca_forn||"";} },30);
 }
 
 function removerFornNS(ns, forn) {
   filtros[ns]._fornecedores = filtros[ns]._fornecedores.filter(f=>f!==forn);
-  filtros[ns].fornecedores  = [...filtros[ns]._fornecedores];
-  if (ns==="forn") { if(filtros.forn._fornecedores.length===1) relForn=filtros.forn._fornecedores[0]; else relForn=""; }
-  const tabMap = { forn:"Fornecedores", cambial:"Análise Cambial", pgto:"Pagamentos", inv:"Invoices" };
-  renderTab(tabMap[ns] || currentTab);
+  if (ns==="forn") {
+    filtros.forn.fornecedores = [...filtros.forn._fornecedores];
+    if(filtros.forn._fornecedores.length===1) relForn=filtros.forn._fornecedores[0]; else relForn="";
+    renderTab("Fornecedores");
+  } else if (ns==="cambial") {
+    filtros.cambial.fornecedores = [...filtros.cambial._fornecedores];
+    renderTab("Análise Cambial");
+  } else {
+    // For pgto/inv: apply immediately so chip removal works
+    filtros[ns].fornecedores = [...filtros[ns]._fornecedores];
+    const tabMap = { pgto:"Pagamentos", inv:"Invoices" };
+    renderTab(tabMap[ns] || currentTab);
+  }
 }
 
 function selTodosFornsNS(ns) {
   const todos = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
   filtros[ns]._fornecedores = [...todos];
-  filtros[ns].fornecedores  = [...todos];
-  const tabMap = { forn:"Fornecedores", cambial:"Análise Cambial", pgto:"Pagamentos", inv:"Invoices" };
-  renderTab(tabMap[ns] || currentTab);
+  if (ns==="forn" || ns==="cambial") {
+    filtros[ns].fornecedores = [...todos];
+    const tabMap = { forn:"Fornecedores", cambial:"Análise Cambial" };
+    renderTab(tabMap[ns] || currentTab);
+  } else {
+    renderFornDDList(ns);
+  }
   setTimeout(()=>{ const dd=document.getElementById(`forn-dd-${ns}`); if(dd)dd.style.display="flex"; },30);
 }
 
