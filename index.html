@@ -2412,7 +2412,7 @@ function renderInvoiceRow(i) {
     <td ${cellAttr} style="position:relative;max-width:160px;font-size:11px;color:#475569">${hint}${i.obs&&i.obs.trim()?`<span title="${i.obs}">${i.obs.length>35?i.obs.substring(0,33)+"…":i.obs}</span>`:"—"}</td>
     <td style="white-space:nowrap">
       <button class="btn-sm" style="background:#dbeafe;color:#1d4ed8;font-weight:600" onclick="editarInvoice('${sid}')">✏️ Editar</button>
-      ${pode("pagamento") && i.status_pgto!=="Pago Total" ? `<button class="btn-sm" style="background:#dcfce7;color:#16a34a" onclick="abrirPgto('${sid}')">💰</button>` : ""}
+      ${pode("pagamento") && !["Pago Total","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto) ? `<button class="btn-sm" style="background:#dcfce7;color:#16a34a" onclick="abrirPgto('${sid}')">💰</button>` : ""}
       ${pode("excluir") ? `<button class="btn-sm" style="background:#fee2e2;color:#dc2626" onclick="excluirInvoice('${sid}')">🗑️</button>` : ""}
     </td>
   </tr>`;
@@ -2715,8 +2715,8 @@ function renderPagamentos() {
           <td class="col-data">${fmtD(i.dt_pgto)}</td>
           <td class="col-awb">${i.banco?`<span style="background:#dbeafe;color:#1d4ed8;padding:2px 7px;border-radius:8px;font-size:11px;font-weight:600">${i.banco}</span>`:"—"}</td>
           <td class="col-acoes">
-            ${pode("pagamento") && i.status_pgto!=="Pago Total" ? `<button class="btn-sm" style="background:#dbeafe;color:#1d4ed8" onclick="abrirPgto('${i.id}')">💰 Pagar</button>` : ""}
-            ${pode("pagamento") && (i.status_pgto==="Pago Total"||i.status_pgto==="Pago Parcial") ? `<button class="btn-sm" style="background:#fef3c7;color:#d97706" onclick="desfazerPagamento('${i.id}')">↩ Desfazer</button>` : ""}
+            ${pode("pagamento") && !["Pago Total","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto) ? `<button class="btn-sm" style="background:#dbeafe;color:#1d4ed8" onclick="abrirPgto('${i.id}')">💰 Pagar</button>` : ""}
+            ${pode("pagamento") && ["Pago Total","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto) ? `<button class="btn-sm" style="background:#fef3c7;color:#d97706" onclick="desfazerPagamento('${i.id}')">↩ Desfazer</button>` : ""}
           </td>
         </tr>`).join("")
     }</tbody>
