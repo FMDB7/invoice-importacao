@@ -405,8 +405,8 @@ let realtimeSub    = null;
 let taxasAtivas    = {USD:"",EUR:"",CHF:"",GBP:""};
 
 let filtros = {
-  inv:     {fornecedor:"",status:"",moeda:"",pasta:"",dtIni:"",dtFim:"",_fornecedor:"",_status:"",_moeda:"",_pasta:"",_dtIni:"",_dtFim:"",_busca_pasta:"",fornecedores:[],_fornecedores:[],_busca_forn:"",statuses:["Em Aberto"],_statuses:["Em Aberto"],ocultarSemVcto:true,mesVcto:""},
-  pgto:    {status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:"",bancos:[],_bancos:[],_status:"Todos",statuses:[],_statuses:[],ano:"",mes:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
+  inv:     {fornecedor:"",status:"",moeda:"",pasta:"",dtIni:"",dtFim:"",valorMin:"",valorMax:"",_fornecedor:"",_status:"",_moeda:"",_pasta:"",_dtIni:"",_dtFim:"",_valorMin:"",_valorMax:"",_busca_pasta:"",fornecedores:[],_fornecedores:[],_busca_forn:"",statuses:["Em Aberto"],_statuses:["Em Aberto"],ocultarSemVcto:true,mesVcto:""},
+  pgto:    {status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:"",valorMin:"",valorMax:"",_valorMin:"",_valorMax:"",bancos:[],_bancos:[],_status:"Todos",statuses:[],_statuses:[],ano:"",mes:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
   forn:    {fornecedor:"",dtIni:"",dtFim:"",_fornecedor:"",_dtIni:"",_dtFim:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
   cambial: {fornecedor:"",moeda:"",ano:"",mes:"",_fornecedor:"",_moeda:"",_ano:"",_mes:"",fornecedores:[],_fornecedores:[],_busca_forn:""}
 };
@@ -787,8 +787,8 @@ function filtroBar(ns, campos, onBuscar) {
 function limparFiltro(ns) {
   const f = filtros[ns];
   Object.keys(f).forEach(k => { if (Array.isArray(f[k])) f[k]=[]; else f[k]=""; });
-  if (ns==="pgto") { filtros.pgto.status="Todos"; filtros.pgto._status="Todos"; filtros.pgto.statuses=[]; filtros.pgto._statuses=[]; filtros.pgto.bancos=[]; filtros.pgto._bancos=[]; filtros.pgto.ano=""; filtros.pgto.mes=""; filtros.pgto.fornecedores=[]; filtros.pgto._fornecedores=[]; filtros.pgto._busca_forn=""; }
-  if (ns==="inv")     { filtros.inv._fornecedores=[]; filtros.inv.fornecedores=[]; filtros.inv._busca_forn=""; filtros.inv._busca_pasta=""; filtros.inv._pasta=""; filtros.inv.pasta=""; filtros.inv._statuses=[]; filtros.inv.statuses=[]; filtros.inv.ocultarSemVcto=true; filtros.inv.mesVcto=""; }
+  if (ns==="pgto") { filtros.pgto.status="Todos"; filtros.pgto._status="Todos"; filtros.pgto.statuses=[]; filtros.pgto._statuses=[]; filtros.pgto.bancos=[]; filtros.pgto._bancos=[]; filtros.pgto.ano=""; filtros.pgto.mes=""; filtros.pgto.fornecedores=[]; filtros.pgto._fornecedores=[]; filtros.pgto._busca_forn=""; filtros.pgto.valorMin=""; filtros.pgto.valorMax=""; filtros.pgto._valorMin=""; filtros.pgto._valorMax=""; }
+  if (ns==="inv")     { filtros.inv._fornecedores=[]; filtros.inv.fornecedores=[]; filtros.inv._busca_forn=""; filtros.inv._busca_pasta=""; filtros.inv._pasta=""; filtros.inv.pasta=""; filtros.inv._statuses=[]; filtros.inv.statuses=[]; filtros.inv.ocultarSemVcto=true; filtros.inv.mesVcto=""; filtros.inv.valorMin=""; filtros.inv.valorMax=""; filtros.inv._valorMin=""; filtros.inv._valorMax=""; }
   if (ns==="forn")    { filtros.forn._fornecedores=[]; filtros.forn.fornecedores=[]; filtros.forn._busca_forn=""; relForn=""; }
   if (ns==="cambial") { filtros.cambial._fornecedores=[]; filtros.cambial.fornecedores=[]; filtros.cambial._busca_forn=""; filtros.cambial.ano=""; filtros.cambial._ano=""; filtros.cambial.mes=""; filtros.cambial._mes=""; }
   paginaAtual[ns] = 1;
@@ -954,6 +954,10 @@ function aplicarFiltroInv() {
   filtros.inv._pasta   = filtros.inv.pasta;
   filtros.inv._dtIni   = filtros.inv.dtIni;
   filtros.inv._dtFim   = filtros.inv.dtFim;
+  filtros.inv.valorMin = document.getElementById("f_inv_valorMin")?.value || "";
+  filtros.inv.valorMax = document.getElementById("f_inv_valorMax")?.value || "";
+  filtros.inv._valorMin = filtros.inv.valorMin;
+  filtros.inv._valorMax = filtros.inv.valorMax;
   filtros.inv.fornecedores = [...filtros.inv._fornecedores];
   paginaAtual.inv = 1;
   renderTab("Invoices");
@@ -967,6 +971,10 @@ function aplicarFiltroPgto()    {
   filtros.pgto._statuses = [...filtros.pgto.statuses];
   filtros.pgto._dtIni=filtros.pgto.dtIni;
   filtros.pgto._dtFim=filtros.pgto.dtFim;
+  filtros.pgto.valorMin = document.getElementById("f_pgto_valorMin")?.value || "";
+  filtros.pgto.valorMax = document.getElementById("f_pgto_valorMax")?.value || "";
+  filtros.pgto._valorMin = filtros.pgto.valorMin;
+  filtros.pgto._valorMax = filtros.pgto.valorMax;
   filtros.pgto.bancos=[...filtros.pgto._bancos];
   filtros.pgto.fornecedores=[...filtros.pgto._fornecedores];
   paginaAtual.pgto = 1;
@@ -1022,6 +1030,8 @@ function getInvFiltradas() {
     if (f.dtIni  && i.vencimento && i.vencimento < f.dtIni) return false;
     if (f.dtFim  && i.vencimento && i.vencimento > f.dtFim) return false;
     if (f.mesVcto && i.vencimento && i.vencimento.substring(0,7) !== f.mesVcto) return false;
+    if (f.valorMin !== "" && f.valorMin !== undefined) { const v = parseFloat(i.reais)||0; if (v < parseFloat(f.valorMin)) return false; }
+    if (f.valorMax !== "" && f.valorMax !== undefined) { const v = parseFloat(i.reais)||0; if (v > parseFloat(f.valorMax)) return false; }
     return true;
   }).sort((a,b) => {
     const va = a.vencimento || "9999-12-31";
@@ -1041,6 +1051,8 @@ function filtroAtivoTxt(ns) {
   if (f.moeda)                        p.push(`Moeda: ${f.moeda}`);
   if (f.status && f.status!=="Todos") p.push(`Status: ${f.status}`);
   if (ns==="inv" && f.pasta)          p.push(`Pasta: ${f.pasta}`);
+  if (f.valorMin)                     p.push(`Val. ≥ ${fmtBRL(parseFloat(f.valorMin))}`);
+  if (f.valorMax)                     p.push(`Val. ≤ ${fmtBRL(parseFloat(f.valorMax))}`);
   if (f.dtIni)                        p.push(`De: ${fmtD(f.dtIni)}`);
   if (f.dtFim)                        p.push(`Até: ${fmtD(f.dtFim)}`);
   if (ns==="cambial" && f.ano)        p.push(`Ano: ${f.ano}`);
@@ -2284,6 +2296,14 @@ function renderInvoices() {
       <label class="form-label">Vcto Final</label>
       <input type="date" id="f_inv_dtFim" value="${filtros.inv._dtFim||""}" onchange="filtros.inv._dtFim=this.value">
     </div>
+    <div>
+      <label class="form-label">Valor R$ Mín</label>
+      <input type="number" id="f_inv_valorMin" value="${filtros.inv._valorMin||''}" oninput="filtros.inv._valorMin=this.value" placeholder="0,00" style="width:110px">
+    </div>
+    <div>
+      <label class="form-label">Valor R$ Máx</label>
+      <input type="number" id="f_inv_valorMax" value="${filtros.inv._valorMax||''}" oninput="filtros.inv._valorMax=this.value" placeholder="0,00" style="width:110px">
+    </div>
     <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:2px;margin-top:auto">
       <button class="btn-search" onclick="aplicarFiltroInv()">🔍 Buscar</button>
       <button class="btn btn-ghost" onclick="limparFiltro('inv')">✖ Limpar</button>
@@ -2503,6 +2523,8 @@ function renderPagamentos() {
   const pgtoFiltraEmAberto = pgtoStatusesAtivos.includes("Em Aberto") || pgtoStatusesAtivos.length === 0;
   const PAGOS_STATUS = ["Pago Total","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"];
   if (pgtoFiltraEmAberto) dados = dados.filter(i => i.status_pgto !== "Em Aberto" || !!i.vencimento || ["À Vista","Antecipado","Antecipado 50%","Contra B/L","60DDI 50%"].includes(i.cond_pgto));
+  if (f.valorMin !== "" && f.valorMin !== undefined) dados = dados.filter(i=>(parseFloat(i.reais)||0) >= parseFloat(f.valorMin));
+  if (f.valorMax !== "" && f.valorMax !== undefined) dados = dados.filter(i=>(parseFloat(i.reais)||0) <= parseFloat(f.valorMax));
   const PAGOS_CAMBIO = ["Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"];
   if (f.dtIni) dados = dados.filter(i=>PAGOS_CAMBIO.includes(i.status_pgto) ? true : (i.dt_pgto&&i.dt_pgto>=f.dtIni));
   if (f.dtFim) dados = dados.filter(i=>PAGOS_CAMBIO.includes(i.status_pgto) ? true : (i.dt_pgto&&i.dt_pgto<=f.dtFim));
@@ -2659,6 +2681,8 @@ function renderPagamentos() {
   <div class="filter-bar">
     ${buildFornDropdownHTML("pgto", todosForns, "Todos os fornecedores")}
     ${buildStatusDropdown("pgto")}
+    <div><label class="form-label">Valor R$ Mín</label><input type="number" id="f_pgto_valorMin" value="${f._valorMin||''}" oninput="filtros.pgto._valorMin=this.value" placeholder="0,00" style="width:110px"></div>
+    <div><label class="form-label">Valor R$ Máx</label><input type="number" id="f_pgto_valorMax" value="${f._valorMax||''}" oninput="filtros.pgto._valorMax=this.value" placeholder="0,00" style="width:110px"></div>
     <div><label class="form-label">Pgto Inicial</label><input type="date" id="f_pgto_dtIni" value="${f._dtIni||""}" onchange="filtros.pgto._dtIni=this.value"></div>
     <div><label class="form-label">Pgto Final</label><input type="date" id="f_pgto_dtFim" value="${f._dtFim||""}" onchange="filtros.pgto._dtFim=this.value"></div>
     ${bancoDropdownHTML}
