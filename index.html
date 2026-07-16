@@ -367,6 +367,23 @@ let currentTab     = "Dashboard";
 let currentUser    = null;   // { id, nome, email, perfil }
 let msAccessToken  = null;
 let editIndex      = null;
+
+function formatValorBRL(input) {
+  // Remove tudo que não é dígito
+  let raw = input.value.replace(/\D/g, "");
+  if (!raw) { input.value = ""; input.dataset.raw = ""; return; }
+  // Formata como BRL: 1.234.567,89
+  const cents = parseInt(raw, 10);
+  const reais = cents / 100;
+  input.value = reais.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  input.dataset.raw = String(reais); // valor numérico real para o filtro
+}
+function getValorRaw(input) {
+  if (!input) return "";
+  const raw = input.dataset.raw || input.value.replace(/\./g, "").replace(",", ".");
+  const n = parseFloat(raw);
+  return isNaN(n) ? "" : String(n);
+}
 const PAGE_SIZE = 15;
 let paginaAtual = { inv:1, pgto:1, forn:1, cambial:1 };
 function irParaPagina(ns, pg) { paginaAtual[ns] = pg; renderTab(currentTab); }
@@ -787,8 +804,8 @@ function filtroBar(ns, campos, onBuscar) {
 function limparFiltro(ns) {
   const f = filtros[ns];
   Object.keys(f).forEach(k => { if (Array.isArray(f[k])) f[k]=[]; else f[k]=""; });
-  if (ns==="pgto") { filtros.pgto.status="Todos"; filtros.pgto._status="Todos"; filtros.pgto.statuses=[]; filtros.pgto._statuses=[]; filtros.pgto.bancos=[]; filtros.pgto._bancos=[]; filtros.pgto.ano=""; filtros.pgto.mes=""; filtros.pgto.fornecedores=[]; filtros.pgto._fornecedores=[]; filtros.pgto._busca_forn=""; filtros.pgto.valorMin=""; filtros.pgto.valorMax=""; filtros.pgto._valorMin=""; filtros.pgto._valorMax=""; }
-  if (ns==="inv")     { filtros.inv._fornecedores=[]; filtros.inv.fornecedores=[]; filtros.inv._busca_forn=""; filtros.inv._busca_pasta=""; filtros.inv._pasta=""; filtros.inv.pasta=""; filtros.inv._statuses=[]; filtros.inv.statuses=[]; filtros.inv.ocultarSemVcto=true; filtros.inv.mesVcto=""; filtros.inv.valorMin=""; filtros.inv.valorMax=""; filtros.inv._valorMin=""; filtros.inv._valorMax=""; }
+  if (ns==="pgto") { filtros.pgto.status="Todos"; filtros.pgto._status="Todos"; filtros.pgto.statuses=[]; filtros.pgto._statuses=[]; filtros.pgto.bancos=[]; filtros.pgto._bancos=[]; filtros.pgto.ano=""; filtros.pgto.mes=""; filtros.pgto.fornecedores=[]; filtros.pgto._fornecedores=[]; filtros.pgto._busca_forn=""; filtros.pgto.valorMin=""; filtros.pgto.valorMax=""; filtros.pgto._valorMin=""; filtros.pgto._valorMax=""; filtros.pgto._valorMinFmt=""; filtros.pgto._valorMaxFmt=""; }
+  if (ns==="inv")     { filtros.inv._fornecedores=[]; filtros.inv.fornecedores=[]; filtros.inv._busca_forn=""; filtros.inv._busca_pasta=""; filtros.inv._pasta=""; filtros.inv.pasta=""; filtros.inv._statuses=[]; filtros.inv.statuses=[]; filtros.inv.ocultarSemVcto=true; filtros.inv.mesVcto=""; filtros.inv.valorMin=""; filtros.inv.valorMax=""; filtros.inv._valorMin=""; filtros.inv._valorMax=""; filtros.inv._valorMinFmt=""; filtros.inv._valorMaxFmt=""; }
   if (ns==="forn")    { filtros.forn._fornecedores=[]; filtros.forn.fornecedores=[]; filtros.forn._busca_forn=""; relForn=""; }
   if (ns==="cambial") { filtros.cambial._fornecedores=[]; filtros.cambial.fornecedores=[]; filtros.cambial._busca_forn=""; filtros.cambial.ano=""; filtros.cambial._ano=""; filtros.cambial.mes=""; filtros.cambial._mes=""; }
   paginaAtual[ns] = 1;
@@ -954,10 +971,15 @@ function aplicarFiltroInv() {
   filtros.inv._pasta   = filtros.inv.pasta;
   filtros.inv._dtIni   = filtros.inv.dtIni;
   filtros.inv._dtFim   = filtros.inv.dtFim;
-  filtros.inv.valorMin = document.getElementById("f_inv_valorMin")?.value || "";
-  filtros.inv.valorMax = document.getElementById("f_inv_valorMax")?.value || "";
+  const invMinEl = document.getElementById("f_inv_valorMin");
+  const invMaxEl = document.getElementById("f_inv_valorMax");
+  filtros.inv.valorMin = getValorRaw(invMinEl);
+  filtros.inv.valorMax = getValorRaw(invMaxEl);
+  filtros.inv._valorMinFmt = invMinEl?.value || "";
+  filtros.inv._valorMaxFmt = invMaxEl?.value || "";
   filtros.inv._valorMin = filtros.inv.valorMin;
   filtros.inv._valorMax = filtros.inv.valorMax;
+  // _valorMinFmt/_valorMaxFmt already set above
   filtros.inv.fornecedores = [...filtros.inv._fornecedores];
   paginaAtual.inv = 1;
   renderTab("Invoices");
@@ -971,10 +993,15 @@ function aplicarFiltroPgto()    {
   filtros.pgto._statuses = [...filtros.pgto.statuses];
   filtros.pgto._dtIni=filtros.pgto.dtIni;
   filtros.pgto._dtFim=filtros.pgto.dtFim;
-  filtros.pgto.valorMin = document.getElementById("f_pgto_valorMin")?.value || "";
-  filtros.pgto.valorMax = document.getElementById("f_pgto_valorMax")?.value || "";
+  const pgtoMinEl = document.getElementById("f_pgto_valorMin");
+  const pgtoMaxEl = document.getElementById("f_pgto_valorMax");
+  filtros.pgto.valorMin = getValorRaw(pgtoMinEl);
+  filtros.pgto.valorMax = getValorRaw(pgtoMaxEl);
+  filtros.pgto._valorMinFmt = pgtoMinEl?.value || "";
+  filtros.pgto._valorMaxFmt = pgtoMaxEl?.value || "";
   filtros.pgto._valorMin = filtros.pgto.valorMin;
   filtros.pgto._valorMax = filtros.pgto.valorMax;
+  // _valorMinFmt/_valorMaxFmt already set above
   filtros.pgto.bancos=[...filtros.pgto._bancos];
   filtros.pgto.fornecedores=[...filtros.pgto._fornecedores];
   paginaAtual.pgto = 1;
@@ -2298,11 +2325,11 @@ function renderInvoices() {
     </div>
     <div>
       <label class="form-label">Valor R$ Mín</label>
-      <input type="number" id="f_inv_valorMin" value="${filtros.inv._valorMin||''}" oninput="filtros.inv._valorMin=this.value" placeholder="0,00" style="width:110px">
+      <input type="text" inputmode="numeric" id="f_inv_valorMin" value="${filtros.inv._valorMinFmt||''}" oninput="formatValorBRL(this);filtros.inv._valorMin=getValorRaw(this)" placeholder="0,00" style="width:120px">
     </div>
     <div>
       <label class="form-label">Valor R$ Máx</label>
-      <input type="number" id="f_inv_valorMax" value="${filtros.inv._valorMax||''}" oninput="filtros.inv._valorMax=this.value" placeholder="0,00" style="width:110px">
+      <input type="text" inputmode="numeric" id="f_inv_valorMax" value="${filtros.inv._valorMaxFmt||''}" oninput="formatValorBRL(this);filtros.inv._valorMax=getValorRaw(this)" placeholder="0,00" style="width:120px">
     </div>
     <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:2px;margin-top:auto">
       <button class="btn-search" onclick="aplicarFiltroInv()">🔍 Buscar</button>
@@ -2681,8 +2708,8 @@ function renderPagamentos() {
   <div class="filter-bar">
     ${buildFornDropdownHTML("pgto", todosForns, "Todos os fornecedores")}
     ${buildStatusDropdown("pgto")}
-    <div><label class="form-label">Valor R$ Mín</label><input type="number" id="f_pgto_valorMin" value="${f._valorMin||''}" oninput="filtros.pgto._valorMin=this.value" placeholder="0,00" style="width:110px"></div>
-    <div><label class="form-label">Valor R$ Máx</label><input type="number" id="f_pgto_valorMax" value="${f._valorMax||''}" oninput="filtros.pgto._valorMax=this.value" placeholder="0,00" style="width:110px"></div>
+    <div><label class="form-label">Valor R$ Mín</label><input type="text" inputmode="numeric" id="f_pgto_valorMin" value="${f._valorMinFmt||''}" oninput="formatValorBRL(this);filtros.pgto._valorMin=getValorRaw(this)" placeholder="0,00" style="width:120px"></div>
+    <div><label class="form-label">Valor R$ Máx</label><input type="text" inputmode="numeric" id="f_pgto_valorMax" value="${f._valorMaxFmt||''}" oninput="formatValorBRL(this);filtros.pgto._valorMax=getValorRaw(this)" placeholder="0,00" style="width:120px"></div>
     <div><label class="form-label">Pgto Inicial</label><input type="date" id="f_pgto_dtIni" value="${f._dtIni||""}" onchange="filtros.pgto._dtIni=this.value"></div>
     <div><label class="form-label">Pgto Final</label><input type="date" id="f_pgto_dtFim" value="${f._dtFim||""}" onchange="filtros.pgto._dtFim=this.value"></div>
     ${bancoDropdownHTML}
