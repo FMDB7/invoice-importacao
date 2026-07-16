@@ -1061,8 +1061,8 @@ function getInvFiltradas() {
     if (f.dtIni  && i.vencimento && i.vencimento < f.dtIni) return false;
     if (f.dtFim  && i.vencimento && i.vencimento > f.dtFim) return false;
     if (f.mesVcto && i.vencimento && i.vencimento.substring(0,7) !== f.mesVcto) return false;
-    if (f.valorMin !== "" && f.valorMin !== undefined) { const v = parseFloat(i.reais)||0; if (v < parseFloat(f.valorMin)) return false; }
-    if (f.valorMax !== "" && f.valorMax !== undefined) { const v = parseFloat(i.reais)||0; if (v > parseFloat(f.valorMax)) return false; }
+    if (f.valorMin !== "" && f.valorMin !== undefined) { const v = parseCurrency(i.valor_moeda)||0; if (v < parseFloat(f.valorMin)) return false; }
+    if (f.valorMax !== "" && f.valorMax !== undefined) { const v = parseCurrency(i.valor_moeda)||0; if (v > parseFloat(f.valorMax)) return false; }
     return true;
   }).sort((a,b) => {
     const va = a.vencimento || "9999-12-31";
@@ -1082,8 +1082,8 @@ function filtroAtivoTxt(ns) {
   if (f.moeda)                        p.push(`Moeda: ${f.moeda}`);
   if (f.status && f.status!=="Todos") p.push(`Status: ${f.status}`);
   if (ns==="inv" && f.pasta)          p.push(`Pasta: ${f.pasta}`);
-  if (f.valorMin)                     p.push(`Val. ≥ ${fmtBRL(parseFloat(f.valorMin))}`);
-  if (f.valorMax)                     p.push(`Val. ≤ ${fmtBRL(parseFloat(f.valorMax))}`);
+  if (f.valorMin)                     p.push(`Moeda ≥ ${parseFloat(f.valorMin).toLocaleString('pt-BR',{minimumFractionDigits:2})}`);
+  if (f.valorMax)                     p.push(`Moeda ≤ ${parseFloat(f.valorMax).toLocaleString('pt-BR',{minimumFractionDigits:2})}`);
   if (f.dtIni)                        p.push(`De: ${fmtD(f.dtIni)}`);
   if (f.dtFim)                        p.push(`Até: ${fmtD(f.dtFim)}`);
   if (ns==="cambial" && f.ano)        p.push(`Ano: ${f.ano}`);
@@ -2328,11 +2328,11 @@ function renderInvoices() {
       <input type="date" id="f_inv_dtFim" value="${filtros.inv._dtFim||""}" onchange="filtros.inv._dtFim=this.value">
     </div>
     <div>
-      <label class="form-label">Valor R$ Mín</label>
+      <label class="form-label">Valor Moeda Mín</label>
       <input type="text" inputmode="numeric" id="f_inv_valorMin" value="${filtros.inv._valorMinFmt||''}" oninput="formatValorBRL(this)" placeholder="0,00" style="width:120px">
     </div>
     <div>
-      <label class="form-label">Valor R$ Máx</label>
+      <label class="form-label">Valor Moeda Máx</label>
       <input type="text" inputmode="numeric" id="f_inv_valorMax" value="${filtros.inv._valorMaxFmt||''}" oninput="formatValorBRL(this)" placeholder="0,00" style="width:120px">
     </div>
     <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:2px;margin-top:auto">
@@ -2554,8 +2554,8 @@ function renderPagamentos() {
   const pgtoFiltraEmAberto = pgtoStatusesAtivos.includes("Em Aberto") || pgtoStatusesAtivos.length === 0;
   const PAGOS_STATUS = ["Pago Total","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"];
   if (pgtoFiltraEmAberto) dados = dados.filter(i => i.status_pgto !== "Em Aberto" || !!i.vencimento || ["À Vista","Antecipado","Antecipado 50%","Contra B/L","60DDI 50%"].includes(i.cond_pgto));
-  if (f.valorMin !== "" && f.valorMin !== undefined) dados = dados.filter(i=>(parseFloat(i.reais)||0) >= parseFloat(f.valorMin));
-  if (f.valorMax !== "" && f.valorMax !== undefined) dados = dados.filter(i=>(parseFloat(i.reais)||0) <= parseFloat(f.valorMax));
+  if (f.valorMin !== "" && f.valorMin !== undefined) dados = dados.filter(i=>(parseCurrency(i.valor_moeda)||0) >= parseFloat(f.valorMin));
+  if (f.valorMax !== "" && f.valorMax !== undefined) dados = dados.filter(i=>(parseCurrency(i.valor_moeda)||0) <= parseFloat(f.valorMax));
   const PAGOS_CAMBIO = ["Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"];
   if (f.dtIni) dados = dados.filter(i=>PAGOS_CAMBIO.includes(i.status_pgto) ? true : (i.dt_pgto&&i.dt_pgto>=f.dtIni));
   if (f.dtFim) dados = dados.filter(i=>PAGOS_CAMBIO.includes(i.status_pgto) ? true : (i.dt_pgto&&i.dt_pgto<=f.dtFim));
@@ -2712,8 +2712,8 @@ function renderPagamentos() {
   <div class="filter-bar">
     ${buildFornDropdownHTML("pgto", todosForns, "Todos os fornecedores")}
     ${buildStatusDropdown("pgto")}
-    <div><label class="form-label">Valor R$ Mín</label><input type="text" inputmode="numeric" id="f_pgto_valorMin" value="${f._valorMinFmt||''}" oninput="formatValorBRL(this)" placeholder="0,00" style="width:120px"></div>
-    <div><label class="form-label">Valor R$ Máx</label><input type="text" inputmode="numeric" id="f_pgto_valorMax" value="${f._valorMaxFmt||''}" oninput="formatValorBRL(this)" placeholder="0,00" style="width:120px"></div>
+    <div><label class="form-label">Valor Moeda Mín</label><input type="text" inputmode="numeric" id="f_pgto_valorMin" value="${f._valorMinFmt||''}" oninput="formatValorBRL(this)" placeholder="0,00" style="width:120px"></div>
+    <div><label class="form-label">Valor Moeda Máx</label><input type="text" inputmode="numeric" id="f_pgto_valorMax" value="${f._valorMaxFmt||''}" oninput="formatValorBRL(this)" placeholder="0,00" style="width:120px"></div>
     <div><label class="form-label">Pgto Inicial</label><input type="date" id="f_pgto_dtIni" value="${f._dtIni||""}" onchange="filtros.pgto._dtIni=this.value"></div>
     <div><label class="form-label">Pgto Final</label><input type="date" id="f_pgto_dtFim" value="${f._dtFim||""}" onchange="filtros.pgto._dtFim=this.value"></div>
     ${bancoDropdownHTML}
