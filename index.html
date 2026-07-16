@@ -427,7 +427,7 @@ let taxasAtivas    = {USD:"",EUR:"",CHF:"",GBP:""};
 
 let filtros = {
   inv:     {fornecedor:"",status:"",moeda:"",pasta:"",dtIni:"",dtFim:"",valorMin:"",valorMax:"",_fornecedor:"",_status:"",_moeda:"",_pasta:"",_dtIni:"",_dtFim:"",_valorMin:"",_valorMax:"",_busca_pasta:"",fornecedores:[],_fornecedores:[],_busca_forn:"",statuses:["Em Aberto"],_statuses:["Em Aberto"],ocultarSemVcto:true,mesVcto:""},
-  pgto:    {status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:"",valorMin:"",valorMax:"",_valorMin:"",_valorMax:"",bancos:[],_bancos:[],_status:"Todos",statuses:[],_statuses:[],ano:"",mes:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
+  pgto:    {status:"Todos",dtIni:"",dtFim:"",_dtIni:"",_dtFim:"",moeda:"",_moeda:"",valorMin:"",valorMax:"",_valorMin:"",_valorMax:"",bancos:[],_bancos:[],_status:"Todos",statuses:[],_statuses:[],ano:"",mes:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
   forn:    {fornecedor:"",dtIni:"",dtFim:"",_fornecedor:"",_dtIni:"",_dtFim:"",fornecedores:[],_fornecedores:[],_busca_forn:""},
   cambial: {fornecedor:"",moeda:"",ano:"",mes:"",_fornecedor:"",_moeda:"",_ano:"",_mes:"",fornecedores:[],_fornecedores:[],_busca_forn:""}
 };
@@ -808,7 +808,7 @@ function filtroBar(ns, campos, onBuscar) {
 function limparFiltro(ns) {
   const f = filtros[ns];
   Object.keys(f).forEach(k => { if (Array.isArray(f[k])) f[k]=[]; else f[k]=""; });
-  if (ns==="pgto") { filtros.pgto.status="Todos"; filtros.pgto._status="Todos"; filtros.pgto.statuses=[]; filtros.pgto._statuses=[]; filtros.pgto.bancos=[]; filtros.pgto._bancos=[]; filtros.pgto.ano=""; filtros.pgto.mes=""; filtros.pgto.fornecedores=[]; filtros.pgto._fornecedores=[]; filtros.pgto._busca_forn=""; filtros.pgto.valorMin=""; filtros.pgto.valorMax=""; filtros.pgto._valorMin=""; filtros.pgto._valorMax=""; filtros.pgto._valorMinFmt=""; filtros.pgto._valorMaxFmt=""; }
+  if (ns==="pgto") { filtros.pgto.status="Todos"; filtros.pgto._status="Todos"; filtros.pgto.statuses=[]; filtros.pgto._statuses=[]; filtros.pgto.bancos=[]; filtros.pgto._bancos=[]; filtros.pgto.ano=""; filtros.pgto.mes=""; filtros.pgto.moeda=""; filtros.pgto._moeda=""; filtros.pgto.fornecedores=[]; filtros.pgto._fornecedores=[]; filtros.pgto._busca_forn=""; filtros.pgto.valorMin=""; filtros.pgto.valorMax=""; filtros.pgto._valorMin=""; filtros.pgto._valorMax=""; filtros.pgto._valorMinFmt=""; filtros.pgto._valorMaxFmt=""; }
   if (ns==="inv")     { filtros.inv._fornecedores=[]; filtros.inv.fornecedores=[]; filtros.inv._busca_forn=""; filtros.inv._busca_pasta=""; filtros.inv._pasta=""; filtros.inv.pasta=""; filtros.inv._statuses=[]; filtros.inv.statuses=[]; filtros.inv.ocultarSemVcto=true; filtros.inv.mesVcto=""; filtros.inv.valorMin=""; filtros.inv.valorMax=""; filtros.inv._valorMin=""; filtros.inv._valorMax=""; filtros.inv._valorMinFmt=""; filtros.inv._valorMaxFmt=""; }
   if (ns==="forn")    { filtros.forn._fornecedores=[]; filtros.forn.fornecedores=[]; filtros.forn._busca_forn=""; relForn=""; }
   if (ns==="cambial") { filtros.cambial._fornecedores=[]; filtros.cambial.fornecedores=[]; filtros.cambial._busca_forn=""; filtros.cambial.ano=""; filtros.cambial._ano=""; filtros.cambial.mes=""; filtros.cambial._mes=""; }
@@ -1006,6 +1006,8 @@ function aplicarFiltroPgto()    {
   filtros.pgto._valorMin = filtros.pgto.valorMin;
   filtros.pgto._valorMax = filtros.pgto.valorMax;
   // _valorMinFmt/_valorMaxFmt already set above
+  filtros.pgto.moeda = document.getElementById("f_pgto_moeda")?.value || "";
+  filtros.pgto._moeda = filtros.pgto.moeda;
   filtros.pgto.bancos=[...filtros.pgto._bancos];
   filtros.pgto.fornecedores=[...filtros.pgto._fornecedores];
   paginaAtual.pgto = 1;
@@ -1082,6 +1084,7 @@ function filtroAtivoTxt(ns) {
   if (f.moeda)                        p.push(`Moeda: ${f.moeda}`);
   if (f.status && f.status!=="Todos") p.push(`Status: ${f.status}`);
   if (ns==="inv" && f.pasta)          p.push(`Pasta: ${f.pasta}`);
+  if (ns==="pgto" && f.moeda)         p.push(`Moeda: ${f.moeda}`);
   if (f.valorMin)                     p.push(`Moeda ≥ ${parseFloat(f.valorMin).toLocaleString('pt-BR',{minimumFractionDigits:2})}`);
   if (f.valorMax)                     p.push(`Moeda ≤ ${parseFloat(f.valorMax).toLocaleString('pt-BR',{minimumFractionDigits:2})}`);
   if (f.dtIni)                        p.push(`De: ${fmtD(f.dtIni)}`);
@@ -2554,6 +2557,7 @@ function renderPagamentos() {
   const pgtoFiltraEmAberto = pgtoStatusesAtivos.includes("Em Aberto") || pgtoStatusesAtivos.length === 0;
   const PAGOS_STATUS = ["Pago Total","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"];
   if (pgtoFiltraEmAberto) dados = dados.filter(i => i.status_pgto !== "Em Aberto" || !!i.vencimento || ["À Vista","Antecipado","Antecipado 50%","Contra B/L","60DDI 50%"].includes(i.cond_pgto));
+  if (f.moeda) dados = dados.filter(i=>i.moeda===f.moeda);
   if (f.valorMin !== "" && f.valorMin !== undefined) dados = dados.filter(i=>(parseCurrency(i.valor_moeda)||0) >= parseFloat(f.valorMin));
   if (f.valorMax !== "" && f.valorMax !== undefined) dados = dados.filter(i=>(parseCurrency(i.valor_moeda)||0) <= parseFloat(f.valorMax));
   const PAGOS_CAMBIO = ["Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"];
@@ -2712,6 +2716,13 @@ function renderPagamentos() {
   <div class="filter-bar">
     ${buildFornDropdownHTML("pgto", todosForns, "Todos os fornecedores")}
     ${buildStatusDropdown("pgto")}
+    <div>
+      <label class="form-label">Moeda</label>
+      <select id="f_pgto_moeda" onchange="filtros.pgto._moeda=this.value">
+        <option value=""${!f._moeda?" selected":""}>Todas</option>
+        ${MOEDAS.map(m=>`<option value="${m}"${f._moeda===m?" selected":""}>${m}</option>`).join("")}
+      </select>
+    </div>
     <div><label class="form-label">Valor Moeda Mín</label><input type="text" inputmode="numeric" id="f_pgto_valorMin" value="${f._valorMinFmt||''}" oninput="formatValorBRL(this)" placeholder="0,00" style="width:120px"></div>
     <div><label class="form-label">Valor Moeda Máx</label><input type="text" inputmode="numeric" id="f_pgto_valorMax" value="${f._valorMaxFmt||''}" oninput="formatValorBRL(this)" placeholder="0,00" style="width:120px"></div>
     <div><label class="form-label">Pgto Inicial</label><input type="date" id="f_pgto_dtIni" value="${f._dtIni||""}" onchange="filtros.pgto._dtIni=this.value"></div>
@@ -3274,6 +3285,7 @@ function exportCSVPgto(){
   if(f.dtFim)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto<=f.dtFim);
   if(f.ano)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto.substring(0,4)===f.ano);
   if(f.mes)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto.substring(5,7)===f.mes);
+  if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
   if(f.bancos&&f.bancos.length>0)dados=dados.filter(i=>f.bancos.includes(i.banco));
   const headers=["Pasta","Nº Invoice","Fornecedor","Cidade","Moeda","Valor Moeda","Taxa Câmbio","Valor R$","Vencimento","Cond. Pgto","Status Pgto","Data Pgto","Banco"];
   const dataRows=dados.map(i=>[csvEsc(i.pasta),csvEsc(i.n_fatura),csvEsc(i.fornecedor),csvEsc(i.cidade),csvEsc(i.moeda),csvNum(i.valor_moeda),csvTaxa(i.taxa),csvNum(i.reais),csvDate(i.vencimento),csvEsc(i.cond_pgto),csvEsc(i.status_pgto),csvDate(i.dt_pgto),csvEsc(i.banco)]);
@@ -3407,6 +3419,7 @@ function exportPDFPgto(){
   if(f.dtFim)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto<=f.dtFim);
   if(f.ano)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto.substring(0,4)===f.ano);
   if(f.mes)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto.substring(5,7)===f.mes);
+  if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
   if(f.bancos&&f.bancos.length>0)dados=dados.filter(i=>f.bancos.includes(i.banco));
   const totR=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totPgR=dados.filter(i=>i.status_pgto==="Pago Total"||i.status_pgto==="Pago Parcial").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
