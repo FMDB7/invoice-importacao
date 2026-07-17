@@ -1620,13 +1620,172 @@ let formState = {};
 
 function abrirFormInvoice(inv) {
   if (!pode("editar") && !pode("nova")) { showToast("Sem permissão para esta ação","err"); return; }
-  formState = inv ? {...inv} : { moeda:"USD", cond_pgto:"À Vista", status_cambio:"Pendente", status_pgto:"Em Aberto" };
+  formState = inv ? {...inv} : { moeda:"USD", cond_pgto:"À Vista", status_cambio:"Pendente", status_pgto:"Em Aberto", n_parcelas:1 };
+  if (!formState.n_parcelas) formState.n_parcelas = 1;
+  parcelasState = [];
   document.getElementById("modalTitle").textContent = (inv && inv.id) ? "✏️ Editar Invoice" : "➕ Nova Invoice";
   renderFormFields();
   abrirModal("modalInvoice");
 }
 
 function flabel(txt) { return `<label class="form-label">${txt}</label>`; }
+
+
+// ════════════════════════════════════════════════════════
+//  PARCELAMENTO
+// ════════════════════════════════════════════════════════
+let parcelasState = []; // [{valor_moeda, reais, vencimento, cond_pgto}]
+
+function calcularParcelas() {
+  const n    = parseInt(formState.n_parcelas) || 1;
+  const vm   = parseCurrency(formState.valor_moeda) || 0;
+  const taxa = parseFloat(formState.taxa) || 0;
+  const emissao = formState.emissao_fatura;
+  const cond    = formState.cond_pgto || "30 dias";
+  if (!vm || n < 1) { parcelasState = []; renderParcelasPreview(); return; }
+
+  // Split valor_moeda into n equal parts (last absorbs rounding diff)
+  const parcBase   = parseFloat((vm / n).toFixed(2));
+  const totalBase  = parseFloat((parcBase * (n-1)).toFixed(2));
+  const parcLast   = parseFloat((vm - totalBase).toFixed(2));
+
+  const diasCond = COND_DIAS[cond] || 30;
+
+  parcelasState = Array.from({length: n}, (_, idx) => {
+    const valMoeda = idx === n-1 ? parcLast : parcBase;
+    const valReais = taxa ? parseFloat((valMoeda * taxa).toFixed(2)) : null;
+    // Vencimento: base + (idx * diasCond) from emissao
+    let vcto = "";
+    if (emissao && diasCond > 0) {
+      const d = new Date(emissao + "T00:00:00");
+      d.setDate(d.getDate() + diasCond * (idx + 1));
+      vcto = d.toISOString().split("T")[0];
+    }
+    return { num: idx+1, valor_moeda: valMoeda, reais: valReais, vencimento: vcto, cond_pgto: cond };
+  });
+  renderParcelasPreview();
+}
+
+function updateParcelVal(idx, field, val) {
+  if (!parcelasState[idx]) return;
+  if (field === "valor_moeda") {
+    const v = parseCurrency(val) || 0;
+    parcelasState[idx].valor_moeda = v;
+    const taxa = parseFloat(formState.taxa) || 0;
+    parcelasState[idx].reais = taxa ? parseFloat((v * taxa).toFixed(2)) : null;
+  } else {
+    parcelasState[idx][field] = val;
+  }
+}
+
+function renderParcelasPreview() {
+  const el = document.getElementById("parcelas-preview");
+  if (!el) return;
+  const n = parseInt(formState.n_parcelas) || 1;
+  if (n <= 1 || !parcelasState.length) { el.innerHTML = ""; return; }
+
+  const totalMoeda = parcelasState.reduce((s,p) => s + (p.valor_moeda||0), 0);
+  const totalReais = parcelasState.reduce((s,p) => s + (p.reais||0), 0);
+
+  const rows = parcelasState.map((p, idx) => `
+    <tr style="background:${idx%2===0?"#f8fafc":"#fff"}">
+      <td style="padding:6px 8px;text-align:center;font-weight:700;color:#2563eb">${p.num}/${n}</td>
+      <td style="padding:6px 8px">
+        <input type="text" inputmode="numeric" value="${fmtCurrencyDisplay(p.valor_moeda)}"
+          oninput="handleParcelCurrency(this,${idx})"
+          style="width:130px;padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px">
+      </td>
+      <td style="padding:6px 8px;color:#16a34a;font-weight:700">${p.reais?fmtBRL(p.reais):"—"}</td>
+      <td style="padding:6px 8px">
+        <input type="date" value="${p.vencimento||""}"
+          onchange="updateParcelVal(${idx},'vencimento',this.value)"
+          style="padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px">
+      </td>
+    </tr>`).join("");
+
+  el.innerHTML = `
+    <div style="margin-top:12px;padding:14px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-weight:700;color:#1d4ed8;font-size:13px">📋 ${n} Parcelas</span>
+        <span style="font-size:11px;color:#64748b">Total: <b style="color:${MOEDA_COR[formState.moeda]||"#1d4ed8"}">${fmtM(totalMoeda,formState.moeda)}</b> = <b style="color:#16a34a">${fmtBRL(totalReais)}</b></span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#dbeafe">
+          <th style="padding:5px 8px;text-align:left;color:#1d4ed8">Parcela</th>
+          <th style="padding:5px 8px;text-align:left;color:#1d4ed8">Valor ${formState.moeda}</th>
+          <th style="padding:5px 8px;text-align:left;color:#1d4ed8">Valor R$</th>
+          <th style="padding:5px 8px;text-align:left;color:#1d4ed8">Vencimento</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div style="margin-top:8px;font-size:10px;color:#64748b">💡 Edite os valores e datas individuais se necessário. Ao salvar, cada parcela será gerada como uma invoice separada.</div>
+    </div>`;
+}
+
+function handleParcelCurrency(el, idx) {
+  let raw = el.value.replace(/[^\d]/g,"");
+  if (!raw) { el.value=""; updateParcelVal(idx,"valor_moeda","0"); return; }
+  const n = parseInt(raw,10)/100;
+  el.value = n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  updateParcelVal(idx,"valor_moeda",n);
+  const taxa = parseFloat(formState.taxa)||0;
+  parcelasState[idx].reais = taxa ? parseFloat((n*taxa).toFixed(2)) : null;
+  const totalMoeda = parcelasState.reduce((s,p)=>s+(p.valor_moeda||0),0);
+  const totalReais = parcelasState.reduce((s,p)=>s+(p.reais||0),0);
+  const summEl = document.querySelector("#parcelas-preview span b:first-child");
+  if (summEl) summEl.textContent = fmtM(totalMoeda,formState.moeda);
+}
+
+async function salvarParcelado() {
+  const n = parseInt(formState.n_parcelas)||1;
+  if (n <= 1 || !parcelasState.length) { await salvarInvoice(); return; }
+  if (!formState.fornecedor || !formState.n_fatura) { showToast("Fornecedor e Nº Invoice são obrigatórios","err"); return; }
+
+  fecharModal("modalInvoice");
+  showToast(`Salvando ${n} parcelas...`,"info");
+
+  let saved = 0;
+  for (let i=0; i<parcelasState.length; i++) {
+    const p = parcelasState[i];
+    const suffix = n > 1 ? `-${String(i+1).padStart(2,"0")}/${n}` : "";
+    const data = {
+      pasta:          formState.pasta         || null,
+      cidade:         formState.cidade        || null,
+      fornecedor:     formState.fornecedor,
+      marca:          formState.marca         || null,
+      n_proforma:     formState.n_proforma    || null,
+      n_fatura:       formState.n_fatura + suffix,
+      awb_bl:         formState.awb_bl        || null,
+      dt_pedido:      formState.dt_pedido     || null,
+      emissao_fatura: formState.emissao_fatura|| null,
+      dt_embarque:    formState.dt_embarque   || null,
+      dt_antecipado:  formState.dt_antecipado || null,
+      cond_pgto:      p.cond_pgto || formState.cond_pgto || null,
+      vencimento:     p.vencimento || null,
+      dt_pgto:        formState.dt_pgto       || null,
+      banco:          formState.banco         || null,
+      taxa:           parseFloat(formState.taxa) || null,
+      moeda:          formState.moeda         || "USD",
+      valor_moeda:    p.valor_moeda           || null,
+      reais:          p.reais                 || null,
+      status_cambio:  formState.status_cambio || "Pendente",
+      status_pgto:    formState.status_pgto   || "Em Aberto",
+      obs:            (formState.obs || "") + (n>1?` [Parcela ${i+1}/${n}]`:"") || null,
+      criado_por:     currentUser?.email      || null
+    };
+    if (!supabaseClient) {
+      invoices.unshift({ id: "demo-"+Date.now()+"-"+i, ...data });
+      saved++;
+    } else {
+      await salvarInvoiceDB(data);
+      saved++;
+    }
+  }
+  parcelasState = [];
+  formState.n_parcelas = 1;
+  renderTab("Invoices");
+  showToast(`✅ ${saved} parcela(s) salva(s) com sucesso!`);
+}
 
 function renderFormFields() {
   const f = formState;
@@ -1670,6 +1829,23 @@ function renderFormFields() {
     <div>${flabel("Status Pagamento")}<select onchange="updateForm('status_pgto',this.value)">${STATUS_PGTO.map(s=>`<option${f.status_pgto===s?" selected":""}>${s}</option>`).join("")}</select></div>
     <div>${flabel("Banco")}<input value="${f.banco||""}" onchange="updateForm('banco',this.value)"></div>
     <div>${flabel("Data Pagamento")}<input type="date" value="${f.dt_pgto||""}" onchange="updateForm('dt_pgto',this.value)"></div>
+    <div style="grid-column:1/-1">
+      <div style="border:1.5px solid #bfdbfe;border-radius:12px;padding:14px;background:#f8fbff;margin-top:4px">
+        <div style="font-weight:700;color:#1d4ed8;font-size:12px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">📦 Parcelamento</div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div>
+            ${flabel("Nº de Parcelas")}
+            <select id="inp_parcelas" onchange="updateForm('n_parcelas',this.value);calcularParcelas()" style="min-width:120px">
+              ${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}"${(f.n_parcelas||1)==n?" selected":""}>${n === 1 ? "1 (sem parcelamento)" : n + "x"}</option>`).join("")}
+            </select>
+          </div>
+          ${(f.n_parcelas||1) > 1 ? `<div style="font-size:11px;color:#64748b;padding-top:16px">
+            Valor por parcela: <b style="color:${MOEDA_COR[f.moeda]||"#1d4ed8"}">${fmtM(parseCurrency(f.valor_moeda)/(f.n_parcelas||1),f.moeda)}</b>
+          </div>` : ""}
+        </div>
+        <div id="parcelas-preview"></div>
+      </div>
+    </div>
     <div style="grid-column:1/-1">${flabel("Observações")}<textarea rows="3" placeholder="Observações..." onchange="updateForm('obs',this.value)" style="resize:vertical">${f.obs||""}</textarea></div>`;
 }
 
