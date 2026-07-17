@@ -1738,8 +1738,11 @@ function handleParcelCurrency(el, idx) {
 
 async function salvarParcelado() {
   const n = parseInt(formState.n_parcelas)||1;
-  if (n <= 1 || !parcelasState.length) { await salvarInvoice(); return; }
+  if (n <= 1) { await salvarInvoice(); return; }
   if (!formState.fornecedor || !formState.n_fatura) { showToast("Fornecedor e Nº Invoice são obrigatórios","err"); return; }
+  // Ensure parcelas are calculated
+  if (!parcelasState.length) calcularParcelas();
+  if (!parcelasState.length) { await salvarInvoice(); return; }
 
   fecharModal("modalInvoice");
   showToast(`Salvando ${n} parcelas...`,"info");
@@ -1835,7 +1838,7 @@ function renderFormFields() {
         <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
           <div>
             ${flabel("Nº de Parcelas")}
-            <select id="inp_parcelas" onchange="updateForm('n_parcelas',this.value);calcularParcelas()" style="min-width:120px">
+            <select id="inp_parcelas" onchange="updateForm('n_parcelas',parseInt(this.value));renderFormFields();calcularParcelas();" style="min-width:120px">
               ${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}"${(f.n_parcelas||1)==n?" selected":""}>${n === 1 ? "1 (sem parcelamento)" : n + "x"}</option>`).join("")}
             </select>
           </div>
@@ -1865,6 +1868,8 @@ function updateForm(k, v) {
     if (vm && formState.valor_moeda) vm.value = fmtCurrencyDisplay(formState.valor_moeda);
     if (tx && formState.taxa) tx.value = parseFloat(formState.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4});
     if (rs && formState.reais) rs.value = fmtBRL(formState.reais);
+    // Recalculate parcelas vencimentos if active
+    if ((formState.n_parcelas||1) > 1) calcularParcelas();
   }
   if (k==="taxa" || k==="valor_moeda") {
     const t  = parseFloat(formState.taxa) || 0;
@@ -1872,6 +1877,8 @@ function updateForm(k, v) {
     formState.reais = (t && vm) ? parseFloat((t*vm).toFixed(2)) : null;
     const el = document.getElementById("inp_reais");
     if (el) el.value = formState.reais ? fmtBRL(formState.reais) : "";
+    // Recalculate parcelas if active
+    if ((formState.n_parcelas||1) > 1) calcularParcelas();
   }
 }
 
