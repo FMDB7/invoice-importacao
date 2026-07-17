@@ -1249,7 +1249,7 @@ document.addEventListener("click", e => {
 //  ALERTAS DE VENCIMENTO
 // ════════════════════════════════════════════════════════
 function alertaVcto(vcto, status) {
-  if (!vcto || ["Pago Total","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(status)) return null;
+  if (!vcto || ["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(status)) return null;
   const diff = (new Date(vcto+"T00:00:00") - new Date()) / 86400000;
   if (diff < 0)  return "vencido";
   if (diff <= 7) return "urgente";
@@ -2378,7 +2378,7 @@ function renderDashboard() {
   <!-- Stats -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
     ${[["📄","#dbeafe","#1d4ed8","Total Invoices",""+invoices.length],
-       ["⏳","#fee2e2","#dc2626","Em Aberto",""+invoices.filter(i=>i.status_pgto==="Em Aberto"&&(i.vencimento||["À Vista","Antecipado","Contra B/L"].includes(i.cond_pgto))).length],
+       ["⏳","#fee2e2","#dc2626","Em Aberto",""+invoices.filter(i=>i.status_pgto==="Em Aberto"&&(i.vencimento||["À Vista","Antecipado","Antecipado 50%","Contra B/L","60DDI 50%"].includes(i.cond_pgto))).length],
        ["⚠️","#fef3c7","#d97706","Pago Parcial",""+invoices.filter(i=>i.status_pgto==="Pago Parcial").length],
        ["✅","#dcfce7","#16a34a","Pago Total",""+invoices.filter(i=>i.status_pgto==="Pago Total").length],
        ["🚨","#fecaca","#991b1b","Vencidos",""+vencidos.length],
@@ -2681,7 +2681,7 @@ function renderInvoiceRow(i) {
     <td ${cellAttr} style="position:relative;max-width:160px;font-size:11px;color:#475569">${hint}${i.obs&&i.obs.trim()?`<span title="${i.obs}">${i.obs.length>35?i.obs.substring(0,33)+"…":i.obs}</span>`:"—"}</td>
     <td style="white-space:nowrap">
       <button class="btn-sm" style="background:#dbeafe;color:#1d4ed8;font-weight:600" onclick="editarInvoice('${sid}')">✏️ Editar</button>
-      ${pode("pagamento") && !["Pago Total","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto) ? `<button class="btn-sm" style="background:#dcfce7;color:#16a34a" onclick="abrirPgto('${sid}')">💰</button>` : ""}
+      ${pode("pagamento") && !["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto) ? `<button class="btn-sm" style="background:#dcfce7;color:#16a34a" onclick="abrirPgto('${sid}')">💰</button>` : ""}
       ${pode("excluir") ? `<button class="btn-sm" style="background:#fee2e2;color:#dc2626" onclick="excluirInvoice('${sid}')">🗑️</button>` : ""}
     </td>
   </tr>`;
@@ -2996,8 +2996,8 @@ function renderPagamentos() {
           <td class="col-data">${fmtD(i.dt_pgto)}</td>
           <td class="col-awb">${i.banco?`<span style="background:#dbeafe;color:#1d4ed8;padding:2px 7px;border-radius:8px;font-size:11px;font-weight:600">${i.banco}</span>`:"—"}</td>
           <td class="col-acoes">
-            ${pode("pagamento") && !["Pago Total","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto) ? `<button class="btn-sm" style="background:#dbeafe;color:#1d4ed8" onclick="abrirPgto('${i.id}')">💰 Pagar</button>` : ""}
-            ${pode("pagamento") && ["Pago Total","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto) ? `<button class="btn-sm" style="background:#fef3c7;color:#d97706" onclick="desfazerPagamento('${i.id}')">↩ Desfazer</button>` : ""}
+            ${pode("pagamento") && !["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto) ? `<button class="btn-sm" style="background:#dbeafe;color:#1d4ed8" onclick="abrirPgto('${i.id}')">💰 Pagar</button>` : ""}
+            ${pode("pagamento") && ["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto) ? `<button class="btn-sm" style="background:#fef3c7;color:#d97706" onclick="desfazerPagamento('${i.id}')">↩ Desfazer</button>` : ""}
           </td>
         </tr>`).join("")
     }</tbody>
