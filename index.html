@@ -3680,7 +3680,6 @@ function exportPDFPgto(){
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pagamentos</title><style>${pdfStyles()}.banco-card{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
   <div class="hdr"><div><h1>💰 Relatório de Pagamentos — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</p></div><div><b>${dados.length}</b> registros</div></div>
   <div class="cards">
-    <div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${dados.filter(i=>i.status_pgto==="Em Aberto").length}</div></div>
     <div class="card" style="background:#fef3c7;border-color:#d97706"><div class="cl">Pago Parcial</div><div class="cv" style="color:#d97706">${dados.filter(i=>i.status_pgto==="Pago Parcial").length}</div></div>
     <div class="card" style="background:#dcfce7;border-color:#16a34a"><div class="cl">Pago Total</div><div class="cv" style="color:#16a34a">${dados.filter(i=>i.status_pgto==="Pago Total").length}</div></div>
     <div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div>
@@ -3688,7 +3687,7 @@ function exportPDFPgto(){
   ${resumoBancoHTML}
   ${pdfResumMoedas(dados,"Resumo por Moeda")}
   <table><thead><tr><th>Pasta</th><th>Cidade</th><th>Nº Invoice</th><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Vencimento</th><th>Cond.</th><th>Status</th><th>Dt.Pgto</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="tot"><b>Total R$:</b> ${fmtBRL(totR)} &nbsp;|&nbsp; <b>Pago:</b> <span style="color:#16a34a">${fmtBRL(totPgR)}</span> &nbsp;|&nbsp; <b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(totAbR)}</span></div>
+  <div class="tot"><b>Total R$:</b> ${fmtBRL(totR)} &nbsp;|&nbsp; <b>Pago:</b> <span style="color:#16a34a">${fmtBRL(totPgR)}</span></div>
   <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado em ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span></div>
   <script>window.print()<\/script></body></html>`);
   w.document.close();
