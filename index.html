@@ -3636,12 +3636,13 @@ function exportPDFPgto(){
   if(f.mes)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto.substring(5,7)===f.mes);
   if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
   if(f.bancos&&f.bancos.length>0)dados=dados.filter(i=>f.bancos.includes(i.banco));
-  const totR=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const totPgR=dados.filter(i=>i.status_pgto==="Pago Total"||i.status_pgto==="Pago Parcial").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const PAGOS_LIST = ["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"];
+  const totPgR=dados.filter(i=>PAGOS_LIST.includes(i.status_pgto)).reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const totR=totPgR; // Total R$ = Total Pago (consistent with Total Geral Pago)
   const totAbR=dados.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
 
   // Resumo por banco com cards visuais
-  const bancosNoRel=[...new Set(dados.filter(i=>i.banco&&(i.status_pgto==="Pago Total"||i.status_pgto==="Pago Parcial")).map(i=>i.banco))].sort();
+  const bancosNoRel=[...new Set(dados.filter(i=>i.banco&&PAGOS_LIST.includes(i.status_pgto)).map(i=>i.banco))].sort();
   const BANCO_CORES=[
     {bg:"#dbeafe",c:"#1d4ed8",brd:"#1d4ed8"},
     {bg:"#dcfce7",c:"#16a34a",brd:"#16a34a"},
@@ -3658,7 +3659,7 @@ function exportPDFPgto(){
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">
         ${bancosNoRel.map((b,idx)=>{
           const cor=BANCO_CORES[idx%BANCO_CORES.length];
-          const pagos=dados.filter(i=>i.banco===b&&(i.status_pgto==="Pago Total"||i.status_pgto==="Pago Parcial"));
+          const pagos=dados.filter(i=>i.banco===b&&PAGOS_LIST.includes(i.status_pgto));
           const tot=pagos.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
           const perc=totPgR>0?((tot/totPgR)*100).toFixed(1)+"%":"—";
           return`<div style="background:${cor.bg};border-radius:10px;padding:14px 18px;border-left:5px solid ${cor.brd};min-width:150px;flex:1;max-width:210px">
@@ -3671,7 +3672,7 @@ function exportPDFPgto(){
       <div style="background:#f0fdf4;border-radius:8px;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border:1px solid #bbf7d0">
         <span style="font-weight:700;color:#16a34a;font-size:12px">✅ TOTAL GERAL PAGO</span>
         <span style="font-weight:800;color:#16a34a;font-size:14px">${fmtBRL(totPgR)}</span>
-        <span style="color:#64748b;font-size:10px">${dados.filter(i=>i.status_pgto==="Pago Total"||i.status_pgto==="Pago Parcial").length} pagamento(s)</span>
+        <span style="color:#64748b;font-size:10px">${dados.filter(i=>PAGOS_LIST.includes(i.status_pgto)).length} pagamento(s)</span>
       </div>
     </div>` : "";
 
