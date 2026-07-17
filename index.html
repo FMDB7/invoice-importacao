@@ -2807,9 +2807,9 @@ function renderPagamentos() {
       ${selBancos.length>0 ? `<div class="banco-chips">${selBancos.map(b=>`<span class="banco-chip">${b}<span class="banco-chip-x" onclick="removerBancoChip('${b.replace(/'/g,"\\'")}')">×</span></span>`).join("")}</div>` : ""}
     </div>`;
 
-  const totPorBanco = [...new Set(dados.filter(i=>i.banco&&(i.status_pgto==="Pago Total"||i.status_pgto==="Pago Parcial")).map(i=>i.banco))].sort()
+  const totPorBanco = [...new Set(dados.filter(i=>i.banco&&["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto)).map(i=>i.banco))].sort()
     .map(b => {
-      const pagos = dados.filter(i=>i.banco===b&&(i.status_pgto==="Pago Total"||i.status_pgto==="Pago Parcial"));
+      const pagos = dados.filter(i=>i.banco===b&&["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto));
       return { banco:b, total:pagos.reduce((s,i)=>s+(parseFloat(i.reais)||0),0), qtd:pagos.length };
     }).filter(b=>b.total>0);
 
@@ -2953,7 +2953,7 @@ function renderPagamentos() {
     <button class="btn btn-primary" onclick="exportPDFPgto()">🖨️ PDF</button>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px">
-    ${[["Em Aberto","#dc2626","#fee2e2"],["Pago Parcial","#d97706","#fef3c7"],["Pago Total","#16a34a","#dcfce7"]].map(([s,c,bg])=>{
+    ${[["Em Aberto","#dc2626","#fee2e2"],["Pago Parcial","#d97706","#fef3c7"],["Pago Total","#16a34a","#dcfce7"],["Pago Câmbio Futuro","#7c3aed","#ede9fe"],["Pago Câmbio Futuro Parcial","#2563eb","#dbeafe"]].map(([s,c,bg])=>{
       const invs = dados.filter(i=>i.status_pgto===s);
       return `<div class="stat" style="background:${bg};border-left:4px solid ${c}">
         <div style="color:${c};font-weight:700;font-size:12px">${s}</div>
@@ -3682,7 +3682,10 @@ function exportPDFPgto(){
   <div class="cards">
     <div class="card" style="background:#fef3c7;border-color:#d97706"><div class="cl">Pago Parcial</div><div class="cv" style="color:#d97706">${dados.filter(i=>i.status_pgto==="Pago Parcial").length}</div></div>
     <div class="card" style="background:#dcfce7;border-color:#16a34a"><div class="cl">Pago Total</div><div class="cv" style="color:#16a34a">${dados.filter(i=>i.status_pgto==="Pago Total").length}</div></div>
-    <div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div>
+    ${dados.filter(i=>i.status_pgto==="Pago Câmbio Futuro Parcial").length>0?`<div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Câmbio Futuro Parcial</div><div class="cv" style="color:#2563eb">${dados.filter(i=>i.status_pgto==="Pago Câmbio Futuro Parcial").length}</div></div>`:""}
+    ${dados.filter(i=>i.status_pgto==="Pago Câmbio Futuro").length>0?`<div class="card" style="background:#ede9fe;border-color:#7c3aed"><div class="cl">Câmbio Futuro</div><div class="cv" style="color:#7c3aed">${dados.filter(i=>i.status_pgto==="Pago Câmbio Futuro").length}</div></div>`:""}
+    <div class="card" style="background:#f0fdf4;border-color:#16a34a"><div class="cl">Total Pagamentos</div><div class="cv" style="color:#16a34a">${dados.length}</div></div>
+    <div class="card" style="background:#dbeafe;border-color:#1d4ed8"><div class="cl">Total R$</div><div class="cv" style="color:#1d4ed8">${fmtBRL(totR)}</div></div>
   </div>
   ${resumoBancoHTML}
   ${pdfResumMoedas(dados,"Resumo por Moeda")}
