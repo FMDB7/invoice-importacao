@@ -2381,6 +2381,8 @@ function renderDashboard() {
        ["⏳","#fee2e2","#dc2626","Em Aberto",""+invoices.filter(i=>i.status_pgto==="Em Aberto"&&(i.vencimento||["À Vista","Antecipado","Antecipado 50%","Contra B/L","60DDI 50%"].includes(i.cond_pgto))).length],
        ["⚠️","#fef3c7","#d97706","Pago Parcial",""+invoices.filter(i=>i.status_pgto==="Pago Parcial").length],
        ["✅","#dcfce7","#16a34a","Pago Total",""+invoices.filter(i=>i.status_pgto==="Pago Total").length],
+       ...(invoices.filter(i=>i.status_pgto==="Pago Câmbio Futuro").length>0?[["💱","#ede9fe","#7c3aed","Câmbio Futuro",""+invoices.filter(i=>i.status_pgto==="Pago Câmbio Futuro").length]]:[]),
+       ...(invoices.filter(i=>i.status_pgto==="Pago Câmbio Futuro Parcial").length>0?[["🔷","#dbeafe","#2563eb","Câmbio Fut. Parc.",""+invoices.filter(i=>i.status_pgto==="Pago Câmbio Futuro Parcial").length]]:[]),
        ["🚨","#fecaca","#991b1b","Vencidos",""+vencidos.length],
        ...(currentUser?.perfil==="admin"?[["👥","#ede9fe","#7c3aed","Usuários",""+usuarios.filter(u=>u.ativo).length]]:[])
     ].map(([ic,bg,c,lb,vl])=>`<div class="stat" style="background:${bg}"><div style="font-size:20px">${ic}</div><div style="font-size:24px;font-weight:700;color:${c}">${vl}</div><div class="stat-label" style="color:${c}">${lb}</div></div>`).join("")}
