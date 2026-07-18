@@ -1436,14 +1436,14 @@ function renderGraficoMensalMoedas(invs) {
 
   // ── SVG Layout Constants ─────────────────────────────────────────────
   const CORES = { USD:"#3b82f6", EUR:"#8b5cf6", CHF:"#ef4444", GBP:"#10b981" };
-  const PAD_L = 44, PAD_R = 50, PAD_T = 16, PAD_B = 36;
-  const W = Math.max(400, meses.length * 58 + PAD_L + PAD_R);
-  const H = 210;
+  const PAD_L = 36, PAD_R = 42, PAD_T = 10, PAD_B = 28;
+  const W = Math.max(360, meses.length * 52 + PAD_L + PAD_R);
+  const H = 155;
   const chartW = W - PAD_L - PAD_R;
   const chartH = H - PAD_T - PAD_B;
   // Bar width = 28% of slot → 72% gap — slim & elegant
   const gap = chartW / meses.length;
-  const bW = Math.max(10, Math.floor(gap * 0.28));
+  const bW = Math.max(8, Math.floor(gap * 0.22));
 
   const maxVol = Math.max(...dadosMes.map(d => d._totalReais), 1);
 
@@ -1451,7 +1451,7 @@ function renderGraficoMensalMoedas(invs) {
   const tipId = "chart-tip-" + Date.now();
 
   // ── Grid Lines (Y left 0-100%) ───────────────────────────────────────
-  const gridLines = [0,25,50,75,100].map(pct => {
+  const gridLines = [0,50,100].map(pct => {
     const y = PAD_T + chartH - (pct/100)*chartH;
     return `<line x1="${PAD_L}" y1="${y.toFixed(1)}" x2="${W-PAD_R}" y2="${y.toFixed(1)}"
       stroke="${pct===0?"#cbd5e1":"#f0f4f8"}" stroke-width="${pct===0?1:0.8}" stroke-dasharray="${pct===0?"":"5,4"}"/>
@@ -1464,8 +1464,8 @@ function renderGraficoMensalMoedas(invs) {
   const rightLabels = [0,0.25,0.5,0.75,1].map(f => {
     const y = PAD_T + chartH - f*chartH;
     const v = f * maxVol;
-    return `<text x="${(W-PAD_R+6).toFixed(1)}" y="${(y+3.5).toFixed(1)}"
-      font-size="9" fill="#93c5fd" font-weight="600">${fmtM(v)}</text>`;
+    return `<text x="${(W-PAD_R+5).toFixed(1)}" y="${(y+3.5).toFixed(1)}"
+      font-size="8" fill="#93c5fd" font-weight="600">${fmtM(v)}</text>`;
   }).join("");
 
   // ── Stacked 100% Columns ─────────────────────────────────────────────
@@ -1535,14 +1535,14 @@ function renderGraficoMensalMoedas(invs) {
     }
   }
   const lineDots = linePoints.map(([x,y]) =>
-    `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#fff" stroke="#3b82f6" stroke-width="2"/>`
+    `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="#fff" stroke="#3b82f6" stroke-width="1.8"/>`
   ).join("");
 
   // ── X-axis labels ────────────────────────────────────────────────────
   const xLabels = dadosMes.map((d, idx) => {
     const cx = PAD_L + idx * gap + gap/2;
-    return `<text x="${cx.toFixed(1)}" y="${(H-8).toFixed(1)}" text-anchor="middle"
-      font-size="10" font-weight="600" fill="#475569">${nomeMes(d.mes)}</text>`;
+    return `<text x="${cx.toFixed(1)}" y="${(H-6).toFixed(1)}" text-anchor="middle"
+      font-size="9" font-weight="600" fill="#64748b">${nomeMes(d.mes)}</text>`;
   }).join("");
 
   // ── Legend ───────────────────────────────────────────────────────────
@@ -1550,8 +1550,8 @@ function renderGraficoMensalMoedas(invs) {
   const legenda = moedasPresentes.map(m => {
     const reaisM = dadosMes.reduce((s,d) => s+(d[m+"_reais"]||0), 0);
     const pctM   = totalGeral > 0 ? ((reaisM/totalGeral)*100).toFixed(1) : "0.0";
-    return `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;font-size:12px">
-      <span style="width:14px;height:14px;border-radius:4px;background:${CORES[m]||"#94a3b8"};display:inline-block;opacity:.88"></span>
+    return `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:11px">
+      <span style="width:10px;height:10px;border-radius:3px;background:${CORES[m]||"#94a3b8"};display:inline-block;opacity:.88"></span>
       <span style="font-weight:700;color:${CORES[m]||"#94a3b8"}">${m}</span>
       <span style="background:${CORES[m]||"#94a3b8"}20;color:${CORES[m]||"#94a3b8"};border:1px solid ${CORES[m]||"#94a3b8"}40;border-radius:10px;padding:0 6px;font-size:10px;font-weight:700">${pctM}%</span>
     </span>`;
@@ -1565,17 +1565,17 @@ function renderGraficoMensalMoedas(invs) {
   </span>`;
 
   // ── Axis titles ──────────────────────────────────────────────────────
-  const yLeftTitle  = `<text transform="rotate(-90)" x="${-(PAD_T+chartH/2).toFixed(0)}" y="13" text-anchor="middle" font-size="10" fill="#94a3b8">% do Volume Mensal</text>`;
-  const yRightTitle = `<text transform="rotate(90)" x="${(PAD_T+chartH/2).toFixed(0)}" y="${-(W-14).toFixed(0)}" text-anchor="middle" font-size="10" fill="#3b82f6">Volume Total R$</text>`;
+  const yLeftTitle  = "";
+  const yRightTitle = "";
 
   return `<div class="card" style="overflow:hidden">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <div style="font-weight:700;color:#1e3a5f;font-size:13px">📊 Distribuição por Moeda % Volume Total — por Mês</div>
-      <div style="font-size:10px;color:#94a3b8">Colunas 100% empilhadas · Linha = Volume R$ (eixo direito)</div>
+      <div style="font-size:9px;color:#94a3b8">100% empilhado · ── Volume R$</div>
     </div>
     <div style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:4px">${legenda}</div>
     <div style="overflow-x:auto;position:relative">
-      <svg id="combo-chart" viewBox="0 0 ${W} ${H}" style="width:100%;min-width:${Math.min(W,320)}px;display:block;overflow:visible">
+      <svg id="combo-chart" viewBox="0 0 ${W} ${H}" style="width:100%;min-width:${Math.min(W,280)}px;display:block;overflow:visible">
         <!-- Grid -->
         ${gridLines}
         <!-- Right labels -->
