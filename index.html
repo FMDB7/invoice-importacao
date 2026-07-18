@@ -1436,13 +1436,14 @@ function renderGraficoMensalMoedas(invs) {
 
   // ── SVG Layout Constants ─────────────────────────────────────────────
   const CORES = { USD:"#3b82f6", EUR:"#8b5cf6", CHF:"#ef4444", GBP:"#10b981" };
-  const PAD_L = 46, PAD_R = 54, PAD_T = 18, PAD_B = 40;
-  const W = Math.max(420, meses.length * 62 + PAD_L + PAD_R);
-  const H = 200;
+  const PAD_L = 44, PAD_R = 50, PAD_T = 16, PAD_B = 36;
+  const W = Math.max(400, meses.length * 58 + PAD_L + PAD_R);
+  const H = 210;
   const chartW = W - PAD_L - PAD_R;
   const chartH = H - PAD_T - PAD_B;
-  const bW = Math.min(48, Math.floor(chartW / meses.length * 0.52));
+  // Bar width = 28% of slot → 72% gap — slim & elegant
   const gap = chartW / meses.length;
+  const bW = Math.max(10, Math.floor(gap * 0.28));
 
   const maxVol = Math.max(...dadosMes.map(d => d._totalReais), 1);
 
@@ -1453,18 +1454,18 @@ function renderGraficoMensalMoedas(invs) {
   const gridLines = [0,25,50,75,100].map(pct => {
     const y = PAD_T + chartH - (pct/100)*chartH;
     return `<line x1="${PAD_L}" y1="${y.toFixed(1)}" x2="${W-PAD_R}" y2="${y.toFixed(1)}"
-      stroke="${pct===0?"#94a3b8":"#e2e8f0"}" stroke-width="${pct===0?1.5:1}" stroke-dasharray="${pct===0?"":"4,3"}"/>
+      stroke="${pct===0?"#cbd5e1":"#f0f4f8"}" stroke-width="${pct===0?1:0.8}" stroke-dasharray="${pct===0?"":"5,4"}"/>
       <text x="${(PAD_L-5).toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="end"
         font-size="9" fill="#94a3b8">${pct}%</text>`;
   }).join("");
 
   // ── Right Y-axis labels (R$ volume) ─────────────────────────────────
-  const fmtM = v => v>=1000000 ? (v/1000000).toFixed(1).replace(".",",")+"M" : v>=1000 ? (v/1000).toFixed(0)+"k" : v.toFixed(0);
+  const fmtM = v => { if(v===0)return"0"; if(v>=1000000)return Math.round(v/1000000)+"M"; if(v>=1000)return Math.round(v/1000)+"k"; return Math.round(v)+""; };
   const rightLabels = [0,0.25,0.5,0.75,1].map(f => {
     const y = PAD_T + chartH - f*chartH;
     const v = f * maxVol;
-    return `<text x="${(W-PAD_R+7).toFixed(1)}" y="${(y+3.5).toFixed(1)}"
-      font-size="9" fill="#3b82f6" font-weight="600">R$${fmtM(v)}</text>`;
+    return `<text x="${(W-PAD_R+6).toFixed(1)}" y="${(y+3.5).toFixed(1)}"
+      font-size="9" fill="#93c5fd" font-weight="600">${fmtM(v)}</text>`;
   }).join("");
 
   // ── Stacked 100% Columns ─────────────────────────────────────────────
@@ -1474,16 +1475,29 @@ function renderGraficoMensalMoedas(invs) {
     let accH = 0;
     const totalR = d._totalReais || 1;
     // Build segments bottom-up
-    const segs = [...moedasPresentes].reverse().map(m => {
+    // Build segments bottom-up, no per-segment stroke
+    const segments = [...moedasPresentes].reverse().map(m => {
       const pct = d._totalReais > 0 ? (d[m+"_reais"] / d._totalReais) : 0;
       const h   = pct * chartH;
-      if (h < 0.5) return "";
+      if (h < 0.5) return { skip: true };
       const y   = PAD_T + chartH - accH - h;
       accH += h;
-      const isTop = (accH >= chartH - 0.5);
-      const r = isTop ? 5 : 0;
-      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${h.toFixed(1)}"
-        fill="${CORES[m]||"#94a3b8"}" rx="${r}" ry="${r}" opacity="0.88"/>`;
+      return { m, y, h };
+    }).filter(s => !s.skip);
+    // Top cap rounded on the whole column (last segment = top)
+    const R = 4;
+    const segs = segments.map((s, si) => {
+      const isTop = si === segments.length - 1;
+      if (isTop && s.h >= R*2) {
+        // Rounded top using path
+        const lx = parseFloat(x.toFixed(1));
+        const ly = parseFloat(s.y.toFixed(1));
+        const rw = bW, rh = parseFloat(s.h.toFixed(1));
+        const path = `M${lx+R},${ly} h${rw-2*R} a${R},${R} 0 0 1 ${R},${R} v${rh-R} h-${rw} v-${rh-R} a${R},${R} 0 0 1 ${R},-${R}Z`;
+        return `<path d="${path}" fill="${CORES[s.m]||"#94a3b8"}" opacity="0.9"/>`;
+      }
+      return `<rect x="${x.toFixed(1)}" y="${s.y.toFixed(1)}" width="${bW}" height="${s.h.toFixed(1)}"
+        fill="${CORES[s.m]||"#94a3b8"}" opacity="0.9"/>`;
     }).join("");
 
     // Invisible hover rect for tooltip
@@ -1521,7 +1535,7 @@ function renderGraficoMensalMoedas(invs) {
     }
   }
   const lineDots = linePoints.map(([x,y]) =>
-    `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="#fff" stroke="#3b82f6" stroke-width="2.5"/>`
+    `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#fff" stroke="#3b82f6" stroke-width="2"/>`
   ).join("");
 
   // ── X-axis labels ────────────────────────────────────────────────────
