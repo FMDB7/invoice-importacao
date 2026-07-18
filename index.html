@@ -1568,14 +1568,14 @@ function renderGraficoMensalMoedas(invs) {
   const yLeftTitle  = "";
   const yRightTitle = "";
 
-  return `<div class="card" style="overflow:hidden">
+  return `<div class="card" style="overflow:hidden;padding:10px 12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <div style="font-weight:700;color:#1e3a5f;font-size:13px">📊 Distribuição por Moeda % Volume Total — por Mês</div>
       <div style="font-size:9px;color:#94a3b8">100% empilhado · ── Volume R$</div>
     </div>
     <div style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:4px">${legenda}</div>
     <div style="overflow-x:auto;position:relative">
-      <svg id="combo-chart" viewBox="0 0 ${W} ${H}" style="width:100%;min-width:${Math.min(W,280)}px;display:block;overflow:visible">
+      <svg id="combo-chart" viewBox="0 0 ${W} ${H}" style="width:100%;max-height:155px;min-width:${Math.min(W,280)}px;display:block;overflow:visible">
         <!-- Grid -->
         ${gridLines}
         <!-- Right labels -->
@@ -1616,10 +1616,26 @@ function showChartTip(e, el, tipId) {
         <span style="color:rgba(255,255,255,.7);font-size:11px">${p.pct}%</span>
       </div>`
     ).join("");
+    const fmtFX = (v, m) => {
+      const SYM = {USD:"US$",EUR:"€",CHF:"Fr",GBP:"£"};
+      return (SYM[m]||m)+" "+v.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+    };
+    const rows2 = data.pcts.filter(p=>parseFloat(p.pct)>0).map(p =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;gap:14px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.08)">
+        <span style="display:flex;align-items:center;gap:6px">
+          <span style="width:9px;height:9px;border-radius:3px;background:${CORES[p.m]||"#94a3b8"};flex-shrink:0"></span>
+          <span style="font-weight:700;color:${CORES[p.m]||"#94a3b8"};font-size:11px">${p.m}</span>
+        </span>
+        <span style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">
+          <span style="font-size:11px;font-weight:700;color:#fff">${fmtFX(p.val, p.m)}</span>
+          <span style="font-size:10px;color:rgba(255,255,255,.55)">${fmtBRL2(p.reais)} · <b style="color:#93c5fd">${p.pct}%</b></span>
+        </span>
+      </div>`
+    ).join("");
     tip.innerHTML = `
-      <div style="font-weight:800;color:#fff;margin-bottom:4px;font-size:13px">📅 ${data.mes}</div>
-      <div style="font-weight:700;color:#60a5fa;font-size:16px;margin-bottom:8px">${fmtBRL2(data.total)}</div>
-      ${rows}`;
+      <div style="font-weight:800;color:#fff;margin-bottom:4px;font-size:12px">📅 ${data.mes}</div>
+      <div style="font-weight:700;color:#4ade80;font-size:15px;margin-bottom:7px;border-bottom:1px solid rgba(255,255,255,.15);padding-bottom:6px">Vol. Total: ${fmtBRL2(data.total)}</div>
+      ${rows2}`;
     tip.style.display = "block";
     moveTip(e, tip);
   } catch(err) { tip.style.display = "none"; }
