@@ -1436,12 +1436,12 @@ function renderGraficoMensalMoedas(invs) {
 
   // ── SVG Layout Constants ─────────────────────────────────────────────
   const CORES = { USD:"#3b82f6", EUR:"#8b5cf6", CHF:"#ef4444", GBP:"#10b981" };
-  const PAD_L = 52, PAD_R = 62, PAD_T = 24, PAD_B = 52;
-  const W = Math.max(560, meses.length * 80 + PAD_L + PAD_R);
-  const H = 280;
+  const PAD_L = 46, PAD_R = 54, PAD_T = 18, PAD_B = 40;
+  const W = Math.max(420, meses.length * 62 + PAD_L + PAD_R);
+  const H = 200;
   const chartW = W - PAD_L - PAD_R;
   const chartH = H - PAD_T - PAD_B;
-  const bW = Math.min(60, Math.floor(chartW / meses.length * 0.55));
+  const bW = Math.min(48, Math.floor(chartW / meses.length * 0.52));
   const gap = chartW / meses.length;
 
   const maxVol = Math.max(...dadosMes.map(d => d._totalReais), 1);
@@ -1454,8 +1454,8 @@ function renderGraficoMensalMoedas(invs) {
     const y = PAD_T + chartH - (pct/100)*chartH;
     return `<line x1="${PAD_L}" y1="${y.toFixed(1)}" x2="${W-PAD_R}" y2="${y.toFixed(1)}"
       stroke="${pct===0?"#94a3b8":"#e2e8f0"}" stroke-width="${pct===0?1.5:1}" stroke-dasharray="${pct===0?"":"4,3"}"/>
-      <text x="${(PAD_L-6).toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="end"
-        font-size="10" fill="#94a3b8">${pct}%</text>`;
+      <text x="${(PAD_L-5).toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="end"
+        font-size="9" fill="#94a3b8">${pct}%</text>`;
   }).join("");
 
   // ── Right Y-axis labels (R$ volume) ─────────────────────────────────
@@ -1463,8 +1463,8 @@ function renderGraficoMensalMoedas(invs) {
   const rightLabels = [0,0.25,0.5,0.75,1].map(f => {
     const y = PAD_T + chartH - f*chartH;
     const v = f * maxVol;
-    return `<text x="${(W-PAD_R+8).toFixed(1)}" y="${(y+3.5).toFixed(1)}"
-      font-size="10" fill="#3b82f6" font-weight="600">R$${fmtM(v)}</text>`;
+    return `<text x="${(W-PAD_R+7).toFixed(1)}" y="${(y+3.5).toFixed(1)}"
+      font-size="9" fill="#3b82f6" font-weight="600">R$${fmtM(v)}</text>`;
   }).join("");
 
   // ── Stacked 100% Columns ─────────────────────────────────────────────
@@ -1527,8 +1527,8 @@ function renderGraficoMensalMoedas(invs) {
   // ── X-axis labels ────────────────────────────────────────────────────
   const xLabels = dadosMes.map((d, idx) => {
     const cx = PAD_L + idx * gap + gap/2;
-    return `<text x="${cx.toFixed(1)}" y="${(H-14).toFixed(1)}" text-anchor="middle"
-      font-size="11" font-weight="600" fill="#475569">${nomeMes(d.mes)}</text>`;
+    return `<text x="${cx.toFixed(1)}" y="${(H-8).toFixed(1)}" text-anchor="middle"
+      font-size="10" font-weight="600" fill="#475569">${nomeMes(d.mes)}</text>`;
   }).join("");
 
   // ── Legend ───────────────────────────────────────────────────────────
@@ -1561,7 +1561,7 @@ function renderGraficoMensalMoedas(invs) {
     </div>
     <div style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:4px">${legenda}</div>
     <div style="overflow-x:auto;position:relative">
-      <svg id="combo-chart" viewBox="0 0 ${W} ${H}" style="width:100%;min-width:${Math.min(W,400)}px;display:block;overflow:visible">
+      <svg id="combo-chart" viewBox="0 0 ${W} ${H}" style="width:100%;min-width:${Math.min(W,320)}px;display:block;overflow:visible">
         <!-- Grid -->
         ${gridLines}
         <!-- Right labels -->
