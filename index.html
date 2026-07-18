@@ -112,8 +112,8 @@ body{font-family:'Segoe UI',sans-serif;background:#f1f5f9;font-size:13px;color:#
 
 /* ── LAYOUT ── */
 .content{padding:16px;max-width:1600px;margin:0 auto}
-.card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:14px}
-.stat{border-radius:10px;padding:14px 16px}
+.card{background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:10px}
+.stat{border-radius:10px;padding:10px 12px}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
 
 /* ── FORM CONTROLS ── */
@@ -170,7 +170,7 @@ input:read-only{background:#f8fafc;cursor:default}
 
 /* ── KPI CARDS ── */
 .kpi-label{font-size:11px;color:#64748b;margin-bottom:2px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
-.kpi-moeda{border-radius:10px;padding:14px 16px;border-left:5px solid}
+.kpi-moeda{border-radius:10px;padding:10px 13px;border-left:4px solid}
 .stat-label{font-size:11px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-top:4px}
 
 /* ── FILTER BAR ── */
@@ -2448,7 +2448,7 @@ function renderDashboard() {
       </div>
       <div style="margin-bottom:6px">
         <div class="kpi-label">Total</div>
-        <div style="font-size:20px;font-weight:800;color:${MOEDA_COR[m]};line-height:1">${fmtM(total,m)}</div>
+        <div style="font-size:17px;font-weight:800;color:${MOEDA_COR[m]};line-height:1">${fmtM(total,m)}</div>
         <div style="font-size:12px;font-weight:800;color:#16a34a;margin-top:3px;letter-spacing:-.2px">${fmtBRL(reaisM)}</div>
       </div>
       <div style="margin-bottom:6px">
@@ -2456,14 +2456,14 @@ function renderDashboard() {
           <div class="kpi-label" style="color:#dc2626">Em Aberto</div>
           <span style="font-size:10px;color:#dc2626;font-weight:700">${total>0?((aberto/total)*100).toFixed(1)+"%":""}</span>
         </div>
-        <div style="font-size:17px;font-weight:700;color:#dc2626;line-height:1">${fmtM(aberto,m)}</div>
+        <div style="font-size:14px;font-weight:700;color:#dc2626;line-height:1">${fmtM(aberto,m)}</div>
       </div>
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div class="kpi-label" style="color:#16a34a">Pago</div>
           <span style="font-size:10px;color:#16a34a;font-weight:700">${total>0?((pago/total)*100).toFixed(1)+"%":""}</span>
         </div>
-        <div style="font-size:17px;font-weight:700;color:#16a34a;line-height:1">${fmtM(pago,m)}</div>
+        <div style="font-size:14px;font-weight:700;color:#16a34a;line-height:1">${fmtM(pago,m)}</div>
       </div>
     </div>`;
   }).join("");
@@ -2475,33 +2475,33 @@ function renderDashboard() {
 
 
   <!-- KPIs por Moeda -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:22px">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:14px">
     ${kpisMoeda}
     <div class="kpi-moeda" style="background:#dcfce7;border-color:#16a34a">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <span style="font-size:14px;font-weight:700;color:#16a34a">🇧🇷 REAIS (R$)</span>
         <span style="display:inline-block;background:#16a34a22;color:#16a34a;border:1px solid #16a34a55;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700;line-height:1.6">100%</span>
       </div>
-      <div style="margin-bottom:6px"><div class="kpi-label">Total Geral</div><div style="font-size:20px;font-weight:800;color:#16a34a;line-height:1">${fmtBRL(totReais)}</div></div>
+      <div style="margin-bottom:6px"><div class="kpi-label">Total Geral</div><div style="font-size:17px;font-weight:800;color:#16a34a;line-height:1">${fmtBRL(totReais)}</div></div>
       <div style="margin-bottom:6px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div class="kpi-label" style="color:#dc2626">Em Aberto</div>
           <span style="font-size:10px;color:#dc2626;font-weight:700">${totReais>0?((totReaisAberto/totReais)*100).toFixed(1)+"%":""}</span>
         </div>
-        <div style="font-size:17px;font-weight:700;color:#dc2626;line-height:1">${fmtBRL(totReaisAberto)}</div>
+        <div style="font-size:14px;font-weight:700;color:#dc2626;line-height:1">${fmtBRL(totReaisAberto)}</div>
       </div>
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div class="kpi-label" style="color:#16a34a">Pago</div>
           <span style="font-size:10px;color:#16a34a;font-weight:700">${totReais>0?((totReaisPago/totReais)*100).toFixed(1)+"%":""}</span>
         </div>
-        <div style="font-size:17px;font-weight:700;color:#16a34a;line-height:1">${fmtBRL(totReaisPago)}</div>
+        <div style="font-size:14px;font-weight:700;color:#16a34a;line-height:1">${fmtBRL(totReaisPago)}</div>
       </div>
     </div>
   </div>
 
   <!-- Stats -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
     ${[["📄","#dbeafe","#1d4ed8","Total Invoices",""+invoices.length],
        ["⏳","#fee2e2","#dc2626","Em Aberto",""+invoices.filter(i=>i.status_pgto==="Em Aberto"&&(i.vencimento||["À Vista","Antecipado","Antecipado 50%","Contra B/L","60DDI 50%"].includes(i.cond_pgto))).length],
        ["⚠️","#fef3c7","#d97706","Pago Parcial",""+invoices.filter(i=>i.status_pgto==="Pago Parcial").length],
@@ -2510,10 +2510,10 @@ function renderDashboard() {
        ...(invoices.filter(i=>i.status_pgto==="Pago Câmbio Futuro Parcial").length>0?[["🔷","#dbeafe","#2563eb","Câmbio Fut. Parc.",""+invoices.filter(i=>i.status_pgto==="Pago Câmbio Futuro Parcial").length]]:[]),
        ["🚨","#fecaca","#991b1b","Vencidos",""+vencidos.length],
        ...(currentUser?.perfil==="admin"?[["👥","#ede9fe","#7c3aed","Usuários",""+usuarios.filter(u=>u.ativo).length]]:[])
-    ].map(([ic,bg,c,lb,vl])=>`<div class="stat" style="background:${bg}"><div style="font-size:20px">${ic}</div><div style="font-size:24px;font-weight:700;color:${c}">${vl}</div><div class="stat-label" style="color:${c}">${lb}</div></div>`).join("")}
+    ].map(([ic,bg,c,lb,vl])=>`<div class="stat" style="background:${bg}"><div style="font-size:20px">${ic}</div><div style="font-size:20px;font-weight:700;color:${c}">${vl}</div><div class="stat-label" style="color:${c}">${lb}</div></div>`).join("")}
   </div>
 
-  <div style="margin-bottom:20px">${renderGraficoMensalMoedas(invoices)}</div>
+  <div style="margin-bottom:12px">${renderGraficoMensalMoedas(invoices)}</div>
 
   ${alertas.length ? `<div class="card"><div style="font-weight:700;color:#dc2626;margin-bottom:10px">🚨 Alertas de Vencimento</div>${alertas.slice().sort((a,b)=>(a.vencimento||"9999-12-31")<(b.vencimento||"9999-12-31")?-1:1).map(i=>{
     const a=alertaVcto(i.vencimento,i.status_pgto);
