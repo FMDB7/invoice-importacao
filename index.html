@@ -1402,25 +1402,22 @@ function renderGraficoMoeda(dados, titulo) {
 function renderGraficoMensalMoedas(invs) {
   if (!invs || invs.length === 0) return "";
 
-  // ── Data Aggregation ────────────────────────────────────────────────
+  // ── Data Aggregation — by VENCIMENTO only (all statuses) ─────────────
+  // Only include invoices that have a vencimento date set
+  const comVcto = invs.filter(i => i.vencimento && i.vencimento.trim() !== "");
+
   const mesesSet = new Set();
-  invs.forEach(i => {
-    const dt = i.vencimento || i.emissao_fatura;
-    if (dt) mesesSet.add(dt.substring(0,7));
-  });
+  comVcto.forEach(i => mesesSet.add(i.vencimento.substring(0,7)));
   const meses = [...mesesSet].sort();
   if (meses.length === 0) return "";
-  const moedasPresentes = MOEDAS.filter(m => invs.some(i => i.moeda === m));
+  const moedasPresentes = MOEDAS.filter(m => comVcto.some(i => i.moeda === m));
   if (moedasPresentes.length === 0) return "";
 
   const dadosMes = meses.map(mes => {
     const entry = { mes };
     let totalReais = 0;
     moedasPresentes.forEach(m => {
-      const arr = invs.filter(i => {
-        const dt = i.vencimento || i.emissao_fatura;
-        return i.moeda === m && dt && dt.substring(0,7) === mes;
-      });
+      const arr = comVcto.filter(i => i.moeda === m && i.vencimento.substring(0,7) === mes);
       entry[m]          = arr.reduce((s,i) => s + parseCurrency(i.valor_moeda), 0);
       entry[m+"_reais"] = arr.reduce((s,i) => s + (parseFloat(i.reais)||0), 0);
       totalReais += entry[m+"_reais"];
@@ -1570,7 +1567,7 @@ function renderGraficoMensalMoedas(invs) {
 
   return `<div class="card" style="overflow:hidden;padding:10px 12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-      <div style="font-weight:700;color:#1e3a5f;font-size:13px">📊 Distribuição por Moeda % Volume Total — por Mês</div>
+      <div style="font-weight:700;color:#1e3a5f;font-size:13px">📊 Volume por Moeda — por Mês de Vencimento</div>
       <div style="font-size:9px;color:#94a3b8">100% empilhado · ── Volume R$</div>
     </div>
     <div style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:4px">${legenda}</div>
