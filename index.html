@@ -2434,7 +2434,7 @@ async function verLogAuditoria() {
 //  DASHBOARD
 // ════════════════════════════════════════════════════════
 function renderDashboard() {
-  const totReaisPago   = invoices.filter(i=>i.status_pgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const totReaisPago   = invoices.filter(i=>["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto)).reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totReaisAberto = invoices.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totReais       = invoices.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const vencidos       = invoices.filter(i=>alertaVcto(i.vencimento,i.status_pgto)==="vencido");
@@ -2450,7 +2450,8 @@ function renderDashboard() {
   const kpisMoeda = MOEDAS.map(m => {
     const invs      = invoices.filter(i=>i.moeda===m);
     const aberto    = invs.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
-    const pago      = invs.filter(i=>i.status_pgto==="Pago Total").reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
+    const pago      = invs.filter(i=>["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto)).reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
+    const pagoReais = invs.filter(i=>["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto)).reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
     const total     = invs.reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
     const reaisM    = invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
     if (!total) return "";
@@ -2477,6 +2478,7 @@ function renderDashboard() {
           <span style="font-size:10px;color:#16a34a;font-weight:700">${total>0?((pago/total)*100).toFixed(1)+"%":""}</span>
         </div>
         <div style="font-size:14px;font-weight:700;color:#16a34a;line-height:1">${fmtM(pago,m)}</div>
+        <div style="font-size:11px;font-weight:700;color:#16a34a;opacity:.8;margin-top:2px">${fmtBRL(pagoReais)}</div>
       </div>
     </div>`;
   }).join("");
