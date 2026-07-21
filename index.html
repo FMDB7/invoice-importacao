@@ -2956,9 +2956,12 @@ function renderPagamentos() {
   if (f.mes)   dadosPainel = dadosPainel.filter(i=>i.dt_pgto&&i.dt_pgto.substring(5,7)===f.mes);
   if (f.bancos&&f.bancos.length>0) dadosPainel = dadosPainel.filter(i=>f.bancos.includes(i.banco));
 
-  const totPorBanco = [...new Set(dadosPainel.filter(i=>i.banco).map(i=>i.banco))].sort()
-    .map(b => {
-      const pagos  = dadosPainel.filter(i=>i.banco===b);
+  // Group by banco — normalize case+whitespace to merge duplicates
+  const bancoNorm = b => (b||"").trim().toUpperCase();
+  const bancosUniq = [...new Set(dadosPainel.filter(i=>i.banco).map(i=>bancoNorm(i.banco)))].sort();
+  const totPorBanco = bancosUniq
+    .map(bNorm => {
+      const pagos  = dadosPainel.filter(i=>bancoNorm(i.banco)===bNorm);
       const totalR = pagos.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
       const qtd    = pagos.length;
       const moedas = MOEDAS.map(m=>{
@@ -2967,7 +2970,7 @@ function renderPagamentos() {
         const vR  = arr.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
         return vM>0 ? { m, vM, vR, qtd:arr.length } : null;
       }).filter(Boolean);
-      return { banco:b, totalR, qtd, moedas };
+      return { banco:bNorm, totalR, qtd, moedas };
     }).filter(b=>b.totalR>0);
 
   const resumoBancos = totPorBanco.length>0 ? `<div class="card" style="margin-bottom:14px">
