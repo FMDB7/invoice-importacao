@@ -2958,25 +2958,41 @@ function renderPagamentos() {
 
   const totPorBanco = [...new Set(dadosPainel.filter(i=>i.banco).map(i=>i.banco))].sort()
     .map(b => {
-      const pagos = dadosPainel.filter(i=>i.banco===b);
-      return { banco:b, total:pagos.reduce((s,i)=>s+(parseFloat(i.reais)||0),0), qtd:pagos.length };
-    }).filter(b=>b.total>0);
+      const pagos  = dadosPainel.filter(i=>i.banco===b);
+      const totalR = pagos.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+      const qtd    = pagos.length;
+      const moedas = MOEDAS.map(m=>{
+        const arr = pagos.filter(i=>i.moeda===m);
+        const vM  = arr.reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
+        const vR  = arr.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+        return vM>0 ? { m, vM, vR, qtd:arr.length } : null;
+      }).filter(Boolean);
+      return { banco:b, totalR, qtd, moedas };
+    }).filter(b=>b.totalR>0);
 
-  const resumoBancos = totPorBanco.length>1 ? `<div class="card" style="margin-bottom:14px">
+  const resumoBancos = totPorBanco.length>0 ? `<div class="card" style="margin-bottom:14px">
     <div style="font-weight:700;color:#1e3a5f;margin-bottom:10px">🏦 Resumo por Banco</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
       ${totPorBanco.map((b,idx)=>{
         const cores=["#1d4ed8","#16a34a","#d97706","#7c3aed","#dc2626"];
         const c=cores[idx%cores.length];
-        const bg={["#1d4ed8"]:"#dbeafe","#16a34a":"#dcfce7","#d97706":"#fef3c7","#7c3aed":"#ede9fe","#dc2626":"#fee2e2"}[c]||"#f1f5f9";
-        return `<div style="background:${bg};border-radius:8px;padding:10px 16px;border-left:4px solid ${c};min-width:160px">
-          <div style="font-size:11px;font-weight:700;color:${c};text-transform:uppercase">🏦 ${b.banco}</div>
-          <div style="font-size:17px;font-weight:800;color:${c}">${fmtBRL(b.total)}</div>
-          <div style="font-size:10px;color:#64748b;margin-top:2px">${b.qtd} pagamento(s)</div>
+        const bg={"#1d4ed8":"#dbeafe","#16a34a":"#dcfce7","#d97706":"#fef3c7","#7c3aed":"#ede9fe","#dc2626":"#fee2e2"}[c]||"#f1f5f9";
+        const breakdown = b.moedas.map(mv=>
+          `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-top:1px solid ${c}22">
+            <span style="font-size:10px;font-weight:600;color:${MOEDA_COR[mv.m]||c}">${mv.m}: ${fmtM(mv.vM,mv.m)}</span>
+            <span style="font-size:10px;color:#475569;font-weight:600">${fmtBRL(mv.vR)}</span>
+          </div>`
+        ).join("");
+        return `<div style="background:${bg};border-radius:10px;padding:12px 16px;border-left:4px solid ${c};min-width:200px;flex:1">
+          <div style="font-size:11px;font-weight:700;color:${c};text-transform:uppercase;margin-bottom:6px">🏦 ${b.banco}</div>
+          <div style="font-size:20px;font-weight:800;color:${c};line-height:1">${fmtBRL(b.totalR)}</div>
+          <div style="font-size:10px;color:#64748b;margin-top:2px;margin-bottom:${b.moedas.length>1?"8px":"0"}">${b.qtd} pagamento(s) · Total em R$</div>
+          ${b.moedas.length>1?`<div style="margin-top:4px">${breakdown}</div>`:""}
         </div>`;
       }).join("")}
     </div>
   </div>` : "";
+
 
   // Cards por moeda — use filtered dados (respects ano/mes/fornecedor filters)
   // cardsMoeda removed — panels consolidated into status row below
