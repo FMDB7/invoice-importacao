@@ -2989,8 +2989,8 @@ function renderPagamentos() {
         return `<div style="background:${bg};border-radius:10px;padding:12px 16px;border-left:4px solid ${c};min-width:200px;flex:1">
           <div style="font-size:11px;font-weight:700;color:${c};text-transform:uppercase;margin-bottom:6px">🏦 ${b.banco}</div>
           <div style="font-size:20px;font-weight:800;color:${c};line-height:1">${fmtBRL(b.totalR)}</div>
-          <div style="font-size:10px;color:#64748b;margin-top:2px;margin-bottom:${b.moedas.length>1?"8px":"0"}">${b.qtd} pagamento(s) · Total em R$</div>
-          ${b.moedas.length>1?`<div style="margin-top:4px">${breakdown}</div>`:""}
+          <div style="font-size:10px;color:#64748b;margin-top:2px;margin-bottom:${b.moedas.length>0?"8px":"0"}">${b.qtd} pagamento(s) · Total em R$</div>
+          ${b.moedas.length>0?`<div style="margin-top:4px">${breakdown}</div>`:""}
         </div>`;
       }).join("")}
     </div>
