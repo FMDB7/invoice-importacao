@@ -3793,7 +3793,8 @@ function exportPDFPgto(){
   const totPgR=totR;
 
   // Resumo por banco — usa mesma base de dados já filtrada
-  const bancosNoRel=[...new Set(dados.filter(i=>i.banco).map(i=>i.banco))].sort();
+  const bancoNormPDF = b => (b||"").trim().toUpperCase();
+  const bancosNoRel=[...new Set(dados.filter(i=>i.banco).map(i=>bancoNormPDF(i.banco)))].sort();
   const BANCO_CORES=[
     {bg:"#dbeafe",c:"#1d4ed8",brd:"#1d4ed8"},
     {bg:"#dcfce7",c:"#16a34a",brd:"#16a34a"},
@@ -3810,13 +3811,20 @@ function exportPDFPgto(){
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">
         ${bancosNoRel.map((b,idx)=>{
           const cor=BANCO_CORES[idx%BANCO_CORES.length];
-          const pagos=dados.filter(i=>i.banco===b); // dados already filtered to paid only
+          const pagos=dados.filter(i=>bancoNormPDF(i.banco)===b);
           const tot=pagos.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
           const perc=totPgR>0?((tot/totPgR)*100).toFixed(1)+"%":"—";
-          return`<div style="background:${cor.bg};border-radius:10px;padding:14px 18px;border-left:5px solid ${cor.brd};min-width:150px;flex:1;max-width:210px">
+          const moedasBreak=MOEDAS.map(m=>{
+            const arr=pagos.filter(i=>i.moeda===m);
+            const vM=arr.reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
+            const vR=arr.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+            return vM>0?`<div style="display:flex;justify-content:space-between;font-size:9px;padding:2px 0;border-top:1px solid ${cor.brd}22"><span style="color:${cor.c};font-weight:600">${m}: ${fmtM(vM,m)}</span><span style="color:#475569">${fmtBRL(vR)}</span></div>`:"";
+          }).join("");
+          return`<div style="background:${cor.bg};border-radius:10px;padding:14px 18px;border-left:5px solid ${cor.brd};min-width:150px;flex:1;max-width:240px">
             <div style="font-size:11px;font-weight:700;color:${cor.c};margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">🏦 ${b}</div>
             <div style="font-size:19px;font-weight:800;color:${cor.c};margin-bottom:4px">${fmtBRL(tot)}</div>
-            <div style="font-size:10px;color:#64748b">${pagos.length} pagamento(s) &nbsp;•&nbsp; ${perc} do total</div>
+            <div style="font-size:10px;color:#64748b;margin-bottom:${moedasBreak?"6px":"0"}">${pagos.length} pagamento(s) &nbsp;•&nbsp; ${perc} do total</div>
+            ${moedasBreak?`<div>${moedasBreak}</div>`:""}
           </div>`;
         }).join("")}
       </div>
