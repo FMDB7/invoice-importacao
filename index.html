@@ -961,6 +961,70 @@ function toggleOcultarSemVcto() {
   paginaAtual.inv = 1;
   renderTab("Invoices");
 }
+
+// ════════════════════════════════════════════════════════
+//  PASTA DROPDOWN (searchable, auto-apply)
+// ════════════════════════════════════════════════════════
+function togglePastaDD() {
+  const dd = document.getElementById("pasta-dd");
+  if (!dd) return;
+  const isOpen = dd.style.display === "block";
+  dd.style.display = isOpen ? "none" : "block";
+  if (!isOpen) {
+    const inp = document.getElementById("pasta-search");
+    if (inp) { inp.value = ""; renderPastaList(""); inp.focus(); }
+    setTimeout(() => document.addEventListener("click", closePastaDDOnce, {once:true, capture:false}), 10);
+  }
+}
+function closePastaDDOnce(e) {
+  const wrap = document.getElementById("pasta-wrap");
+  const dd   = document.getElementById("pasta-dd");
+  if (dd && wrap && !wrap.contains(e.target)) dd.style.display = "none";
+}
+function renderPastaList(busca) {
+  const el = document.getElementById("pasta-list");
+  if (!el) return;
+  const todas = [...new Set(invoices.map(i=>(i.pasta||"").trim()).filter(Boolean))].sort((a,b)=>{
+    // Natural sort: numeric pasta numbers
+    const na = parseFloat(a), nb = parseFloat(b);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return a.localeCompare(b,"pt-BR");
+  });
+  const b = busca.toLowerCase();
+  const lista = b ? todas.filter(p=>p.toLowerCase().includes(b)) : todas;
+  const sel   = filtros.inv._pasta;
+  el.innerHTML = (b ? [] : [{label:"Todas as pastas", val:""}]).concat(lista.map(p=>({label:p,val:p}))).map(({label,val})=>{
+    const isSel = sel === val;
+    const count = val ? invoices.filter(i=>(i.pasta||"").trim()===val).length : "";
+    return `<div onclick="selecionarPasta('${val.replace(/'/g,"\'")}')"
+      style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;cursor:pointer;font-size:12px;background:${isSel?"#eff6ff":"#fff"};border-bottom:1px solid #f8fafc;font-weight:${isSel?"700":"400"};color:${isSel?"#1d4ed8":"#1e293b"}"
+      onmouseover="this.style.background='${isSel?"#dbeafe":"#f8fafc"}'" onmouseout="this.style.background='${isSel?"#eff6ff":"#fff"}'">
+      <span>${label}</span>
+      ${count?`<span style="font-size:10px;color:#94a3b8;font-weight:400">${count}</span>`:""}
+    </div>`;
+  }).join("");
+}
+function selecionarPasta(val) {
+  filtros.inv._pasta = val;
+  filtros.inv.pasta  = val;
+  // Update button label
+  const btn = document.getElementById("pasta-btn-label");
+  if (btn) btn.textContent = val || "Todas as pastas";
+  const dd = document.getElementById("pasta-dd");
+  if (dd) dd.style.display = "none";
+  // Auto-apply filter immediately
+  filtros.inv._statuses = [...filtros.inv.statuses];
+  filtros.inv.fornecedores = [...filtros.inv._fornecedores];
+  const invMinEl = document.getElementById("f_inv_valorMin");
+  const invMaxEl = document.getElementById("f_inv_valorMax");
+  filtros.inv.valorMin = getValorRaw(invMinEl);
+  filtros.inv.valorMax = getValorRaw(invMaxEl);
+  filtros.inv._valorMinFmt = invMinEl?.value || "";
+  filtros.inv._valorMaxFmt = invMaxEl?.value || "";
+  paginaAtual.inv = 1;
+  renderTab("Invoices");
+}
+
 function filtrarConds(busca) {
   const dd = document.getElementById("cond-dd");
   if (!dd) return;
@@ -998,7 +1062,7 @@ function aplicarFiltroInv() {
   filtros.inv.statuses  = [...filtros.inv._statuses];
   filtros.inv.status     = filtros.inv.statuses.length === 1 ? filtros.inv.statuses[0] : filtros.inv.statuses.length > 1 ? "__multi__" : "";
   filtros.inv.moeda    = document.getElementById("f_inv_moeda")?.value   || "";
-  filtros.inv.pasta    = document.getElementById("f_inv_pasta")?.value   || "";
+  filtros.inv.pasta    = filtros.inv._pasta || "";
   filtros.inv.dtIni    = document.getElementById("f_inv_dtIni")?.value   || "";
   filtros.inv.dtFim    = document.getElementById("f_inv_dtFim")?.value   || "";
   filtros.inv._status  = filtros.inv.status;
