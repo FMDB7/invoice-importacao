@@ -2604,6 +2604,88 @@ function renderDashboard() {
 // ════════════════════════════════════════════════════════
 //  INVOICES
 // ════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════
+//  SELEÇÃO DE INVOICES (checkbox multi-select)
+// ════════════════════════════════════════════════════════
+let invSelIds = new Set();
+
+function toggleInvSel(id) {
+  if (invSelIds.has(id)) invSelIds.delete(id); else invSelIds.add(id);
+  atualizarCardSel();
+  // Update row highlight
+  const row = document.getElementById("row-" + id);
+  if (row) row.style.background = invSelIds.has(id) ? "#eff6ff" : "";
+  const cb = document.getElementById("cb-inv-" + id);
+  if (cb) cb.checked = invSelIds.has(id);
+}
+
+function toggleTodosInvSel() {
+  const cbs  = [...document.querySelectorAll(".cb-inv-row")];
+  const todos = cbs.map(cb => cb.dataset.id);
+  const allSel = todos.every(id => invSelIds.has(id));
+  if (allSel) todos.forEach(id => invSelIds.delete(id));
+  else todos.forEach(id => invSelIds.add(id));
+  cbs.forEach(cb => {
+    cb.checked = invSelIds.has(cb.dataset.id);
+    const row  = document.getElementById("row-" + cb.dataset.id);
+    if (row) row.style.background = invSelIds.has(cb.dataset.id) ? "#eff6ff" : "";
+  });
+  const thCb = document.getElementById("th-cb-inv");
+  if (thCb) thCb.checked = !allSel;
+  atualizarCardSel();
+}
+
+function limparSelInv() {
+  invSelIds.clear();
+  document.querySelectorAll(".cb-inv-row").forEach(cb => { cb.checked = false; });
+  document.querySelectorAll("[id^=row-]").forEach(r => r.style.background = "");
+  const thCb = document.getElementById("th-cb-inv");
+  if (thCb) thCb.checked = false;
+  atualizarCardSel();
+}
+
+function atualizarCardSel() {
+  const card = document.getElementById("card-sel-inv");
+  if (!card) return;
+  const n = invSelIds.size;
+  if (n === 0) { card.style.display = "none"; return; }
+  const selecionadas = invoices.filter(i => invSelIds.has(i.id));
+  // Group by moeda
+  const MOEDAS_LIST = ["USD","EUR","CHF","GBP"];
+  const porMoeda = MOEDAS_LIST.map(m => {
+    const arr = selecionadas.filter(i => i.moeda === m);
+    if (!arr.length) return null;
+    const vM = arr.reduce((s,i) => s + parseCurrency(i.valor_moeda), 0);
+    const vR = arr.reduce((s,i) => s + (parseFloat(i.reais)||0), 0);
+    return { m, vM, vR, qtd: arr.length };
+  }).filter(Boolean);
+  const totR = selecionadas.reduce((s,i) => s + (parseFloat(i.reais)||0), 0);
+  const COR = { USD:"#1d4ed8", EUR:"#7c3aed", CHF:"#dc2626", GBP:"#059669" };
+  const BG  = { USD:"#dbeafe", EUR:"#ede9fe", CHF:"#fee2e2", GBP:"#d1fae5" };
+  const SYM = { USD:"US$", EUR:"€", CHF:"Fr", GBP:"£" };
+  const moedaCards = porMoeda.map(p => `
+    <div style="background:${BG[p.m]||"#f1f5f9"};border-left:3px solid ${COR[p.m]||"#64748b"};border-radius:8px;padding:8px 14px;min-width:140px">
+      <div style="font-size:10px;font-weight:700;color:${COR[p.m]||"#64748b"};margin-bottom:2px">${SYM[p.m]} ${p.m} · ${p.qtd} título(s)</div>
+      <div style="font-size:15px;font-weight:800;color:${COR[p.m]||"#1e3a5f"};line-height:1">${(p.vM).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div style="font-size:11px;font-weight:700;color:#16a34a;margin-top:2px">${fmtBRL(p.vR)}</div>
+    </div>`
+  ).join("");
+  card.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="font-weight:700;color:#1e3a5f;font-size:13px;white-space:nowrap">✅ ${n} invoice(s) selecionada(s)</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">${moedaCards}</div>
+        <div style="background:#dcfce7;border-left:3px solid #16a34a;border-radius:8px;padding:8px 14px;min-width:140px">
+          <div style="font-size:10px;font-weight:700;color:#16a34a;margin-bottom:2px">🇧🇷 TOTAL EM R$</div>
+          <div style="font-size:18px;font-weight:800;color:#16a34a;line-height:1">${fmtBRL(totR)}</div>
+        </div>
+      </div>
+      <button onclick="limparSelInv()" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:6px 14px;font-size:12px;color:#64748b;cursor:pointer;white-space:nowrap">✕ Limpar seleção</button>
+    </div>`;
+  card.style.display = "block";
+}
+
 function renderInvoices() {
   const todosForns = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
   const filtradas  = getInvFiltradas();
@@ -2778,8 +2860,10 @@ function renderInvoices() {
   ${podeEditarInline()?`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:12px;color:#1d4ed8;display:flex;align-items:center;gap:8px">
     ✏️ <b>Edição inline ativa:</b> clique em qualquer célula da tabela para editar diretamente. Clique em ✅ para salvar a linha.
   </div>`:""}
+  <div id="card-sel-inv" style="display:none;background:#fff;border:1.5px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(37,99,235,.08)"></div>
   <div class="table-wrap"><table id="tbl-invoices">
     <thead><tr>
+      <th style="width:36px;padding:0 8px;text-align:center"><input type="checkbox" id="th-cb-inv" onclick="toggleTodosInvSel()" style="width:15px;height:15px;accent-color:#2563eb;cursor:pointer"></th>
       <th class="col-pasta">Pasta</th>
       <th class="col-cidade">Cidade</th>
       <th class="col-fornecedor">Fornecedor / Marca</th>
@@ -2871,6 +2955,7 @@ function renderInvoiceRow(i) {
   const hint      = canInline ? `<span class="edit-hint">✏️ Clique para editar</span>` : "";
 
   return `<tr id="row-${sid}">
+    <td style="width:36px;padding:0 8px;text-align:center" onclick="event.stopPropagation()"><input type="checkbox" id="cb-inv-${sid}" class="cb-inv-row" data-id="${sid}" ${invSelIds.has(sid)?"checked":""} onchange="toggleInvSel('${sid}')" style="width:15px;height:15px;accent-color:#2563eb;cursor:pointer"></td>
     <td ${cellAttr} style="position:relative">${hint}${i.pasta||"—"}</td>
     <td ${cellAttr} style="position:relative">${hint}${i.cidade||"—"}</td>
     <td ${cellAttr} style="position:relative">${hint}<b>${i.fornecedor||""}</b></td>
@@ -3192,6 +3277,7 @@ function renderPagamentos() {
   ${resumoBancos}
   <div class="table-wrap"><table>
     <thead><tr>
+      <th style="width:36px;padding:0 8px;text-align:center"><input type="checkbox" id="th-cb-inv" onclick="toggleTodosInvSel()" style="width:15px;height:15px;accent-color:#2563eb;cursor:pointer"></th>
       <th class="col-pasta">Pasta</th><th class="col-invoice">Nº Invoice</th><th class="col-fornecedor">Fornecedor</th>
       <th class="col-cidade">Cidade</th><th class="col-moeda">Moeda</th><th class="col-valor">Valor Moeda</th>
       <th class="col-taxa">Taxa</th><th class="col-valor">Valor R$</th><th class="col-data">Vencto</th>
