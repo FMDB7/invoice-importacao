@@ -985,7 +985,6 @@ function renderPastaList(busca) {
   const el = document.getElementById("pasta-list");
   if (!el) return;
   const todas = [...new Set(invoices.map(i=>(i.pasta||"").trim()).filter(Boolean))].sort((a,b)=>{
-    // Natural sort: numeric pasta numbers
     const na = parseFloat(a), nb = parseFloat(b);
     if (!isNaN(na) && !isNaN(nb)) return na - nb;
     return a.localeCompare(b,"pt-BR");
@@ -996,11 +995,13 @@ function renderPastaList(busca) {
   el.innerHTML = (b ? [] : [{label:"Todas as pastas", val:""}]).concat(lista.map(p=>({label:p,val:p}))).map(({label,val})=>{
     const isSel = sel === val;
     const count = val ? invoices.filter(i=>(i.pasta||"").trim()===val).length : "";
-    return `<div onclick="selecionarPasta('${val.replace(/'/g,"\'")}')"
-      style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;cursor:pointer;font-size:12px;background:${isSel?"#eff6ff":"#fff"};border-bottom:1px solid #f8fafc;font-weight:${isSel?"700":"400"};color:${isSel?"#1d4ed8":"#1e293b"}"
+    return `<div onclick="selecionarPasta('${val.replace(/'/g,"\'")}');event.stopPropagation()"
+      style="display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;font-size:12px;background:${isSel?"#eff6ff":"#fff"};border-bottom:1px solid #f8fafc"
       onmouseover="this.style.background='${isSel?"#dbeafe":"#f8fafc"}'" onmouseout="this.style.background='${isSel?"#eff6ff":"#fff"}'">
-      <span>${label}</span>
-      ${count?`<span style="font-size:10px;color:#94a3b8;font-weight:400">${count}</span>`:""}
+      <input type="checkbox" ${isSel?"checked":""} onclick="event.stopPropagation();selecionarPasta('${val.replace(/'/g,"\'")}');"
+        style="width:15px;height:15px;accent-color:#2563eb;cursor:pointer;flex-shrink:0;pointer-events:none">
+      <span style="flex:1;font-weight:${isSel?"700":"400"};color:${isSel?"#1d4ed8":"#1e293b"}">${label}</span>
+      ${count?`<span style="font-size:10px;color:#94a3b8;flex-shrink:0">${count}</span>`:""}
     </div>`;
   }).join("");
 }
