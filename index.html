@@ -2853,8 +2853,12 @@ function renderInvoices() {
   <div style="margin:-10px 0 12px 0;padding:0 4px"><span style="font-size:11px;color:#2563eb;font-weight:600">${filtroAtivoTxt("inv")}</span></div>
   <div class="card" style="display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;flex-wrap:wrap">
     ${pode("taxa") ? `<button class="btn" style="background:#fef3c7;color:#d97706;border:1px solid #fde68a;font-weight:700" onclick="abrirModalTaxa()">💱 Taxas de Câmbio</button>` : ""}
-    <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSV()">⬇️ Excel</button>
-    <button class="btn btn-primary" onclick="exportPDF()">🖨️ PDF</button>
+    <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVInv()">
+      ${invSelIds && invSelIds.size>0 ? "⬇️ Excel Seleção ("+invSelIds.size+")" : "⬇️ Excel"}
+    </button>
+    <button class="btn btn-primary" onclick="exportPDFInv()">
+      ${invSelIds && invSelIds.size>0 ? "🖨️ PDF Seleção ("+invSelIds.size+")" : "🖨️ PDF"}
+    </button>
     ${pode("nova") ? `<button class="btn btn-green" onclick="editIndex=null;abrirFormInvoice()">+ Nova Invoice</button>` : ""}
   </div>
   ${podeEditarInline()?`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:12px;color:#1d4ed8;display:flex;align-items:center;gap:8px">
@@ -3787,6 +3791,107 @@ function buildCSV(headerRow,dataRows,summaryBlocks){
   return lines.join("\r\n");
 }
 function dlCSV(content,filename){ const a=document.createElement("a"); a.href="data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent(content); a.download=filename.endsWith(".csv")?filename:filename+".csv"; a.click(); }
+
+
+function exportCSVInv() {
+  if (invSelIds && invSelIds.size > 0) {
+    const selecionadas = invoices.filter(i => invSelIds.has(i.id));
+    exportCSVComDados(selecionadas, "invoices-selecao");
+  } else {
+    exportCSV();
+  }
+}
+
+function exportPDFInv() {
+  if (invSelIds && invSelIds.size > 0) {
+    const selecionadas = invoices.filter(i => invSelIds.has(i.id));
+    exportPDFComDados(selecionadas, true);
+  } else {
+    exportPDF();
+  }
+}
+
+function exportCSVComDados(filtradas, nomeArq) {
+  const rows = filtradas.map(i => [
+    i.pasta||"", i.cidade||"", i.fornecedor||"", i.marca||"", i.n_fatura||"",
+    i.awb_bl||"", fmtD(i.emissao_fatura), fmtD(i.vencimento), i.moeda||"",
+    parseCurrency(i.valor_moeda)||"", parseFloat(i.taxa)||"", parseFloat(i.reais)||"",
+    i.cond_pgto||"", i.status_pgto||"", fmtD(i.dt_pgto), i.banco||"", i.obs||""
+  ]);
+  const header = ["Pasta","Cidade","Fornecedor","Marca","Nº Invoice","AWB/BL",
+    "Emissão","Vencimento","Moeda","Valor Moeda","Taxa","Valor R$",
+    "Condição Pgto","Status Pgto","Dt. Pgto","Banco","Observação"];
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  ws["!cols"] = header.map((_,i)=>({wch: i===2||i===3?24:i===4?18:i===16?30:13}));
+  XLSX.utils.book_append_sheet(wb, ws, "Invoices");
+  XLSX.writeFile(wb, nomeArq+".xlsx");
+}
+
+function exportPDFComDados(filtradas, isSel) {
+  const now     = new Date();
+  const dtExp   = now.toLocaleDateString("pt-BR") + " às " + now.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  const totR    = filtradas.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const totAbR  = filtradas.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+  const rows    = filtradas.map((i,idx)=>{
+    const cor = i.status_pgto==="Pago Total"||i.status_pgto==="Pago Câmbio Futuro"?"#16a34a":
+                i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";
+    const td  = "padding:6px 10px;border-bottom:0.5px solid #e2e8f0;font-size:10px";
+    return `<tr style="background:${idx%2===0?"#fff":"#f8fafc"}">
+      <td style="${td}">${i.pasta||""}</td>
+      <td style="${td}">${i.cidade||""}</td>
+      <td style="${td};font-weight:600">${i.fornecedor||""}</td>
+      <td style="${td}">${i.n_fatura||""}</td>
+      <td style="${td}">${fmtD(i.emissao_fatura)}</td>
+      <td style="${td}">${fmtD(i.vencimento)}</td>
+      <td style="${td}">${i.moeda||""}</td>
+      <td style="${td};font-weight:600">${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td>
+      <td style="${td}">${i.taxa?parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4}):"—"}</td>
+      <td style="${td};font-weight:700">${fmtBRL(i.reais)}</td>
+      <td style="${td}">${i.cond_pgto||""}</td>
+      <td style="${td}"><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td>
+      <td style="${td};font-size:9px">${i.obs||"—"}</td>
+    </tr>`;
+  }).join("");
+  const thStyle = "padding:8px 10px;background:#1e3a5f;color:#fff;font-size:10px;font-weight:500;text-align:left";
+  const tituloLabel = isSel ? `Seleção — ${filtradas.length} invoice(s)` : `${filtradas.length} faturas`;
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Invoices${isSel?" — Seleção":""}</title>
+    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Arial,sans-serif;padding:20px;color:#1e293b}
+    @media print{body{padding:10px}.no-print{display:none}}</style>
+    </head><body>
+    <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border-radius:10px;padding:16px 20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start">
+      <div><div style="font-weight:700;font-size:15px">🌐 ${isSel?"📌 Seleção de Invoices":"Relatório de Invoices"} — Importação</div>
+        <div style="font-size:11px;opacity:.8">Exportado em ${dtExp}</div></div>
+      <div style="font-size:13px;font-weight:700;opacity:.9">${tituloLabel}</div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="background:#fee2e2;border-radius:8px;padding:10px 16px;flex:1;min-width:120px">
+        <div style="font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase">Em Aberto</div>
+        <div style="font-size:22px;font-weight:800;color:#dc2626">${filtradas.filter(i=>i.status_pgto==="Em Aberto").length}</div>
+      </div>
+      <div style="background:#dbeafe;border-radius:8px;padding:10px 16px;flex:1;min-width:120px">
+        <div style="font-size:10px;font-weight:700;color:#2563eb;text-transform:uppercase">Total R$</div>
+        <div style="font-size:22px;font-weight:800;color:#2563eb">${fmtBRL(totR)}</div>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:10px">
+      <thead><tr>
+        <th style="${thStyle}">Pasta</th><th style="${thStyle}">Cidade</th><th style="${thStyle}">Fornecedor</th>
+        <th style="${thStyle}">Nº Invoice</th><th style="${thStyle}">Emissão</th><th style="${thStyle}">Vencimento</th>
+        <th style="${thStyle}">Moeda</th><th style="${thStyle}">Valor Moeda</th><th style="${thStyle}">Taxa</th>
+        <th style="${thStyle}">Valor R$</th><th style="${thStyle}">Cond.</th><th style="${thStyle}">Status</th>
+        <th style="${thStyle}">Observação</th>
+      </tr></thead><tbody>${rows}</tbody>
+    </table>
+    <div style="margin-top:12px;font-size:10px;color:#64748b;text-align:right">
+      Total: ${fmtBRL(totR)} | Em aberto: ${fmtBRL(totAbR)}
+    </div>
+    <script>window.onload=()=>setTimeout(()=>window.print(),300);<\/script>
+  </body></html>`;
+  const w = window.open("","_blank","width=1100,height=800");
+  w.document.write(html); w.document.close();
+}
 
 function exportCSV(){
   const filtradas=getInvFiltradas();
