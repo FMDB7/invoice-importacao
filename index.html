@@ -3866,13 +3866,27 @@ function exportPDFComDados(filtradas, isSel) {
       <div style="font-size:13px;font-weight:700;opacity:.9">${tituloLabel}</div>
     </div>
     <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-      <div style="background:#fee2e2;border-radius:8px;padding:10px 16px;flex:1;min-width:120px">
+      <div style="background:#fee2e2;border-radius:8px;padding:10px 16px;min-width:100px">
         <div style="font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase">Em Aberto</div>
-        <div style="font-size:22px;font-weight:800;color:#dc2626">${filtradas.filter(i=>i.status_pgto==="Em Aberto").length}</div>
+        <div style="font-size:20px;font-weight:800;color:#dc2626">${filtradas.filter(i=>i.status_pgto==="Em Aberto").length}</div>
       </div>
-      <div style="background:#dbeafe;border-radius:8px;padding:10px 16px;flex:1;min-width:120px">
-        <div style="font-size:10px;font-weight:700;color:#2563eb;text-transform:uppercase">Total R$</div>
-        <div style="font-size:22px;font-weight:800;color:#2563eb">${fmtBRL(totR)}</div>
+      ${MOEDAS.map(m=>{
+        const arr=filtradas.filter(i=>i.moeda===m);
+        if(!arr.length)return"";
+        const vM=arr.reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
+        const vR=arr.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+        const MCOR2={USD:"#1d4ed8",EUR:"#7c3aed",CHF:"#dc2626",GBP:"#065f46"};
+        const MBG2={USD:"#dbeafe",EUR:"#ede9fe",CHF:"#fee2e2",GBP:"#d1fae5"};
+        const MSIMB2={USD:"US$",EUR:"€",CHF:"Fr",GBP:"£"};
+        return`<div style="background:${MBG2[m]||"#f1f5f9"};border-radius:8px;padding:10px 16px;min-width:130px;border-left:4px solid ${MCOR2[m]||"#64748b"}">
+          <div style="font-size:10px;font-weight:700;color:${MCOR2[m]};text-transform:uppercase;margin-bottom:3px">${MSIMB2[m]} ${m}</div>
+          <div style="font-size:16px;font-weight:800;color:${MCOR2[m]};line-height:1">${(MSIMB2[m]||"")+" "+vM.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+          <div style="font-size:11px;font-weight:700;color:#16a34a;margin-top:3px">${fmtBRL(vR)}</div>
+        </div>`;
+      }).join("")}
+      <div style="background:#dbeafe;border-radius:8px;padding:10px 16px;min-width:130px">
+        <div style="font-size:10px;font-weight:700;color:#2563eb;text-transform:uppercase;margin-bottom:3px">Total R$</div>
+        <div style="font-size:18px;font-weight:800;color:#2563eb">${fmtBRL(totR)}</div>
       </div>
     </div>
     <table style="width:100%;border-collapse:collapse;font-size:10px">
@@ -4025,7 +4039,7 @@ function exportPDF(){
   const w=window.open("","_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoices</title><style>${pdfStyles()}</style></head><body>
   <div class="hdr"><div><h1>🌐 Relatório de Invoices — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</p></div><div><b>${filtradas.length}</b> faturas</div></div>
-  <div class="cards"><div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${filtradas.filter(i=>i.status_pgto==="Em Aberto").length}</div></div><div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div></div>
+  <div class="cards"><div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${filtradas.filter(i=>i.status_pgto==="Em Aberto").length}</div></div>${MOEDAS.map(m=>{const arr=filtradas.filter(i=>i.moeda===m);if(!arr.length)return"";const vM=arr.reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);const vR=arr.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);const MCOR={USD:"#1d4ed8",EUR:"#7c3aed",CHF:"#dc2626",GBP:"#065f46"};const MBG={USD:"#dbeafe",EUR:"#ede9fe",CHF:"#fee2e2",GBP:"#d1fae5"};const MSIMB={USD:"US$",EUR:"€",CHF:"Fr",GBP:"£"};return`<div class="card" style="background:${MBG[m]||"#f1f5f9"};border-color:${MCOR[m]||"#64748b"}"><div class="cl" style="color:${MCOR[m]}">${MSIMB[m]||""} ${m}</div><div class="cv" style="color:${MCOR[m]}">${(MSIMB[m]||"")+" "+vM.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}</div><div style="font-size:11px;font-weight:700;color:#16a34a;margin-top:2px">${fmtBRL(vR)}</div></div>`;}).join("")}<div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div></div>
   <table style="font-size:11px;border-spacing:0"><thead><tr><th style="padding:8px 12px">Pasta</th><th style="padding:8px 12px">Cidade</th><th style="padding:8px 12px">Fornecedor</th><th style="padding:8px 12px">Nº Invoice</th><th style="padding:8px 12px">Emissão</th><th style="padding:8px 12px">Vencimento</th><th style="padding:8px 12px">Moeda</th><th style="padding:8px 12px">Valor na Moeda</th><th style="padding:8px 12px">Taxa</th><th style="padding:8px 12px">Valor R$</th><th style="padding:8px 12px">Cond.</th><th style="padding:8px 12px">Status</th><th style="padding:8px 12px">Observação</th></tr></thead><tbody>${rows}</tbody></table>
   ${pdfResumMoedas(filtradas,"Resumo por Moeda — Invoices")}
   <div class="tot"><span><b>Total R$:</b> ${fmtBRL(totR)}</span><span><b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(filtradas.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span></span><span><b>Pago Total:</b> <span style="color:#16a34a">${fmtBRL(filtradas.filter(i=>i.status_pgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span></span></div>
