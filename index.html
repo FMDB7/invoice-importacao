@@ -3844,10 +3844,10 @@ function exportPDFComDados(filtradas, isSel) {
       <td style="${td}">${i.n_fatura||""}</td>
       <td style="${td}">${fmtD(i.emissao_fatura)}</td>
       <td style="${td}">${fmtD(i.vencimento)}</td>
-      <td style="${td}">${i.moeda||""}</td>
-      <td style="${td};font-weight:600">${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td>
+      <td style="${td}"><span style="font-size:10px;font-weight:700;background:${MOEDA_BG[i.moeda]||"#f1f5f9"};color:${MOEDA_COR[i.moeda]||"#64748b"};padding:1px 6px;border-radius:4px">${i.moeda||""}</span></td>
+      <td style="${td};font-weight:700;color:${MOEDA_COR[i.moeda]||"#1e3a5f"}">${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td>
       <td style="${td}">${i.taxa?parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4}):"—"}</td>
-      <td style="${td};font-weight:700">${fmtBRL(i.reais)}</td>
+      <td style="${td};font-weight:700;color:#16a34a">${fmtBRL(i.reais)}</td>
       <td style="${td}">${i.cond_pgto||""}</td>
       <td style="${td}"><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td>
       <td style="${td};font-size:9px">${i.obs||"—"}</td>
@@ -3879,7 +3879,7 @@ function exportPDFComDados(filtradas, isSel) {
       <thead><tr>
         <th style="${thStyle}">Pasta</th><th style="${thStyle}">Cidade</th><th style="${thStyle}">Fornecedor</th>
         <th style="${thStyle}">Nº Invoice</th><th style="${thStyle}">Emissão</th><th style="${thStyle}">Vencimento</th>
-        <th style="${thStyle}">Moeda</th><th style="${thStyle}">Valor Moeda</th><th style="${thStyle}">Taxa</th>
+        <th style="${thStyle}">Moeda</th><th style="${thStyle}">Valor na Moeda</th><th style="${thStyle}">Taxa</th>
         <th style="${thStyle}">Valor R$</th><th style="${thStyle}">Cond.</th><th style="${thStyle}">Status</th>
         <th style="${thStyle}">Observação</th>
       </tr></thead><tbody>${rows}</tbody>
@@ -4026,7 +4026,7 @@ function exportPDF(){
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoices</title><style>${pdfStyles()}</style></head><body>
   <div class="hdr"><div><h1>🌐 Relatório de Invoices — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</p></div><div><b>${filtradas.length}</b> faturas</div></div>
   <div class="cards"><div class="card" style="background:#fee2e2;border-color:#dc2626"><div class="cl">Em Aberto</div><div class="cv" style="color:#dc2626">${filtradas.filter(i=>i.status_pgto==="Em Aberto").length}</div></div><div class="card" style="background:#dbeafe;border-color:#2563eb"><div class="cl">Total R$</div><div class="cv" style="color:#2563eb">${fmtBRL(totR)}</div></div></div>
-  <table style="font-size:11px;border-spacing:0"><thead><tr><th style="padding:8px 12px">Pasta</th><th style="padding:8px 12px">Cidade</th><th style="padding:8px 12px">Fornecedor</th><th style="padding:8px 12px">Nº Invoice</th><th style="padding:8px 12px">Emissão</th><th style="padding:8px 12px">Vencimento</th><th style="padding:8px 12px">Moeda</th><th style="padding:8px 12px">Valor Moeda</th><th style="padding:8px 12px">Taxa</th><th style="padding:8px 12px">Valor R$</th><th style="padding:8px 12px">Cond.</th><th style="padding:8px 12px">Status</th><th style="padding:8px 12px">Observação</th></tr></thead><tbody>${rows}</tbody></table>
+  <table style="font-size:11px;border-spacing:0"><thead><tr><th style="padding:8px 12px">Pasta</th><th style="padding:8px 12px">Cidade</th><th style="padding:8px 12px">Fornecedor</th><th style="padding:8px 12px">Nº Invoice</th><th style="padding:8px 12px">Emissão</th><th style="padding:8px 12px">Vencimento</th><th style="padding:8px 12px">Moeda</th><th style="padding:8px 12px">Valor na Moeda</th><th style="padding:8px 12px">Taxa</th><th style="padding:8px 12px">Valor R$</th><th style="padding:8px 12px">Cond.</th><th style="padding:8px 12px">Status</th><th style="padding:8px 12px">Observação</th></tr></thead><tbody>${rows}</tbody></table>
   ${pdfResumMoedas(filtradas,"Resumo por Moeda — Invoices")}
   <div class="tot"><span><b>Total R$:</b> ${fmtBRL(totR)}</span><span><b>Em Aberto:</b> <span style="color:#dc2626">${fmtBRL(filtradas.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span></span><span><b>Pago Total:</b> <span style="color:#16a34a">${fmtBRL(filtradas.filter(i=>i.status_pgto==="Pago Total").reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span></span></div>
   <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado em ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span></div>
