@@ -3417,8 +3417,24 @@ function toggleFornNS(ns, forn) {
   } else if (ns==="cambial") {
     filtros.cambial.fornecedores = [...arr];
     renderTab("Análise Cambial");
+  } else if (ns==="pgto") {
+    // Auto-apply immediately for pgto
+    filtros.pgto.fornecedores = [...arr];
+    paginaAtual.pgto = 1;
+    // Update trigger button label
+    const trig = document.getElementById("forn-trig-pgto");
+    if (trig) {
+      const trigTxt = arr.length===0 ? "Todos os fornecedores" : arr.length===1 ? arr[0] : `${arr.length} fornecedores`;
+      trig.querySelector("span").textContent = trigTxt;
+      trig.style.border = arr.length>0 ? "1.5px solid #2563eb" : "1.5px solid #e2e8f0";
+      trig.style.boxShadow = arr.length>0 ? "0 0 0 3px #dbeafe" : "";
+    }
+    // Close dropdown
+    const dd = document.getElementById("forn-dd-pgto");
+    if (dd) dd.style.display = "none";
+    renderTab("Pagamentos");
   } else {
-    // pgto and inv: just refresh dropdown UI without full re-render
+    // inv: just refresh dropdown UI without full re-render
     renderFornDDList(ns);
     const trig = document.getElementById(`forn-trig-${ns}`);
     if (trig) {
@@ -3427,8 +3443,8 @@ function toggleFornNS(ns, forn) {
       trig.style.border = arr.length>0 ? "1.5px solid #2563eb" : "1.5px solid #e2e8f0";
       trig.style.boxShadow = arr.length>0 ? "0 0 0 3px #dbeafe" : "";
     }
+    setTimeout(()=>{ const dd=document.getElementById(`forn-dd-${ns}`); if(dd)dd.style.display="flex"; const el=document.getElementById(`forn-busca-${ns}`); if(el){el.focus();el.value=filtros[ns]._busca_forn||"";} },30);
   }
-  setTimeout(()=>{ const dd=document.getElementById(`forn-dd-${ns}`); if(dd)dd.style.display="flex"; const el=document.getElementById(`forn-busca-${ns}`); if(el){el.focus();el.value=filtros[ns]._busca_forn||"";} },30);
 }
 
 function removerFornNS(ns, forn) {
@@ -3455,10 +3471,16 @@ function selTodosFornsNS(ns) {
     filtros[ns].fornecedores = [...todos];
     const tabMap = { forn:"Fornecedores", cambial:"Análise Cambial" };
     renderTab(tabMap[ns] || currentTab);
+  } else if (ns==="pgto") {
+    filtros.pgto.fornecedores = [...todos];
+    paginaAtual.pgto = 1;
+    const dd = document.getElementById("forn-dd-pgto");
+    if (dd) dd.style.display = "none";
+    renderTab("Pagamentos");
   } else {
     renderFornDDList(ns);
+    setTimeout(()=>{ const dd=document.getElementById(`forn-dd-${ns}`); if(dd)dd.style.display="flex"; },30);
   }
-  setTimeout(()=>{ const dd=document.getElementById(`forn-dd-${ns}`); if(dd)dd.style.display="flex"; },30);
 }
 
 function limparFornsNS(ns) {
