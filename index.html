@@ -3062,7 +3062,7 @@ function renderPagamentos() {
   const bancoBtnTxt = selBancos.length===0 ? "Todos os bancos" : selBancos.length===1 ? selBancos[0] : `${selBancos.length} bancos`;
 
   let dados = invoices.filter(i=>["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto));
-  if (f.fornecedores && f.fornecedores.length > 0) dados = dados.filter(i=>f.fornecedores.includes(i.fornecedor));
+  if (f.fornecedores && f.fornecedores.length > 0) dados = dados.filter(i=>f.fornecedores.map(x=>x.trim().toUpperCase()).includes((i.fornecedor||"").trim().toUpperCase()));
   if (f.statuses && f.statuses.length > 0) dados = dados.filter(i=>f.statuses.includes(i.status_pgto));
   const pgtoStatusesAtivos = f.statuses && f.statuses.length > 0 ? f.statuses : (f.status && f.status!=="Todos" && f.status!=="__multi__" ? [f.status] : []);
   const pgtoFiltraEmAberto = pgtoStatusesAtivos.includes("Em Aberto") || pgtoStatusesAtivos.length === 0;
@@ -3105,7 +3105,7 @@ function renderPagamentos() {
   // ─── dadosPainel: single filtered source for ALL panels ─────────────
   const PAGOS_ALL = ["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"];
   let dadosPainel = invoices.filter(i => PAGOS_ALL.includes(i.status_pgto));
-  if (f.fornecedores && f.fornecedores.length > 0) dadosPainel = dadosPainel.filter(i=>f.fornecedores.includes(i.fornecedor));
+  if (f.fornecedores && f.fornecedores.length > 0) dadosPainel = dadosPainel.filter(i=>f.fornecedores.map(x=>x.trim().toUpperCase()).includes((i.fornecedor||"").trim().toUpperCase()));
   if (f.statuses && f.statuses.length > 0)         dadosPainel = dadosPainel.filter(i=>f.statuses.includes(i.status_pgto));
   if (f.moeda) dadosPainel = dadosPainel.filter(i=>i.moeda===f.moeda);
   if (f.ano)   dadosPainel = dadosPainel.filter(i=>i.dt_pgto&&i.dt_pgto.substring(0,4)===f.ano);
