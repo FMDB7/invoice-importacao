@@ -174,7 +174,7 @@ input:read-only{background:#f8fafc;cursor:default}
 .stat-label{font-size:11px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-top:4px}
 
 /* ── FILTER BAR ── */
-.filter-bar{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.filter-bar{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;overflow:visible;position:relative}
 
 /* ── BANCO MULTI-SELECT ── */
 .banco-filter-wrap{position:relative}
@@ -3250,7 +3250,7 @@ function renderPagamentos() {
     <div><label class="form-label">Pgto Inicial</label><input type="date" id="f_pgto_dtIni" value="${f._dtIni||""}" onchange="filtros.pgto._dtIni=this.value"></div>
     <div><label class="form-label">Pgto Final</label><input type="date" id="f_pgto_dtFim" value="${f._dtFim||""}" onchange="filtros.pgto._dtFim=this.value"></div>
     ${bancoDropdownHTML}
-    <div style="display:flex;gap:8px;align-items:flex-end">
+    <div style="display:flex;gap:8px;align-items:flex-end;padding-top:2px">
       <button class="btn-search" onclick="aplicarFiltroPgto()">🔍 Buscar</button>
       <button class="btn btn-ghost" onclick="limparFiltro('pgto')">✖ Limpar</button>
     </div>
@@ -3337,7 +3337,7 @@ function buildFornDropdownHTML(ns, todosForns, placeholder) {
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${triggerTxt}</span>
       <span style="color:#64748b;font-size:10px;flex-shrink:0">▼</span>
     </button>
-    <div id="${dropId}" style="display:none;position:absolute;top:100%;left:0;z-index:60;background:#fff;border:1.5px solid #2563eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);min-width:270px;max-height:340px;overflow:hidden;flex-direction:column;margin-top:4px">
+    <div id="${dropId}" style="display:none;position:absolute;top:100%;left:0;z-index:9999;background:#fff;border:1.5px solid #2563eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);min-width:270px;max-height:340px;overflow:hidden;flex-direction:column;margin-top:4px">
       <!-- Busca -->
       <div style="padding:8px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:6px">
         <span style="color:#64748b">🔍</span>
