@@ -422,6 +422,7 @@ function parseBRL(txt) {
 }
 const PAGE_SIZE = 15;
 let paginaAtual = { inv:1, pgto:1, forn:1, cambial:1 };
+let invSelIds  = new Set();
 function irParaPagina(ns, pg) { paginaAtual[ns] = pg; renderTab(currentTab); }
 function paginar(arr, ns) {
   const totalPg = Math.max(1, Math.ceil(arr.length / PAGE_SIZE));
@@ -1142,6 +1143,8 @@ function selecionarMesCambial(mes) {
 function getInvFiltradas() {
   const f = filtros.inv;
   return invoices.filter(i => {
+    // Se há seleção ativa, mostrar apenas os selecionados
+    if (typeof invSelIds !== "undefined" && invSelIds.size > 0 && !invSelIds.has(i.id)) return false;
     // Multi-fornecedor tem prioridade; fallback para filtro simples
     if (f.fornecedores && f.fornecedores.length > 0) {
       if (!f.fornecedores.includes(i.fornecedor)) return false;
@@ -1188,7 +1191,9 @@ function filtroAtivoTxt(ns) {
   if (f.dtFim)                        p.push(`Até: ${fmtD(f.dtFim)}`);
   if (ns==="cambial" && f.ano)        p.push(`Ano: ${f.ano}`);
   if (ns==="cambial" && f.mes)        p.push(`Mês: ${MESES_NOMES[parseInt(f.mes)-1]}`);
-  return p.length ? `✅ Filtro ativo: ${p.join(" | ")}` : "";
+  return p.length || (ns==="inv" && invSelIds && invSelIds.size>0)
+    ? `✅ Filtro ativo: ${[...(invSelIds && invSelIds.size>0 && ns==="inv" ? [`${invSelIds.size} selecionada(s)`] : []), ...p].join(" | ")}`
+    : "";
 }
 
 
@@ -2612,7 +2617,6 @@ function renderDashboard() {
 // ════════════════════════════════════════════════════════
 //  SELEÇÃO DE INVOICES (checkbox multi-select)
 // ════════════════════════════════════════════════════════
-let invSelIds = new Set();
 
 function toggleInvSel(id) {
   if (invSelIds.has(id)) invSelIds.delete(id); else invSelIds.add(id);
@@ -2647,6 +2651,7 @@ function limparSelInv() {
   const thCb = document.getElementById("th-cb-inv");
   if (thCb) thCb.checked = false;
   atualizarCardSel();
+  renderTab("Invoices");
 }
 
 function atualizarCardSel() {
