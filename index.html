@@ -1831,7 +1831,7 @@ function abrirFormInvoice(inv) {
   abrirModal("modalInvoice");
 }
 
-function flabel(txt) { return `<label class="form-label">${txt}</label>`; }
+function flabel(txt, req) { return '<label class="form-label">'+txt+(req?'<span style="color:#dc2626;margin-left:2px">★</span>':'')+'</label>'; }
 
 
 // ════════════════════════════════════════════════════════
@@ -1943,6 +1943,8 @@ async function salvarParcelado() {
   const n = parseInt(formState.n_parcelas)||1;
   if (n <= 1) { await salvarInvoice(); return; }
   if (!formState.fornecedor || !formState.n_fatura) { showToast("Fornecedor e Nº Invoice são obrigatórios","err"); return; }
+  if (!formState.emissao_fatura) { showToast("Data de Emissão é obrigatória","err"); renderFormFields(); return; }
+  if (!formState.vencimento) { showToast("Vencimento é obrigatório","err"); renderFormFields(); return; }
   // Ensure parcelas are calculated
   if (!parcelasState.length) calcularParcelas();
   if (!parcelasState.length) { await salvarInvoice(); return; }
@@ -2008,7 +2010,7 @@ function renderFormFields() {
     <div>${flabel("Nº Invoice ★")}<input value="${f.n_fatura||""}" onchange="updateForm('n_fatura',this.value)"></div>
     <div>${flabel("AWB / BL")}<input value="${f.awb_bl||""}" onchange="updateForm('awb_bl',this.value)"></div>
     <div>${flabel("Dt. Pedido Fornecedor")}<input type="date" value="${f.dt_pedido||""}" onchange="updateForm('dt_pedido',this.value)"></div>
-    <div>${flabel("Emissão da Fatura")}<input type="date" value="${f.emissao_fatura||""}" onchange="updateForm('emissao_fatura',this.value)"></div>
+    <div>${flabel("Emissão da Fatura",true)}<input type="date" value="${f.emissao_fatura||''}" onchange="updateForm('emissao_fatura',this.value)" style="${!f.emissao_fatura?'border-color:#dc2626;':''}" required></div>
     <div>${flabel("Data de Embarque")}<input type="date" value="${f.dt_embarque||""}" onchange="updateForm('dt_embarque',this.value)"></div>
     <div>${flabel("Data Antecipado")}<input type="date" value="${f.dt_antecipado||""}" onchange="updateForm('dt_antecipado',this.value)"></div>
     <div style="position:relative">
@@ -2026,7 +2028,7 @@ function renderFormFields() {
         ${COND_PGTO.map(cond=>`<div class="cond-opt" data-val="${cond}" onmousedown="selecionarCond('${cond}')" style="padding:9px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f8fafc" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#fff'">${cond}</div>`).join("")}
       </div>
     </div>
-    <div>${flabel("Vencimento (automático)")}<input type="date" id="inp_vencimento" value="${f.vencimento||""}" onchange="updateForm('vencimento',this.value)" style="background:#f0fdf4"></div>
+    <div>${flabel("Vencimento (automático)",true)}<input type="date" id="inp_vencimento" value="${f.vencimento||''}" onchange="updateForm('vencimento',this.value)" style="background:#f0fdf4;${!f.vencimento?'border-color:#dc2626;':''}" required></div>
     <div>${flabel("Moeda")}<select onchange="updateForm('moeda',this.value)">${MOEDAS.map(m=>`<option${f.moeda===m?" selected":""}>${m}</option>`).join("")}</select></div>
     <div>${flabel("Valor na Moeda")}<input id="inp_valor_moeda" type="text" inputmode="numeric" value="${vmFmt}" placeholder="0,00" oninput="handleCurrencyInput(this,'valor_moeda')"></div>
     <div>${flabel("Taxa de Câmbio (R$)")}<input id="inp_taxa" type="text" inputmode="numeric" value="${taxaFmt}" placeholder="5,4585" oninput="handleTaxaInput(this,'taxa')"></div>
@@ -2105,6 +2107,8 @@ function handleCurrencyInput(el, key) {
 
 async function salvarInvoice() {
   if (!formState.fornecedor || !formState.n_fatura) { showToast("Fornecedor e Nº Invoice são obrigatórios","err"); return; }
+  if (!formState.emissao_fatura) { showToast("Data de Emissão é obrigatória","err"); renderFormFields(); return; }
+  if (!formState.vencimento) { showToast("Vencimento é obrigatório","err"); renderFormFields(); return; }
   registrarAuditoria(formState.id?"EDITAR_INVOICE":"NOVA_INVOICE",{n_fatura:formState.n_fatura,fornecedor:formState.fornecedor});
   const data = {
     pasta:          formState.pasta         || null,
@@ -3054,6 +3058,86 @@ async function salvarLinhaInline(sid) {
 // ════════════════════════════════════════════════════════
 //  PAGAMENTOS
 // ════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════
+//  SELEÇÃO DE PAGAMENTOS (checkbox multi-select)
+// ════════════════════════════════════════════════════════
+let pgtoSelIds = new Set();
+
+function togglePgtoSel(id) {
+  if (pgtoSelIds.has(id)) pgtoSelIds.delete(id); else pgtoSelIds.add(id);
+  atualizarCardSelPgto();
+  const row = document.getElementById("pgto-row-" + id);
+  if (row) row.style.background = pgtoSelIds.has(id) ? "#eff6ff" : "";
+  const cb = document.getElementById("cb-pgto-" + id);
+  if (cb) cb.checked = pgtoSelIds.has(id);
+}
+
+function toggleTodosPgtoSel() {
+  const cbs  = [...document.querySelectorAll(".cb-pgto-row")];
+  const todos = cbs.map(cb => cb.dataset.id);
+  const allSel = todos.every(id => pgtoSelIds.has(id));
+  if (allSel) todos.forEach(id => pgtoSelIds.delete(id));
+  else todos.forEach(id => pgtoSelIds.add(id));
+  cbs.forEach(cb => {
+    cb.checked = pgtoSelIds.has(cb.dataset.id);
+    const row  = document.getElementById("pgto-row-" + cb.dataset.id);
+    if (row) row.style.background = pgtoSelIds.has(cb.dataset.id) ? "#eff6ff" : "";
+  });
+  const thCb = document.getElementById("th-cb-pgto");
+  if (thCb) thCb.checked = !allSel;
+  atualizarCardSelPgto();
+}
+
+function limparSelPgto() {
+  pgtoSelIds.clear();
+  document.querySelectorAll(".cb-pgto-row").forEach(cb => { cb.checked = false; });
+  document.querySelectorAll("[id^=pgto-row-]").forEach(r => r.style.background = "");
+  const thCb = document.getElementById("th-cb-pgto");
+  if (thCb) thCb.checked = false;
+  atualizarCardSelPgto();
+}
+
+function atualizarCardSelPgto() {
+  const card = document.getElementById("card-sel-pgto");
+  if (!card) return;
+  const n = pgtoSelIds.size;
+  if (n === 0) { card.style.display = "none"; return; }
+  const selecionadas = invoices.filter(i => pgtoSelIds.has(i.id));
+  const MOEDAS_LIST  = ["USD","EUR","CHF","GBP"];
+  const porMoeda = MOEDAS_LIST.map(m => {
+    const arr = selecionadas.filter(i => i.moeda === m);
+    if (!arr.length) return null;
+    const vM = arr.reduce((s,i) => s + parseCurrency(i.valor_moeda), 0);
+    const vR = arr.reduce((s,i) => s + (parseFloat(i.reais)||0), 0);
+    return { m, vM, vR, qtd: arr.length };
+  }).filter(Boolean);
+  const totR = selecionadas.reduce((s,i) => s + (parseFloat(i.reais)||0), 0);
+  const COR = { USD:"#1d4ed8", EUR:"#7c3aed", CHF:"#dc2626", GBP:"#059669" };
+  const BG  = { USD:"#dbeafe", EUR:"#ede9fe", CHF:"#fee2e2", GBP:"#d1fae5" };
+  const SYM = { USD:"US$", EUR:"€", CHF:"Fr", GBP:"£" };
+  const moedaCards = porMoeda.map(p => `
+    <div style="background:${BG[p.m]||"#f1f5f9"};border-left:3px solid ${COR[p.m]||"#64748b"};border-radius:8px;padding:8px 14px;min-width:140px">
+      <div style="font-size:10px;font-weight:700;color:${COR[p.m]||"#64748b"};margin-bottom:2px">${SYM[p.m]} ${p.m} · ${p.qtd} título(s)</div>
+      <div style="font-size:15px;font-weight:800;color:${COR[p.m]||"#1e3a5f"};line-height:1">${(p.vM).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div style="font-size:11px;font-weight:700;color:#16a34a;margin-top:2px">${fmtBRL(p.vR)}</div>
+    </div>`
+  ).join("");
+  card.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="font-weight:700;color:#1e3a5f;font-size:13px;white-space:nowrap">✅ ${n} pagamento(s) selecionado(s)</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">${moedaCards}</div>
+        <div style="background:#dcfce7;border-left:3px solid #16a34a;border-radius:8px;padding:8px 14px;min-width:140px">
+          <div style="font-size:10px;font-weight:700;color:#16a34a;margin-bottom:2px">🇧🇷 TOTAL EM R$</div>
+          <div style="font-size:18px;font-weight:800;color:#16a34a;line-height:1">${fmtBRL(totR)}</div>
+        </div>
+      </div>
+      <button onclick="limparSelPgto()" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:6px 14px;font-size:12px;color:#64748b;cursor:pointer;white-space:nowrap">✕ Limpar seleção</button>
+    </div>`;
+  card.style.display = "block";
+}
+
 function renderPagamentos() {
   const f = filtros.pgto;
   const todosForns = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
@@ -3279,9 +3363,10 @@ function renderPagamentos() {
     }).join("")}
   </div>
   ${resumoBancos}
+  <div id="card-sel-pgto" style="display:none;background:#fff;border:1.5px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(37,99,235,.08)"></div>
   <div class="table-wrap"><table>
     <thead><tr>
-      <th style="width:36px;padding:0 8px;text-align:center"><input type="checkbox" id="th-cb-inv" onclick="toggleTodosInvSel()" style="width:15px;height:15px;accent-color:#2563eb;cursor:pointer"></th>
+      <th style="width:36px;padding:0 8px;text-align:center"><input type="checkbox" id="th-cb-pgto" onclick="toggleTodosPgtoSel()" style="width:15px;height:15px;accent-color:#2563eb;cursor:pointer"></th>
       <th class="col-pasta">Pasta</th><th class="col-invoice">Nº Invoice</th><th class="col-fornecedor">Fornecedor</th>
       <th class="col-cidade">Cidade</th><th class="col-moeda">Moeda</th><th class="col-valor">Valor Moeda</th>
       <th class="col-taxa">Taxa</th><th class="col-valor">Valor R$</th><th class="col-data">Vencto</th>
@@ -3289,8 +3374,9 @@ function renderPagamentos() {
       <th class="col-awb">Banco</th><th class="col-acoes">Ação</th>
     </tr></thead>
     <tbody>${dados.length===0
-      ? `<tr><td colspan="14" style="text-align:center;padding:24px;color:#94a3b8">Nenhum registro encontrado</td></tr>`
-      : pgPgto.pageItems.map(i => `<tr>
+      ? `<tr><td colspan="15" style="text-align:center;padding:24px;color:#94a3b8">Nenhum registro encontrado</td></tr>`
+      : pgPgto.pageItems.map(i => `<tr id="pgto-row-${i.id}" style="${pgtoSelIds.has(i.id)?"background:#eff6ff":""}">
+          <td style="width:36px;padding:0 8px;text-align:center" onclick="event.stopPropagation()"><input type="checkbox" id="cb-pgto-${i.id}" class="cb-pgto-row" data-id="${i.id}" ${pgtoSelIds.has(i.id)?"checked":""} onchange="togglePgtoSel('${i.id}')" style="width:15px;height:15px;accent-color:#2563eb;cursor:pointer"></td>
           <td class="col-pasta" style="font-weight:600;color:#1e3a5f">${i.pasta||""}</td>
           <td class="col-invoice">${i.n_fatura||""}</td>
           <td class="col-fornecedor">${i.fornecedor||""}</td>
