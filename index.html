@@ -4270,7 +4270,7 @@ function exportPDFRanking(){
   }).join("");
   const w=window.open("","_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ranking Fornecedores</title><style>${pdfStyles()}</style></head><body>
-  <div class="hdr"><div><h1>📋 Ranking de Fornecedores — Importação</h1><p>Gerado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${forn.length}</b> fornecedores</div></div>
+  <div class="hdr"><div><h1>📋 Relatório Fornecedores — Câmbio Importação</h1><p>Gerado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${forn.length}</b> fornecedores</div></div>
   <table><thead><tr><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th style="text-align:center">Em Aberto</th><th style="text-align:center">Pago Total</th><th>Total R$</th></tr></thead><tbody>${rows}</tbody></table>
   ${pdfResumMoedas(invoices,"Resumo Geral por Moeda — Ranking")}
   <div class="tot"><b>Total Geral R$:</b> <span style="color:#16a34a">${fmtBRL(invoices.reduce((s,i)=>s+(parseFloat(i.reais)||0),0))}</span></div>
@@ -4291,11 +4291,11 @@ function exportPDFCambial(){
   const rows=dados.map((i,idx)=>`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td><b>${i.fornecedor||""}</b></td><td>${fmtD(i.dt_pgto)}</td><td>${i.moeda}</td><td>R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}</td><td>${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td>${fmtBRL(i.reais)}</td><td>${i.n_fatura||""}</td><td>${i.banco||"—"}</td></tr>`).join("");
   const w=window.open("","_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Análise Cambial</title><style>${pdfStyles()}</style></head><body>
-  <div class="hdr"><div><h1>📈 Análise Cambial — Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${dados.length}</b> pagamentos</div></div>
+  <div class="hdr"><div><h1>📈 Análise Cambial — Câmbio Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${dados.length}</b> pagamentos</div></div>
   <table><thead><tr><th>Fornecedor</th><th>Data Pgto</th><th>Moeda</th><th>Taxa Câmbio</th><th>Valor Moeda</th><th>Valor R$</th><th>Nº Invoice</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
   ${pdfResumMoedas(dados,"Resumo por Moeda — Análise Cambial")}
   <div class="tot"><b>Total Geral R$:</b> <span style="color:#16a34a">${fmtBRL(totR)}</span></div>
-  <div class="footer"><span>Análise Cambial — Importação</span><span>Gerado em ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span></div>
+  <div class="footer"><span>Análise Cambial — Câmbio Importação</span><span>Gerado em ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span></div>
   <script>window.print()<\/script></body></html>`);
   w.document.close();
 }
