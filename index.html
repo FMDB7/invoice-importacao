@@ -801,7 +801,7 @@ function statusBadge(s) {
 // ════════════════════════════════════════════════════════
 function renderTabBar() {
   document.getElementById("tabBar").innerHTML = getTabs().map(t =>
-    `<button class="tab${t===currentTab?" active":""}" onclick="renderTab('${t}')">${t==="Invoices"?"Invoices (Faturas em Aberto)":t}</button>`
+    `<button class="tab${t===currentTab?" active":""}" onclick="renderTab('${t}')">${t==="Invoices"?"Invoices Títulos em Aberto":t}</button>`
   ).join("");
 }
 
