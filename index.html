@@ -3271,7 +3271,7 @@ function renderPagamentos() {
 
   const botoesMesHTML = mesesDisp.length > 0 ? `
     <div style="margin-bottom:14px">
-      <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Mês${anoAtivo?" — "+anoAtivo:""}</div>
+      <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Visualizar Mês Pagamentos${anoAtivo?" — "+anoAtivo:""}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${mesesDisp.map(m => {
           const isSel = mesAtivo === m;
