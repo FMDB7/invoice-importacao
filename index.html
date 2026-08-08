@@ -801,7 +801,7 @@ function statusBadge(s) {
 // ════════════════════════════════════════════════════════
 function renderTabBar() {
   document.getElementById("tabBar").innerHTML = getTabs().map(t =>
-    `<button class="tab${t===currentTab?" active":""}" onclick="renderTab('${t}')">${t}</button>`
+    `<button class="tab${t===currentTab?" active":""}" onclick="renderTab('${t}')">${t==="Invoices"?"Invoices (Faturas em Aberto)":t}</button>`
   ).join("");
 }
 
@@ -2740,7 +2740,7 @@ function renderInvoices() {
   // Botões de mês
   const botoesHTML = mesesSet.length > 0 ? `
     <div style="margin-bottom:14px">
-      <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">📅 Visualizar mês fechado</div>
+      <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">📅 VISUALIZAR MÊS EM ABERTO</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${mesesSet.map(mes => {
           const [a,m] = mes.split("-");
