@@ -3865,12 +3865,14 @@ function exportPDFMultiForn() {
   const totR = invs.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const rows = invs.map((i,idx)=>{const cor=i.status_pgto==="Pago Total"?"#16a34a":i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td><b>${i.fornecedor||""}</b></td><td>${i.n_fatura||""}</td><td>${fmtD(i.emissao_fatura)}</td><td>${fmtD(i.vencimento)}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${i.cond_pgto||""}</td><td><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td></tr>`;}).join("");
   // Resumo por Fornecedor
-  const resumoFornHTML = selForns.map(fn => {
+  const resumoFornHTML = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">` + selForns.map(fn => {
     const invsFn = invs.filter(i=>i.fornecedor===fn);
     const totFnR = invsFn.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
     const PAGOS = ["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"];
     const pagoR = invsFn.filter(i=>PAGOS.includes(i.status_pgto)).reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
     const abertoR = invsFn.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+    const pctPago = totFnR>0 ? Math.round((pagoR/totFnR)*100) : 0;
+    const pctAberto = totFnR>0 ? Math.round((abertoR/totFnR)*100) : 0;
     const moedasFn = MOEDAS.map(m=>{
       const arr=invsFn.filter(i=>i.moeda===m);
       const vM=arr.reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
@@ -3878,31 +3880,39 @@ function exportPDFMultiForn() {
       const MCOR={USD:"#1d4ed8",EUR:"#7c3aed",CHF:"#dc2626",GBP:"#059669"};
       const MBG={USD:"#dbeafe",EUR:"#ede9fe",CHF:"#fee2e2",GBP:"#d1fae5"};
       const MSIMB={USD:"US$",EUR:"€",CHF:"Fr",GBP:"£"};
-      return vM>0?`<div style="background:${MBG[m]||"#f1f5f9"};border-radius:8px;padding:8px 14px;border-left:3px solid ${MCOR[m]||"#64748b"};min-width:130px">
-        <div style="font-size:10px;font-weight:700;color:${MCOR[m]};margin-bottom:2px">${MSIMB[m]} ${m}</div>
-        <div style="font-size:14px;font-weight:800;color:${MCOR[m]}">${(MSIMB[m]+" "+vM.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}))}</div>
-        <div style="font-size:11px;font-weight:700;color:#16a34a">${fmtBRL(vR)}</div>
+      return vM>0?`<div style="background:${MBG[m]||"#f1f5f9"};border-radius:6px;padding:5px 10px;border-left:3px solid ${MCOR[m]||"#64748b"};font-size:10px">
+        <span style="font-weight:700;color:${MCOR[m]}">${MSIMB[m]} ${m}:</span>
+        <span style="font-weight:800;color:${MCOR[m]};margin-left:4px">${(MSIMB[m]+" "+vM.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}))}</span>
+        <span style="color:#16a34a;font-weight:600;margin-left:4px">= ${fmtBRL(vR)}</span>
       </div>`:"";
     }).join("");
-    return `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    return `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;break-inside:avoid">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
         <div>
-          <div style="font-size:13px;font-weight:700;color:#1e3a5f">${fn}</div>
-          <div style="font-size:10px;color:#64748b;margin-top:2px">${invsFn.length} invoice(s)</div>
+          <div style="font-size:12px;font-weight:700;color:#1e3a5f;margin-bottom:2px">${fn}</div>
+          <div style="font-size:10px;color:#64748b">${invsFn.length} invoice(s)</div>
         </div>
         <div style="text-align:right">
-          <div style="font-size:11px;color:#64748b">Total R$</div>
-          <div style="font-size:16px;font-weight:800;color:#1e3a5f">${fmtBRL(totFnR)}</div>
-          <div style="font-size:10px;margin-top:2px">
-            <span style="color:#dc2626;font-weight:600">Em Aberto: ${fmtBRL(abertoR)}</span>
-            &nbsp;·&nbsp;
-            <span style="color:#16a34a;font-weight:600">Pago: ${fmtBRL(pagoR)}</span>
-          </div>
+          <div style="font-size:15px;font-weight:800;color:#1e3a5f">${fmtBRL(totFnR)}</div>
+          <div style="font-size:9px;color:#64748b;margin-top:1px">Total em R$</div>
         </div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">${moedasFn}</div>
+      <div style="background:#f8fafc;border-radius:6px;padding:6px 8px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px">
+          <span style="color:#dc2626;font-weight:600">⏳ Em Aberto (${pctAberto}%)</span>
+          <span style="color:#dc2626;font-weight:700">${fmtBRL(abertoR)}</span>
+        </div>
+        <div style="background:#e5e7eb;border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px">
+          <div style="background:#dc2626;height:6px;width:${pctAberto}%;border-radius:4px"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px">
+          <span style="color:#16a34a;font-weight:600">✅ Pago (${pctPago}%)</span>
+          <span style="color:#16a34a;font-weight:700">${fmtBRL(pagoR)}</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">${moedasFn}</div>
     </div>`;
-  }).join("");
+  }).join("") + `</div>`;
 
   const w=window.open("","_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório Fornecedores — Câmbio Importação</title><style>${pdfStyles()}</style></head><body>
