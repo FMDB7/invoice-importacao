@@ -4341,16 +4341,176 @@ function exportPDFCambial(){
   if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
   if(f.ano)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto.substring(0,4)===f.ano);
   if(f.mes)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto.substring(5,7)===f.mes);
+  if(!dados.length){showToast("Nenhum dado para exportar","err");return;}
+
   const totR=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const rows=dados.map((i,idx)=>`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td><b>${i.fornecedor||""}</b></td><td>${fmtD(i.dt_pgto)}</td><td>${i.moeda}</td><td>R$ ${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4})}</td><td>${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td>${fmtBRL(i.reais)}</td><td>${i.n_fatura||""}</td><td>${i.banco||"—"}</td></tr>`).join("");
-  const w=window.open("","_blank");
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Análise Cambial</title><style>${pdfStyles()}</style></head><body>
-  <div class="hdr"><div><h1>📈 Análise Cambial — Câmbio Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")}</p></div><div><b>${dados.length}</b> pagamentos</div></div>
-  <table><thead><tr><th>Fornecedor</th><th>Data Pgto</th><th>Moeda</th><th>Taxa Câmbio</th><th>Valor Moeda</th><th>Valor R$</th><th>Nº Invoice</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
-  ${pdfResumMoedas(dados,"Resumo por Moeda — Análise Cambial")}
-  <div class="tot"><b>Total Geral R$:</b> <span style="color:#16a34a">${fmtBRL(totR)}</span></div>
-  <div class="footer"><span>Análise Cambial — Câmbio Importação</span><span>Gerado em ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span></div>
-  <script>window.print()<\/script></body></html>`);
+  const dtExp=new Date().toLocaleDateString("pt-BR")+" às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+
+  // ── KPI por moeda ─────────────────────────────────────
+  const MCOR={USD:"#1d4ed8",EUR:"#7c3aed",CHF:"#dc2626",GBP:"#059669"};
+  const MBG={USD:"#dbeafe",EUR:"#ede9fe",CHF:"#fee2e2",GBP:"#d1fae5"};
+  const MSIMB={USD:"US$",EUR:"€",CHF:"Fr",GBP:"£"};
+  const kpiCards = MOEDAS.map(m=>{
+    const arr=dados.filter(i=>i.moeda===m);
+    if(!arr.length)return"";
+    const vM=arr.reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
+    const vR=arr.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+    const taxas=arr.map(i=>parseFloat(i.taxa)).filter(t=>t>0);
+    const taxaMin=Math.min(...taxas).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4});
+    const taxaMax=Math.max(...taxas).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4});
+    const taxaAvg=(taxas.reduce((s,t)=>s+t,0)/taxas.length).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4});
+    const pct=totR>0?((vR/totR)*100).toFixed(1):"0";
+    return`<div style="background:${MBG[m]};border:1.5px solid ${MCOR[m]}33;border-radius:10px;padding:14px 16px;border-left:5px solid ${MCOR[m]}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:13px;font-weight:700;color:${MCOR[m]}">${MSIMB[m]} ${m}</span>
+        <span style="background:${MCOR[m]};color:#fff;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700">${pct}%</span>
+      </div>
+      <div style="font-size:18px;font-weight:800;color:${MCOR[m]};margin-bottom:2px">${(MSIMB[m]+" "+vM.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}))}</div>
+      <div style="font-size:13px;font-weight:700;color:#16a34a;margin-bottom:8px">${fmtBRL(vR)}</div>
+      <div style="background:#fff;border-radius:6px;padding:6px 8px;font-size:10px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="color:#64748b">Taxa mín.</span><span style="font-weight:700;color:${MCOR[m]}">${taxaMin}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="color:#64748b">Taxa média</span><span style="font-weight:700;color:${MCOR[m]}">${taxaAvg}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:#64748b">Taxa máx.</span><span style="font-weight:700;color:${MCOR[m]}">${taxaMax}</span></div>
+      </div>
+      <div style="margin-top:6px;font-size:10px;color:#64748b;text-align:right">${arr.length} pagamento(s)</div>
+    </div>`;
+  }).join("");
+
+  // ── SVG: Barras de volume por moeda (horizontal) ──────
+  const MOEDAS_COM = MOEDAS.filter(m=>dados.some(i=>i.moeda===m));
+  const maxVol = Math.max(...MOEDAS_COM.map(m=>dados.filter(i=>i.moeda===m).reduce((s,i)=>s+(parseFloat(i.reais)||0),0)));
+  const barW=420, barH=24, gap=10;
+  const barsHTML = MOEDAS_COM.map((m,idx)=>{
+    const vR=dados.filter(i=>i.moeda===m).reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+    const w=maxVol>0?Math.round((vR/maxVol)*barW):0;
+    const pct=totR>0?((vR/totR)*100).toFixed(1):"0";
+    return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:${idx<MOEDAS_COM.length-1?gap+"px":"0"}">
+      <div style="font-size:10px;font-weight:700;color:${MCOR[m]};width:32px">${m}</div>
+      <div style="flex:1;position:relative;height:${barH}px;background:#f1f5f9;border-radius:4px;overflow:hidden">
+        <div style="position:absolute;left:0;top:0;height:${barH}px;width:${(vR/maxVol*100).toFixed(1)}%;background:${MCOR[m]};border-radius:4px;opacity:.85"></div>
+        <div style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:#fff">${fmtBRL(vR)}</div>
+      </div>
+      <div style="font-size:10px;color:${MCOR[m]};font-weight:700;width:38px;text-align:right">${pct}%</div>
+    </div>`;
+  }).join("");
+
+  // ── SVG: Evolução de taxa por mês ─────────────────────
+  const mesesMap={};
+  dados.forEach(i=>{
+    const mes=i.dt_pgto.substring(0,7);
+    if(!mesesMap[mes])mesesMap[mes]={};
+    if(!mesesMap[mes][i.moeda])mesesMap[mes][i.moeda]=[];
+    mesesMap[mes][i.moeda].push(parseFloat(i.taxa));
+  });
+  const mesesOrdenados=Object.keys(mesesMap).sort();
+  const MESES_BR=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const nomeMes=m=>{const[y,mo]=m.split("-");return MESES_BR[parseInt(mo)-1]+"/"+y.substring(2);};
+  const taxaLineHTML = MOEDAS_COM.length>0&&mesesOrdenados.length>=2 ? `
+    <div style="margin-top:4px">
+      <div style="font-size:10px;color:#64748b;margin-bottom:8px">Variação de taxa por mês de pagamento</div>
+      ${MOEDAS_COM.map(m=>{
+        const pontos=mesesOrdenados.map(mes=>({mes,avg:mesesMap[mes]&&mesesMap[mes][m]?(mesesMap[mes][m].reduce((s,t)=>s+t,0)/mesesMap[mes][m].length):null})).filter(p=>p.avg!==null);
+        if(pontos.length<2)return"";
+        const taxaMin2=Math.min(...pontos.map(p=>p.avg));
+        const taxaMax2=Math.max(...pontos.map(p=>p.avg));
+        const range=taxaMax2-taxaMin2||0.01;
+        const W=460,H=70,padL=8,padR=8,padT=8,padB=8;
+        const chartW=W-padL-padR,chartH=H-padT-padB;
+        const pts=pontos.map((p,i)=>({
+          x:padL+(i/(pontos.length-1))*chartW,
+          y:padT+chartH-(((p.avg-taxaMin2)/range)*chartH)
+        }));
+        const path="M "+pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L ");
+        const dots=pts.map((p,i)=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${MCOR[m]}"/>
+          <text x="${p.x.toFixed(1)}" y="${(H-2).toFixed(1)}" text-anchor="middle" font-size="8" fill="#64748b">${nomeMes(pontos[i].mes)}</text>
+          <text x="${p.x.toFixed(1)}" y="${(p.y-5).toFixed(1)}" text-anchor="middle" font-size="8" font-weight="bold" fill="${MCOR[m]}">${pontos[i].avg.toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4})}</text>`).join("");
+        return`<div style="background:#f8fafc;border-radius:8px;padding:10px;margin-bottom:8px">
+          <div style="font-size:11px;font-weight:700;color:${MCOR[m]};margin-bottom:6px">${MSIMB[m]} ${m} — taxa média mensal</div>
+          <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block">
+            <path d="${path}" fill="none" stroke="${MCOR[m]}" stroke-width="2" opacity="0.8"/>
+            ${dots}
+          </svg>
+        </div>`;
+      }).join("")}
+    </div>` : "";
+
+  // ── Tabela de operações ───────────────────────────────
+  const rows=dados.slice().sort((a,b)=>a.dt_pgto>b.dt_pgto?-1:1).map((i,idx)=>{
+    const td="padding:5px 8px;border-bottom:0.5px solid #e2e8f0;font-size:10px";
+    return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}">
+      <td style="${td};font-weight:600">${i.fornecedor||""}</td>
+      <td style="${td}">${fmtD(i.dt_pgto)}</td>
+      <td style="${td}"><b style="color:${MCOR[i.moeda]||"#1e3a5f"}">${i.moeda}</b></td>
+      <td style="${td};font-weight:700;color:${MCOR[i.moeda]||"#1e3a5f"}">${parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4})}</td>
+      <td style="${td};font-weight:600">${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td>
+      <td style="${td};font-weight:700;color:#16a34a">${fmtBRL(i.reais)}</td>
+      <td style="${td}">${i.n_fatura||""}</td>
+      <td style="${td}">${i.banco||"—"}</td>
+    </tr>`;
+  }).join("");
+
+  const thS="padding:7px 8px;background:#1e3a5f;color:#fff;font-size:10px;font-weight:500;text-align:left";
+  const w=window.open("","_blank","width=1100,height=800");
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Análise Cambial — Câmbio Importação</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;padding:20px;color:#1e293b;font-size:12px;background:#f8fafc}
+    @media print{body{padding:10px;background:#fff}.no-print{display:none}}
+    @page{margin:15mm}
+  </style>
+  </head><body>
+
+  <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border-radius:12px;padding:18px 22px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start">
+    <div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px">📈 Análise Cambial — Câmbio Importação</div>
+      <div style="font-size:11px;opacity:.8">Exportado em ${dtExp}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:22px;font-weight:800">${fmtBRL(totR)}</div>
+      <div style="font-size:10px;opacity:.8">${dados.length} operação(ões) cambiais</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
+    ${kpiCards}
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+      <div style="font-size:11px;font-weight:700;color:#1e3a5f;margin-bottom:10px">📊 Participação por Moeda (R$)</div>
+      ${barsHTML}
+    </div>
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+      <div style="font-size:11px;font-weight:700;color:#1e3a5f;margin-bottom:6px">💱 Evolução de Taxa Cambial</div>
+      ${taxaLineHTML||"<div style='font-size:10px;color:#94a3b8;padding:20px;text-align:center'>Dados insuficientes para gerar gráfico de evolução</div>"}
+    </div>
+  </div>
+
+  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:14px">
+    <div style="padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:11px;font-weight:700;color:#1e3a5f">🗒️ Operações Cambiais — Detalhamento</div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="${thS}">Fornecedor</th><th style="${thS}">Data Pgto</th><th style="${thS}">Moeda</th>
+        <th style="${thS}">Taxa R$</th><th style="${thS}">Valor Moeda</th><th style="${thS}">Valor R$</th>
+        <th style="${thS}">Nº Invoice</th><th style="${thS}">Banco</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+
+  <div style="background:#dcfce7;border-radius:8px;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border:1px solid #bbf7d0">
+    <span style="font-weight:700;color:#16a34a;font-size:12px">✅ TOTAL GERAL PAGO (R$)</span>
+    <span style="font-weight:800;color:#16a34a;font-size:16px">${fmtBRL(totR)}</span>
+    <span style="color:#64748b;font-size:10px">${dados.length} operação(ões)</span>
+  </div>
+
+  <div style="margin-top:12px;text-align:center;font-size:9px;color:#94a3b8">
+    Análise Cambial — Câmbio Importação &nbsp;|&nbsp; Gerado em ${dtExp}
+  </div>
+
+  <script>window.onload=()=>setTimeout(()=>window.print(),400);<\/script>
+  </body></html>`);
   w.document.close();
 }
 
