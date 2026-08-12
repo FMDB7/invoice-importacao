@@ -54,6 +54,11 @@
 
 
 <meta charset="UTF-8"/>
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Câmbio Invoices Importação</title>
 
@@ -420,6 +425,56 @@ function parseBRL(txt) {
   const n = parseFloat(String(txt).replace(/\./g, "").replace(",", "."));
   return isNaN(n) ? "" : String(n);
 }
+
+// ════════════════════════════════════════════════════════
+//  SEGURANÇA — Sanitização e Proteção
+// ════════════════════════════════════════════════════════
+function sanitizeHTML(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g,  "&amp;")
+    .replace(/</g,  "&lt;")
+    .replace(/>/g,  "&gt;")
+    .replace(/"/g,  "&quot;")
+    .replace(/'/g,  "&#x27;")
+    .replace(/\//g, "&#x2F;")
+    .replace(/`/g,  "&#x60;");
+}
+const esc = sanitizeHTML; // alias curto
+
+function sanitizeNum(val) {
+  const n = parseFloat(String(val).replace(/[^\d.,-]/g,""));
+  return isNaN(n) ? "" : n;
+}
+
+// Rate limiting para login
+const _loginAttempts = { count: 0, last: 0 };
+function checkLoginRateLimit() {
+  const now = Date.now();
+  if (now - _loginAttempts.last > 60000) { _loginAttempts.count = 0; }
+  _loginAttempts.last = now;
+  _loginAttempts.count++;
+  if (_loginAttempts.count > 10) {
+    showToast("Muitas tentativas. Aguarde 1 minuto.", "err");
+    return false;
+  }
+  return true;
+}
+
+// Session timeout (30 min de inatividade)
+let _lastActivity = Date.now();
+function resetActivity() { _lastActivity = Date.now(); }
+function checkSession() {
+  if (currentUser && Date.now() - _lastActivity > 30 * 60 * 1000) {
+    currentUser = null;
+    showToast("Sessão expirada por inatividade. Faça login novamente.", "err");
+    setTimeout(() => location.reload(), 2000);
+  }
+}
+setInterval(checkSession, 60000);
+document.addEventListener("click", resetActivity, { passive: true });
+document.addEventListener("keydown", resetActivity, { passive: true });
+
 const PAGE_SIZE = 15;
 let paginaAtual = { inv:1, pgto:1, forn:1, cambial:1 };
 let invSelIds  = new Set();
@@ -2059,7 +2114,7 @@ function renderFormFields() {
         <div id="parcelas-preview"></div>
       </div>
     </div>
-    <div style="grid-column:1/-1">${flabel("Observações")}<textarea rows="3" placeholder="Observações..." onchange="updateForm('obs',this.value)" style="resize:vertical">${f.obs||""}</textarea></div>`;
+    <div style="grid-column:1/-1">${flabel("Observações")}<textarea rows="3" placeholder="Observações..." maxlength="500" onchange="updateForm('obs',this.value)" style="resize:vertical">${f.obs||""}</textarea></div>`;
 }
 
 function updateForm(k, v) {
@@ -2188,7 +2243,7 @@ function abrirPgto(id) {
   const i = invoices.find(inv => inv.id === id);
   if (!i) return;
   const vm = parseCurrency(i.valor_moeda);
-  document.getElementById("pgtoInfo").innerHTML = `<b>${i.n_fatura}</b> — ${i.fornecedor} &nbsp;|&nbsp; <span style="color:${MOEDA_COR[i.moeda]};font-weight:700">${i.moeda} ${fmtM(vm,i.moeda)}</span>`;
+  document.getElementById("pgtoInfo").innerHTML = `<b>${esc(i.n_fatura)}</b> — ${esc(i.fornecedor)} &nbsp;|&nbsp; <span style="color:${MOEDA_COR[i.moeda]};font-weight:700">${i.moeda} ${fmtM(vm,i.moeda)}</span>`;
   document.getElementById("pgtoFields").innerHTML = `
     <div>${flabel("Data Pagamento")}<input id="p_dtPgto" type="date" value="${hoje()}"></div>
     <div>${flabel("Banco")}<input id="p_banco" value="${i.banco||""}"></div>
@@ -2954,7 +3009,7 @@ function renderInvoiceRow(i) {
         </select>
       </td>
       <td><input class="inline-input" id="ie_awb_${sid}" value="${i.awb_bl||""}" style="width:90px"></td>
-      <td><input class="inline-input" id="ie_obs_${sid}" value="${i.obs||""}" placeholder="Obs..." style="width:120px"></td>
+      <td><input class="inline-input" id="ie_obs_${sid}" value="${esc(i.obs||"")}" placeholder="Obs..." style="width:120px"></td>
       <td style="white-space:nowrap">
         <button class="save-row-btn" onclick="salvarLinhaInline('${sid}')">✅ Salvar</button>
         <button class="cancel-row-btn" onclick="invoiceEditId=null;renderTab('Invoices')">✖</button>
@@ -4017,7 +4072,7 @@ function exportPDFComDados(filtradas, isSel) {
       <td style="${td};font-weight:700;color:#16a34a">${fmtBRL(i.reais)}</td>
       <td style="${td}">${i.cond_pgto||""}</td>
       <td style="${td}"><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td>
-      <td style="${td};font-size:9px">${i.obs||"—"}</td>
+      <td style="${td};font-size:9px">${esc(i.obs||"—")}</td>
     </tr>`;
   }).join("");
   const thStyle = "padding:8px 10px;background:#1e3a5f;color:#fff;font-size:10px;font-weight:500;text-align:left";
@@ -4202,7 +4257,7 @@ function pdfStyles(){ return `*{box-sizing:border-box;margin:0;padding:0}body{fo
 function exportPDF(){
   const filtradas=getInvFiltradas();
   const totR=filtradas.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const rows=filtradas.map((i,idx)=>{const cor=i.status_pgto==="Pago Total"?"#16a34a":i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";const td="padding:6px 12px";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td style="${td}">${i.pasta||""}</td><td style="${td}">${i.cidade||""}</td><td style="${td}"><b>${i.fornecedor||""}</b></td><td style="${td}">${i.n_fatura||""}</td><td style="${td}">${fmtD(i.emissao_fatura)}</td><td style="${td}">${fmtD(i.vencimento)}</td><td style="${td}">${i.moeda}</td><td style="${td}">${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td style="${td}">${i.taxa||"—"}</td><td style="${td}">${fmtBRL(i.reais)}</td><td style="${td}">${i.cond_pgto||""}</td><td style="${td}"><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td><td style="${td};font-size:10px;max-width:160px">${i.obs||"—"}</td></tr>`;}).join("");
+  const rows=filtradas.map((i,idx)=>{const cor=i.status_pgto==="Pago Total"?"#16a34a":i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";const td="padding:6px 12px";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td style="${td}">${i.pasta||""}</td><td style="${td}">${i.cidade||""}</td><td style="${td}"><b>${i.fornecedor||""}</b></td><td style="${td}">${i.n_fatura||""}</td><td style="${td}">${fmtD(i.emissao_fatura)}</td><td style="${td}">${fmtD(i.vencimento)}</td><td style="${td}">${i.moeda}</td><td style="${td}">${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td style="${td}">${i.taxa||"—"}</td><td style="${td}">${fmtBRL(i.reais)}</td><td style="${td}">${i.cond_pgto||""}</td><td style="${td}"><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td><td style="${td};font-size:10px;max-width:160px">${esc(i.obs||"—")}</td></tr>`;}).join("");
   const w=window.open("","_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoices</title><style>${pdfStyles()}</style></head><body>
   <div class="hdr"><div><h1>🌐 Relatório Invoice (Fatura em Aberto) — Câmbio Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</p></div><div><b>${filtradas.length}</b> faturas</div></div>
