@@ -1245,7 +1245,7 @@ function filtroAtivoTxt(ns) {
   if (f.dtIni)                        p.push(`De: ${fmtD(f.dtIni)}`);
   if (f.dtFim)                        p.push(`Até: ${fmtD(f.dtFim)}`);
   if (ns==="cambial" && f.ano)        p.push(`Ano: ${f.ano}`);
-  if (ns==="cambial" && f.mes)        p.push(`Mês: ${MESES_NOMES[parseInt(f.mes)-1]}`);
+  if (ns==="cambial" && f.mes)        p.push(`Mês: ${(MESES_NOMES[parseInt(f.mes)-1]||"")}`);
   return p.length || (ns==="inv" && invSelIds && invSelIds.size>0)
     ? `✅ Filtro ativo: ${[...(invSelIds && invSelIds.size>0 && ns==="inv" ? [`${invSelIds.size} selecionada(s)`] : []), ...p].join(" | ")}`
     : "";
@@ -1485,7 +1485,7 @@ function renderGraficoMesesCambial(dadosTodos, mesSelecionado) {
     const h = Math.max((val/maxVal)*H, 4);
     const isSel = mesSelecionado === mesNum;
     const cor = isSel ? "#7c3aed" : "#3b82f6";
-    const tip = `${MESES_NOMES[parseInt(mesNum)-1]}: ${fmtBRL(val)} (${pct.toFixed(1)}%)`;
+    const tip = `${(MESES_NOMES[parseInt(mesNum)-1]||"")}: ${fmtBRL(val)} (${pct.toFixed(1)}%)`;
     return `<div onclick="selecionarMesCambial('${mesNum}')" title="${tip}" style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;width:${barW}px;cursor:pointer">
       <div style="position:relative;height:${H}px;width:${barW}px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;overflow:visible">
         <div style="position:absolute;bottom:${(h+2).toFixed(0)}px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:2px;z-index:2;pointer-events:none">
@@ -1494,13 +1494,13 @@ function renderGraficoMesesCambial(dadosTodos, mesSelecionado) {
         </div>
         <div style="width:${barW}px;height:${h.toFixed(0)}px;background:${cor};border-radius:6px 6px 0 0;transition:background .15s,height .25s,opacity .15s;${isSel?"box-shadow:0 0 0 2px #7c3aed":""}" onmouseover="this.style.opacity='0.78'" onmouseout="this.style.opacity='1'"></div>
       </div>
-      <div style="font-size:10px;color:${isSel?"#7c3aed":"#64748b"};font-weight:${isSel?"800":"600"};text-align:center;margin-top:4px">${MESES_NOMES[parseInt(mesNum)-1].substring(0,3)}</div>
+      <div style="font-size:10px;color:${isSel?"#7c3aed":"#64748b"};font-weight:${isSel?"800":"600"};text-align:center;margin-top:4px">${((MESES_NOMES[parseInt(mesNum)-1]||"")||"?").substring(0,3)}</div>
     </div>`;
   }).join("");
 
   return `<div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-weight:700;color:#1e3a5f">📅 Pagamentos por Mês (R$) ${mesSelecionado?`<span style="font-size:11px;color:#7c3aed;font-weight:700">— filtrando ${MESES_NOMES[parseInt(mesSelecionado)-1]}</span>`:""}</div>
+      <div style="font-weight:700;color:#1e3a5f">📅 Pagamentos por Mês (R$) ${mesSelecionado?`<span style="font-size:11px;color:#7c3aed;font-weight:700">— filtrando ${(MESES_NOMES[parseInt(mesSelecionado)-1]||"")}</span>`:""}</div>
       ${mesSelecionado ? `<button onclick="selecionarMesCambial('${mesSelecionado}')" style="font-size:10px;background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:3px 9px;cursor:pointer;font-weight:600">✖ Limpar mês</button>` : ""}
     </div>
     <div style="overflow-x:auto;padding-bottom:4px"><div style="display:flex;align-items:flex-end;gap:12px;padding:40px 8px 4px 8px;min-width:max-content">${cols}</div></div>
@@ -2766,7 +2766,7 @@ function renderInvoices() {
     const invMes = invoices.filter(i => i.status_pgto === "Em Aberto" && i.vencimento && (i.vencimento||"").substring(0,7) === mesAtivo);
     const totReais = invMes.reduce((s,i) => s+(parseFloat(i.reais)||0), 0);
     const [anoM, numM] = mesAtivo.split("-");
-    const nomeMesLabel = MESES_NOMES[parseInt(numM)-1] + "/" + anoM;
+    const nomeMesLabel = (MESES_NOMES[parseInt(numM)-1]||"") + "/" + anoM;
     const kpisMoeda = MOEDAS.map(m => {
       const v = invMes.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
       if (!v) return "";
@@ -2799,7 +2799,7 @@ function renderInvoices() {
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${mesesSet.map(mes => {
           const [a,m] = mes.split("-");
-          const label = MESES_NOMES[parseInt(m)-1].substring(0,3)+"/"+a.substring(2);
+          const label = ((MESES_NOMES[parseInt(m)-1]||"")||"?").substring(0,3)+"/"+(a||"").substring(2);
           const isSel = mesAtivo === mes;
           const invM  = invAbertasComVcto.filter(i=>i.vencimento&&(i.vencimento||"").substring(0,7)===mes);
           const totR  = invM.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
@@ -3332,7 +3332,7 @@ function renderPagamentos() {
           const isSel = mesAtivo === m;
           const invM  = pgtoBase.filter(i=>i.dt_pgto&&(i.dt_pgto||"").substring(5,7)===m);
           const tot   = invM.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-          const label = MESES_NOMES[parseInt(m)-1].substring(0,3);
+          const label = ((MESES_NOMES[parseInt(m)-1]||"")||"?").substring(0,3);
           return `<button onclick="selecionarMesPgto('${m}')" style="display:flex;flex-direction:column;align-items:center;padding:8px 14px;border-radius:10px;border:2px solid ${isSel?"#16a34a":"#e2e8f0"};background:${isSel?"#16a34a":"#fff"};color:${isSel?"#fff":"#475569"};cursor:pointer;font-size:12px;font-weight:700;min-width:64px;transition:all .15s;box-shadow:${isSel?"0 4px 12px rgba(22,163,74,.3)":"none"}">
             <span>${label}</span>
             <span style="font-size:9px;opacity:${isSel?".85":".55"};margin-top:2px">${invM.length} pg.</span>
@@ -3348,7 +3348,7 @@ function renderPagamentos() {
   if (mesAtivo) {
     const invMes = dadosPainel; // fully filtered by all criteria
     const totR   = invMes.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-    const nomeMesLabel = MESES_NOMES[parseInt(mesAtivo)-1] + (anoAtivo?" / "+anoAtivo:"");
+    const nomeMesLabel = (MESES_NOMES[parseInt(mesAtivo)-1]||"") + (anoAtivo?" / "+anoAtivo:"");
     const kpis = MOEDAS.map(m=>{
       const v = invMes.filter(i=>i.moeda===m).reduce((s,i)=>s+parseCurrency(i.valor_moeda),0);
       if(!v) return "";
