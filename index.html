@@ -3301,14 +3301,14 @@ function renderPagamentos() {
   // cardsMoeda removed — panels consolidated into status row below
 
   // Anos e meses disponíveis nos pagamentos (dt_pgto preenchido)
-  const pgtoComDt = invoices.filter(i=>i.dt_pgto&&["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto));
-  const anosDisp  = [...new Set(pgtoComDt.map(i=>i.dt_pgto.substring(0,4)))].sort().reverse();
+  const pgtoComDt = invoices.filter(i=>i.dt_pgto&&typeof i.dt_pgto==="string"&&i.dt_pgto.length>=7&&["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto));
+  const anosDisp  = [...new Set(pgtoComDt.filter(i=>i.dt_pgto).map(i=>i.dt_pgto.substring(0,4)))].sort().reverse();
   const anoAtivo  = f.ano;
   const mesAtivo  = f.mes;
 
   // Meses disponíveis para o ano ativo (ou todos se nenhum ano selecionado)
-  const pgtoBase  = anoAtivo ? pgtoComDt.filter(i=>i.dt_pgto.substring(0,4)===anoAtivo) : pgtoComDt;
-  const mesesDisp = [...new Set(pgtoBase.map(i=>i.dt_pgto.substring(5,7)))].sort();
+  const pgtoBase  = anoAtivo ? pgtoComDt.filter(i=>i.dt_pgto&&i.dt_pgto.substring(0,4)===anoAtivo) : pgtoComDt;
+  const mesesDisp = [...new Set(pgtoBase.filter(i=>i.dt_pgto).map(i=>i.dt_pgto.substring(5,7)))].sort();
 
   const botoesAnoHTML = anosDisp.length > 0 ? `
     <div style="margin-bottom:10px">
@@ -3316,7 +3316,7 @@ function renderPagamentos() {
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${anosDisp.map(a => {
           const isSel = anoAtivo === a;
-          const tot = pgtoComDt.filter(i=>i.dt_pgto.substring(0,4)===a).reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+          const tot = pgtoComDt.filter(i=>i.dt_pgto&&i.dt_pgto.substring(0,4)===a).reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
           return `<button onclick="selecionarAnoPgto('${a}')" style="padding:7px 16px;border-radius:10px;border:2px solid ${isSel?"#2563eb":"#e2e8f0"};background:${isSel?"#2563eb":"#fff"};color:${isSel?"#fff":"#475569"};cursor:pointer;font-size:13px;font-weight:700;transition:all .15s;box-shadow:${isSel?"0 4px 12px rgba(37,99,235,.3)":"none"}">
             ${a} <span style="font-size:10px;opacity:.8">${fmtBRL(tot).replace("R$","").trim()}</span>
           </button>`;
@@ -3330,7 +3330,7 @@ function renderPagamentos() {
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${mesesDisp.map(m => {
           const isSel = mesAtivo === m;
-          const invM  = pgtoBase.filter(i=>i.dt_pgto.substring(5,7)===m);
+          const invM  = pgtoBase.filter(i=>i.dt_pgto&&i.dt_pgto.substring(5,7)===m);
           const tot   = invM.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
           const label = MESES_NOMES[parseInt(m)-1].substring(0,3);
           return `<button onclick="selecionarMesPgto('${m}')" style="display:flex;flex-direction:column;align-items:center;padding:8px 14px;border-radius:10px;border:2px solid ${isSel?"#16a34a":"#e2e8f0"};background:${isSel?"#16a34a":"#fff"};color:${isSel?"#fff":"#475569"};cursor:pointer;font-size:12px;font-weight:700;min-width:64px;transition:all .15s;box-shadow:${isSel?"0 4px 12px rgba(22,163,74,.3)":"none"}">
