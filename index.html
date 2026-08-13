@@ -1217,7 +1217,7 @@ function getInvFiltradas() {
     if (f.pasta  && !(i.pasta||"").toLowerCase().includes(f.pasta.toLowerCase())) return false;
     if (f.dtIni  && i.vencimento && i.vencimento < f.dtIni) return false;
     if (f.dtFim  && i.vencimento && i.vencimento > f.dtFim) return false;
-    if (f.mesVcto && i.vencimento && i.vencimento.substring(0,7) !== f.mesVcto) return false;
+    if (f.mesVcto && i.vencimento && (i.vencimento||"").substring(0,7) !== f.mesVcto) return false;
     if (f.valorMin !== "" && f.valorMin !== undefined) { const v = parseCurrency(i.valor_moeda)||0; if (v < parseFloat(f.valorMin)) return false; }
     if (f.valorMax !== "" && f.valorMax !== undefined) { const v = parseCurrency(i.valor_moeda)||0; if (v > parseFloat(f.valorMax)) return false; }
     return true;
@@ -1461,7 +1461,7 @@ function renderGraficoMesesCambial(dadosTodos, mesSelecionado) {
   dadosTodos.forEach(i => {
     const dt = i.dt_pgto;
     if (!dt) return;
-    const mesNum = dt.substring(5,7);
+    const mesNum = (dt||"").substring(5,7);
     porMes[mesNum] = (porMes[mesNum]||0) + (parseFloat(i.reais)||0);
   });
   const mesesComDados = Object.keys(porMes).sort();
@@ -1532,7 +1532,7 @@ function renderGraficoMensalMoedas(invs) {
   const comVcto = invs.filter(i => i.vencimento && i.vencimento.trim() !== "");
 
   const mesesSet = new Set();
-  comVcto.forEach(i => { if(i.vencimento) mesesSet.add(i.vencimento.substring(0,7)); });
+  comVcto.forEach(i => { if(i.vencimento) mesesSet.add((i.vencimento||"").substring(0,7)); });
   const meses = [...mesesSet].sort();
   if (meses.length === 0) return "";
   const moedasPresentes = MOEDAS.filter(m => comVcto.some(i => i.moeda === m));
@@ -1542,7 +1542,7 @@ function renderGraficoMensalMoedas(invs) {
     const entry = { mes };
     let totalReais = 0;
     moedasPresentes.forEach(m => {
-      const arr = comVcto.filter(i => i.moeda === m && i.vencimento && i.vencimento.substring(0,7) === mes);
+      const arr = comVcto.filter(i => i.moeda === m && i.vencimento && (i.vencimento||"").substring(0,7) === mes);
       entry[m]          = arr.reduce((s,i) => s + parseCurrency(i.valor_moeda), 0);
       entry[m+"_reais"] = arr.reduce((s,i) => s + (parseFloat(i.reais)||0), 0);
       totalReais += entry[m+"_reais"];
@@ -2758,12 +2758,12 @@ function renderInvoices() {
 
   // Calcular meses disponíveis com vencimentos de invoices Em Aberto
   const invAbertasComVcto = invoices.filter(i => i.status_pgto === "Em Aberto" && i.vencimento);
-  const mesesSet = [...new Set(invAbertasComVcto.filter(i=>i.vencimento).map(i => i.vencimento.substring(0,7)))].sort();
+  const mesesSet = [...new Set(invAbertasComVcto.filter(i=>i.vencimento).map(i => (i.vencimento||"").substring(0,7)))].sort();
 
   // Resumo do mês selecionado
   let resumoMesHTML = "";
   if (mesAtivo) {
-    const invMes = invoices.filter(i => i.status_pgto === "Em Aberto" && i.vencimento && i.vencimento.substring(0,7) === mesAtivo);
+    const invMes = invoices.filter(i => i.status_pgto === "Em Aberto" && i.vencimento && (i.vencimento||"").substring(0,7) === mesAtivo);
     const totReais = invMes.reduce((s,i) => s+(parseFloat(i.reais)||0), 0);
     const [anoM, numM] = mesAtivo.split("-");
     const nomeMesLabel = MESES_NOMES[parseInt(numM)-1] + "/" + anoM;
@@ -2801,7 +2801,7 @@ function renderInvoices() {
           const [a,m] = mes.split("-");
           const label = MESES_NOMES[parseInt(m)-1].substring(0,3)+"/"+a.substring(2);
           const isSel = mesAtivo === mes;
-          const invM  = invAbertasComVcto.filter(i=>i.vencimento&&i.vencimento.substring(0,7)===mes);
+          const invM  = invAbertasComVcto.filter(i=>i.vencimento&&(i.vencimento||"").substring(0,7)===mes);
           const totR  = invM.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
           return `<button onclick="selecionarMesInv('${mes}')" style="display:flex;flex-direction:column;align-items:center;padding:8px 14px;border-radius:10px;border:2px solid ${isSel?"#2563eb":"#e2e8f0"};background:${isSel?"#2563eb":"#fff"};color:${isSel?"#fff":"#475569"};cursor:pointer;font-size:12px;font-weight:700;min-width:70px;transition:all .15s;box-shadow:${isSel?"0 4px 12px rgba(37,99,235,.3)":"none"}">
             <span>${label}</span>
@@ -3217,8 +3217,8 @@ function renderPagamentos() {
   if (f.valorMax !== "" && f.valorMax !== undefined) dados = dados.filter(i=>(parseCurrency(i.valor_moeda)||0) <= parseFloat(f.valorMax));
   if (f.dtIni) dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto>=f.dtIni);
   if (f.dtFim) dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto<=f.dtFim);
-  if (f.ano)   dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto&&i.dt_pgto.substring(0,4)===f.ano);
-  if (f.mes)   dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto&&i.dt_pgto.substring(5,7)===f.mes);
+  if (f.ano)   dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(0,4)===f.ano);
+  if (f.mes)   dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(5,7)===f.mes);
   if (f.bancos&&f.bancos.length>0) dados = dados.filter(i=>f.bancos.includes(i.banco));
   dados = dados.slice().sort((a,b)=>{ const va=a.vencimento||"9999-12-31",vb=b.vencimento||"9999-12-31"; return va<vb?-1:va>vb?1:0; });
   const pgPgto = paginar(dados, "pgto");
@@ -3252,8 +3252,8 @@ function renderPagamentos() {
   if (f.fornecedores && f.fornecedores.length > 0) dadosPainel = dadosPainel.filter(i=>f.fornecedores.map(x=>x.trim().toUpperCase()).includes((i.fornecedor||"").trim().toUpperCase()));
   if (f.statuses && f.statuses.length > 0)         dadosPainel = dadosPainel.filter(i=>f.statuses.includes(i.status_pgto));
   if (f.moeda) dadosPainel = dadosPainel.filter(i=>i.moeda===f.moeda);
-  if (f.ano)   dadosPainel = dadosPainel.filter(i=>i.dt_pgto&&i.dt_pgto&&i.dt_pgto.substring(0,4)===f.ano);
-  if (f.mes)   dadosPainel = dadosPainel.filter(i=>i.dt_pgto&&i.dt_pgto&&i.dt_pgto.substring(5,7)===f.mes);
+  if (f.ano)   dadosPainel = dadosPainel.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(0,4)===f.ano);
+  if (f.mes)   dadosPainel = dadosPainel.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(5,7)===f.mes);
   if (f.bancos&&f.bancos.length>0) dadosPainel = dadosPainel.filter(i=>f.bancos.includes(i.banco));
 
   // Group by banco — normalize case+whitespace to merge duplicates
@@ -3302,13 +3302,13 @@ function renderPagamentos() {
 
   // Anos e meses disponíveis nos pagamentos (dt_pgto preenchido)
   const pgtoComDt = invoices.filter(i=>i.dt_pgto&&typeof i.dt_pgto==="string"&&i.dt_pgto.length>=7&&["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"].includes(i.status_pgto));
-  const anosDisp  = [...new Set(pgtoComDt.filter(i=>i.dt_pgto).map(i=>i.dt_pgto.substring(0,4)))].sort().reverse();
+  const anosDisp  = [...new Set(pgtoComDt.filter(i=>i.dt_pgto).map(i=>(i.dt_pgto||"").substring(0,4)))].sort().reverse();
   const anoAtivo  = f.ano;
   const mesAtivo  = f.mes;
 
   // Meses disponíveis para o ano ativo (ou todos se nenhum ano selecionado)
-  const pgtoBase  = anoAtivo ? pgtoComDt.filter(i=>i.dt_pgto&&i.dt_pgto.substring(0,4)===anoAtivo) : pgtoComDt;
-  const mesesDisp = [...new Set(pgtoBase.filter(i=>i.dt_pgto).map(i=>i.dt_pgto.substring(5,7)))].sort();
+  const pgtoBase  = anoAtivo ? pgtoComDt.filter(i=>i.dt_pgto&&(i.dt_pgto||"").substring(0,4)===anoAtivo) : pgtoComDt;
+  const mesesDisp = [...new Set(pgtoBase.filter(i=>i.dt_pgto).map(i=>(i.dt_pgto||"").substring(5,7)))].sort();
 
   const botoesAnoHTML = anosDisp.length > 0 ? `
     <div style="margin-bottom:10px">
@@ -3316,7 +3316,7 @@ function renderPagamentos() {
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${anosDisp.map(a => {
           const isSel = anoAtivo === a;
-          const tot = pgtoComDt.filter(i=>i.dt_pgto&&i.dt_pgto.substring(0,4)===a).reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
+          const tot = pgtoComDt.filter(i=>i.dt_pgto&&(i.dt_pgto||"").substring(0,4)===a).reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
           return `<button onclick="selecionarAnoPgto('${a}')" style="padding:7px 16px;border-radius:10px;border:2px solid ${isSel?"#2563eb":"#e2e8f0"};background:${isSel?"#2563eb":"#fff"};color:${isSel?"#fff":"#475569"};cursor:pointer;font-size:13px;font-weight:700;transition:all .15s;box-shadow:${isSel?"0 4px 12px rgba(37,99,235,.3)":"none"}">
             ${a} <span style="font-size:10px;opacity:.8">${fmtBRL(tot).replace("R$","").trim()}</span>
           </button>`;
@@ -3330,7 +3330,7 @@ function renderPagamentos() {
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${mesesDisp.map(m => {
           const isSel = mesAtivo === m;
-          const invM  = pgtoBase.filter(i=>i.dt_pgto&&i.dt_pgto.substring(5,7)===m);
+          const invM  = pgtoBase.filter(i=>i.dt_pgto&&(i.dt_pgto||"").substring(5,7)===m);
           const tot   = invM.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
           const label = MESES_NOMES[parseInt(m)-1].substring(0,3);
           return `<button onclick="selecionarMesPgto('${m}')" style="display:flex;flex-direction:column;align-items:center;padding:8px 14px;border-radius:10px;border:2px solid ${isSel?"#16a34a":"#e2e8f0"};background:${isSel?"#16a34a":"#fff"};color:${isSel?"#fff":"#475569"};cursor:pointer;font-size:12px;font-weight:700;min-width:64px;transition:all .15s;box-shadow:${isSel?"0 4px 12px rgba(22,163,74,.3)":"none"}">
@@ -3816,15 +3816,15 @@ function renderAnaliseCambial() {
   else if (f.fornecedor)
     dadosBase = dadosBase.filter(i=>i.fornecedor===f.fornecedor);
   if (f.moeda) dadosBase = dadosBase.filter(i=>i.moeda===f.moeda);
-  if (f.ano)   dadosBase = dadosBase.filter(i=>i.dt_pgto && i.dt_pgto&&i.dt_pgto.substring(0,4)===f.ano);
+  if (f.ano)   dadosBase = dadosBase.filter(i=>i.dt_pgto && i.dt_pgto&&(i.dt_pgto||"").substring(0,4)===f.ano);
 
   const dadosGrafico = dadosBase.slice();
   let dados = dadosBase.slice();
-  if (f.mes) dados = dados.filter(i=>i.dt_pgto && i.dt_pgto&&i.dt_pgto.substring(5,7)===f.mes);
+  if (f.mes) dados = dados.filter(i=>i.dt_pgto && i.dt_pgto&&(i.dt_pgto||"").substring(5,7)===f.mes);
   dados = dados.sort((a,b)=>{ const va=a.dt_pgto||"9999-12-31",vb=b.dt_pgto||"9999-12-31"; return va<vb?-1:va>vb?1:0; });
   const pgCambial = paginar(dados, "cambial");
 
-  const anosDisponiveis = [...new Set(invoices.filter(i=>i.dt_pgto).map(i=>i.dt_pgto.substring(0,4)))].sort().reverse();
+  const anosDisponiveis = [...new Set(invoices.filter(i=>i.dt_pgto).map(i=>(i.dt_pgto||"").substring(0,4)))].sort().reverse();
 
   const totMoeda={}, totReaisMoeda={}, taxaMedia={};
   MOEDAS.forEach(m=>{
@@ -4144,8 +4144,8 @@ function exportCSVPgto(){
   else if(f.status&&f.status!=="Todos")dados=dados.filter(i=>i.status_pgto===f.status);
   if(f.dtIni)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto>=f.dtIni);
   if(f.dtFim)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto<=f.dtFim);
-  if(f.ano)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&i.dt_pgto.substring(0,4)===f.ano);
-  if(f.mes)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&i.dt_pgto.substring(5,7)===f.mes);
+  if(f.ano)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(0,4)===f.ano);
+  if(f.mes)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(5,7)===f.mes);
   if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
   if(f.bancos&&f.bancos.length>0)dados=dados.filter(i=>f.bancos.includes(i.banco));
   const headers=["Pasta","Nº Invoice","Fornecedor","Cidade","Moeda","Valor Moeda","Taxa Câmbio","Valor R$","Vencimento","Cond. Pgto","Status Pgto","Data Pgto","Banco"];
@@ -4184,8 +4184,8 @@ function exportCSVCambial(){
   if(f.fornecedores&&f.fornecedores.length>0)dados=dados.filter(i=>f.fornecedores.includes(i.fornecedor));
   else if(f.fornecedor)dados=dados.filter(i=>i.fornecedor===f.fornecedor);
   if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
-  if(f.ano)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&i.dt_pgto.substring(0,4)===f.ano);
-  if(f.mes)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&i.dt_pgto.substring(5,7)===f.mes);
+  if(f.ano)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(0,4)===f.ano);
+  if(f.mes)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(5,7)===f.mes);
   const headers=["Fornecedor","Nº Invoice","Data Pgto","Banco","Moeda","Taxa Câmbio","Valor Moeda","Valor R$","Status Pgto","Pasta","Cidade"];
   const dataRows=dados.map(i=>[csvEsc(i.fornecedor),csvEsc(i.n_fatura),csvDate(i.dt_pgto),csvEsc(i.banco),csvEsc(i.moeda),csvTaxa(i.taxa),csvNum(i.valor_moeda),csvNum(i.reais),csvEsc(i.status_pgto),csvEsc(i.pasta),csvEsc(i.cidade)]);
   dlCSV(buildCSV(headers,dataRows,[csvResumMoedas(dados)]),"analise_cambial.csv");
@@ -4279,8 +4279,8 @@ function exportPDFPgto(){
   if(f.statuses&&f.statuses.length>0)dados=dados.filter(i=>f.statuses.includes(i.status_pgto));
   if(f.dtIni)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto>=f.dtIni);
   if(f.dtFim)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto<=f.dtFim);
-  if(f.ano)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&i.dt_pgto.substring(0,4)===f.ano);
-  if(f.mes)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&i.dt_pgto.substring(5,7)===f.mes);
+  if(f.ano)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(0,4)===f.ano);
+  if(f.mes)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(5,7)===f.mes);
   if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
   if(f.bancos&&f.bancos.length>0)dados=dados.filter(i=>f.bancos.includes(i.banco));
   const totR=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
@@ -4394,8 +4394,8 @@ function exportPDFCambial(){
   if(f.fornecedores&&f.fornecedores.length>0)dados=dados.filter(i=>f.fornecedores.includes(i.fornecedor));
   else if(f.fornecedor)dados=dados.filter(i=>i.fornecedor===f.fornecedor);
   if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
-  if(f.ano)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&i.dt_pgto.substring(0,4)===f.ano);
-  if(f.mes)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&i.dt_pgto.substring(5,7)===f.mes);
+  if(f.ano)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(0,4)===f.ano);
+  if(f.mes)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(5,7)===f.mes);
   if(!dados.length){showToast("Nenhum dado para exportar","err");return;}
 
   const totR=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
@@ -4452,7 +4452,7 @@ function exportPDFCambial(){
   // ── SVG: Evolução de taxa por mês ─────────────────────
   const mesesMap={};
   dados.forEach(i=>{
-    if(!i.dt_pgto)return; const mes=i.dt_pgto&&i.dt_pgto.substring(0,7);
+    if(!i.dt_pgto)return; const mes=i.dt_pgto&&(i.dt_pgto||"").substring(0,7);
     if(!mesesMap[mes])mesesMap[mes]={};
     if(!mesesMap[mes][i.moeda])mesesMap[mes][i.moeda]=[];
     mesesMap[mes][i.moeda].push(parseFloat(i.taxa));
