@@ -1208,8 +1208,8 @@ function selecionarMesCambial(mes) {
 function getInvFiltradas() {
   const f = filtros.inv;
   return invoices.filter(i => {
-    // Se há seleção ativa, mostrar apenas os selecionados
-    if (typeof invSelIds !== "undefined" && invSelIds.size > 0 && !invSelIds.has(i.id)) return false;
+    // Filtro por seleção só quando explicitamente ativado (modo "ver selecionados")
+    if (f._verSelecionados && typeof invSelIds !== "undefined" && invSelIds.size > 0 && !invSelIds.has(i.id)) return false;
     // Multi-fornecedor tem prioridade; fallback para filtro simples
     if (f.fornecedores && f.fornecedores.length > 0) {
       if (!f.fornecedores.includes(i.fornecedor)) return false;
@@ -1256,9 +1256,7 @@ function filtroAtivoTxt(ns) {
   if (f.dtFim)                        p.push(`Até: ${fmtD(f.dtFim)}`);
   if (ns==="cambial" && f.ano)        p.push(`Ano: ${f.ano}`);
   if (ns==="cambial" && f.mes)        p.push(`Mês: ${(MESES_NOMES[parseInt(f.mes)-1]||"")}`);
-  return p.length || (ns==="inv" && invSelIds && invSelIds.size>0)
-    ? `✅ Filtro ativo: ${[...(invSelIds && invSelIds.size>0 && ns==="inv" ? [`${invSelIds.size} selecionada(s)`] : []), ...p].join(" | ")}`
-    : "";
+  return p.length ? `✅ Filtro ativo: ${p.join(" | ")}` : "";
 }
 
 
@@ -2714,9 +2712,8 @@ function limparSelInv() {
   document.querySelectorAll(".cb-inv-row").forEach(cb => { cb.checked = false; });
   document.querySelectorAll("[id^=row-]").forEach(r => r.style.background = "");
   const thCb = document.getElementById("th-cb-inv");
-  if (thCb) thCb.checked = false;
+  if (thCb) { thCb.checked = false; thCb.indeterminate = false; }
   atualizarCardSel();
-  renderTab("Invoices");
 }
 
 
