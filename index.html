@@ -867,8 +867,8 @@ function renderTab(tab) {
   try {
     if      (tab === "Dashboard")       el.innerHTML = renderDashboard();
     else if (tab === "Nova Invoice")    { abrirFormInvoice(); renderTab("Invoices"); return; }
-    else if (tab === "Invoices")        el.innerHTML = renderInvoices();
-    else if (tab === "Pagamentos")      el.innerHTML = renderPagamentos();
+    else if (tab === "Invoices")        { el.innerHTML = renderInvoices(); setTimeout(()=>syncSelUI("inv"),0); }
+    else if (tab === "Pagamentos")      { el.innerHTML = renderPagamentos(); setTimeout(()=>syncSelUI("pgto"),0); }
     else if (tab === "Fornecedores")    el.innerHTML = renderRelForn();
     else if (tab === "Análise Cambial") el.innerHTML = renderAnaliseCambial();
     else if (tab === "Usuários")        el.innerHTML = renderUsuarios();
@@ -2719,6 +2719,30 @@ function limparSelInv() {
   renderTab("Invoices");
 }
 
+
+// Sincroniza estado dos checkboxes após render/paginação
+function syncSelUI(ns) {
+  const rowClass = ns==="inv" ? "cb-inv-row" : "cb-pgto-row";
+  const thId     = ns==="inv" ? "th-cb-inv"  : "th-cb-pgto";
+  const selSet   = ns==="inv" ? invSelIds    : pgtoSelIds;
+  const rowPfx   = ns==="inv" ? "row-"        : "pgto-row-";
+  const cbs = [...document.querySelectorAll("." + rowClass)];
+  cbs.forEach(cb => {
+    const isSel = selSet.has(cb.dataset.id);
+    cb.checked = isSel;
+    const row = document.getElementById(rowPfx + cb.dataset.id);
+    if (row) row.style.background = isSel ? "#eff6ff" : "";
+  });
+  const thCb = document.getElementById(thId);
+  if (thCb && cbs.length > 0) {
+    const allSel  = cbs.every(cb => selSet.has(cb.dataset.id));
+    const someSel = cbs.some(cb => selSet.has(cb.dataset.id));
+    thCb.checked = allSel;
+    thCb.indeterminate = someSel && !allSel;
+  }
+  if (ns==="inv") atualizarCardSel(); else atualizarCardSelPgto();
+}
+
 function atualizarCardSel() {
   const card = document.getElementById("card-sel-inv");
   if (!card) return;
@@ -2941,7 +2965,7 @@ function renderInvoices() {
   <div id="card-sel-inv" style="display:none;background:#fff;border:1.5px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(37,99,235,.08)"></div>
   <div class="table-wrap"><table id="tbl-invoices">
     <thead><tr>
-      <th style="width:36px;padding:0 8px;text-align:center"><input type="checkbox" id="th-cb-inv" onclick="toggleTodosInvSel()" style="width:15px;height:15px;accent-color:#2563eb;cursor:pointer"></th>
+      <th style="width:36px;padding:0 8px;text-align:center"><input type="checkbox" id="th-cb-inv" onclick="toggleTodosInvSel()" style="width:15px;height:15px;accent-color:#2563eb;cursor:pointer" title="Selecionar/desmarcar página atual"></th>
       <th class="col-pasta">Pasta</th>
       <th class="col-cidade">Cidade</th>
       <th class="col-fornecedor">Fornecedor / Marca</th>
