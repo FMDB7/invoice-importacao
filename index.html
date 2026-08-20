@@ -1110,8 +1110,16 @@ function selecionarAnoPgto(ano) {
   paginaAtual.pgto = 1;
   renderTab("Pagamentos");
 }
-function selecionarMesPgto(mes) {
-  filtros.pgto.mes = (filtros.pgto.mes === mes) ? "" : mes;
+function selecionarCidadePgto(cidade) {
+  filtros.pgto._cidade = cidade;
+  filtros.pgto.cidade  = cidade;
+  // Preserva os demais filtros já aplicados
+  filtros.pgto.moeda = document.getElementById("f_pgto_moeda")?.value || filtros.pgto.moeda || "";
+  filtros.pgto._moeda = filtros.pgto.moeda;
+  paginaAtual.pgto = 1;
+  renderTab("Pagamentos");
+}
+function selecionarMesPgto(mes) {  filtros.pgto.mes = (filtros.pgto.mes === mes) ? "" : mes;
   paginaAtual.pgto = 1;
   renderTab("Pagamentos");
 }
@@ -1161,6 +1169,8 @@ function aplicarFiltroPgto()    {
   // _valorMinFmt/_valorMaxFmt already set above
   filtros.pgto.moeda = document.getElementById("f_pgto_moeda")?.value || "";
   filtros.pgto._moeda = filtros.pgto.moeda;
+  filtros.pgto.cidade = document.getElementById("f_pgto_cidade")?.value || "";
+  filtros.pgto._cidade = filtros.pgto.cidade;
   filtros.pgto.bancos=[...filtros.pgto._bancos];
   filtros.pgto.fornecedores=[...filtros.pgto._fornecedores];
   paginaAtual.pgto = 1;
@@ -3213,6 +3223,7 @@ function renderPagamentos() {
   const PAGOS_STATUS = ["Pago Total","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"];
   if (pgtoFiltraEmAberto) dados = dados.filter(i => i.status_pgto !== "Em Aberto" || !!i.vencimento || ["À Vista","Antecipado","Antecipado 50%","Contra B/L","60DDI 50%"].includes(i.cond_pgto));
   if (f.moeda) dados = dados.filter(i=>i.moeda===f.moeda);
+  if (f.cidade) dados = dados.filter(i=>(i.cidade||"").trim().toUpperCase()===f.cidade.trim().toUpperCase());
   if (f.valorMin !== "" && f.valorMin !== undefined) dados = dados.filter(i=>(parseCurrency(i.valor_moeda)||0) >= parseFloat(f.valorMin));
   if (f.valorMax !== "" && f.valorMax !== undefined) dados = dados.filter(i=>(parseCurrency(i.valor_moeda)||0) <= parseFloat(f.valorMax));
   if (f.dtIni) dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto>=f.dtIni);
@@ -3252,6 +3263,7 @@ function renderPagamentos() {
   if (f.fornecedores && f.fornecedores.length > 0) dadosPainel = dadosPainel.filter(i=>f.fornecedores.map(x=>x.trim().toUpperCase()).includes((i.fornecedor||"").trim().toUpperCase()));
   if (f.statuses && f.statuses.length > 0)         dadosPainel = dadosPainel.filter(i=>f.statuses.includes(i.status_pgto));
   if (f.moeda) dadosPainel = dadosPainel.filter(i=>i.moeda===f.moeda);
+  if (f.cidade) dadosPainel = dadosPainel.filter(i=>(i.cidade||"").trim().toUpperCase()===f.cidade.trim().toUpperCase());
   if (f.ano)   dadosPainel = dadosPainel.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(0,4)===f.ano);
   if (f.mes)   dadosPainel = dadosPainel.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(5,7)===f.mes);
   if (f.bancos&&f.bancos.length>0) dadosPainel = dadosPainel.filter(i=>f.bancos.includes(i.banco));
@@ -3387,6 +3399,13 @@ function renderPagamentos() {
       <select id="f_pgto_moeda" onchange="filtros.pgto._moeda=this.value">
         <option value=""${!f._moeda?" selected":""}>Todas</option>
         ${MOEDAS.map(m=>`<option value="${m}"${f._moeda===m?" selected":""}>${m}</option>`).join("")}
+      </select>
+    </div>
+    <div>
+      <label class="form-label">🏙️ Cidade</label>
+      <select id="f_pgto_cidade" onchange="selecionarCidadePgto(this.value)" style="min-width:120px;${f._cidade?'border-color:#2563eb;background:#eff6ff;font-weight:700':''}">
+        <option value=""${!f._cidade?" selected":""}>Todas</option>
+        ${CIDADES.map(cd=>`<option value="${cd}"${f._cidade===cd?" selected":""}>${cd}</option>`).join("")}
       </select>
     </div>
     <div><label class="form-label">Valor Moeda Mín</label><input type="text" inputmode="numeric" id="f_pgto_valorMin" value="${f._valorMinFmt||''}" oninput="formatValorBRL(this)" placeholder="0,00" style="width:120px"></div>
@@ -4147,6 +4166,7 @@ function exportCSVPgto(){
   if(f.ano)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(0,4)===f.ano);
   if(f.mes)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(5,7)===f.mes);
   if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
+  if(f.cidade)dados=dados.filter(i=>(i.cidade||"").trim().toUpperCase()===f.cidade.trim().toUpperCase());
   if(f.bancos&&f.bancos.length>0)dados=dados.filter(i=>f.bancos.includes(i.banco));
   const headers=["Pasta","Nº Invoice","Fornecedor","Cidade","Moeda","Valor Moeda","Taxa Câmbio","Valor R$","Vencimento","Cond. Pgto","Status Pgto","Data Pgto","Banco"];
   const dataRows=dados.map(i=>[csvEsc(i.pasta),csvEsc(i.n_fatura),csvEsc(i.fornecedor),csvEsc(i.cidade),csvEsc(i.moeda),csvNum(i.valor_moeda),csvTaxa(i.taxa),csvNum(i.reais),csvDate(i.vencimento),csvEsc(i.cond_pgto),csvEsc(i.status_pgto),csvDate(i.dt_pgto),csvEsc(i.banco)]);
@@ -4282,6 +4302,7 @@ function exportPDFPgto(){
   if(f.ano)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(0,4)===f.ano);
   if(f.mes)dados=dados.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(5,7)===f.mes);
   if(f.moeda)dados=dados.filter(i=>i.moeda===f.moeda);
+  if(f.cidade)dados=dados.filter(i=>(i.cidade||"").trim().toUpperCase()===f.cidade.trim().toUpperCase());
   if(f.bancos&&f.bancos.length>0)dados=dados.filter(i=>f.bancos.includes(i.banco));
   const totR=dados.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totPgR=totR;
@@ -4329,7 +4350,7 @@ function exportPDFPgto(){
       </div>
     </div>` : "";
 
-  const rows=dados.map((i,idx)=>{const cor=i.status_pgto==="Pago Total"?"#16a34a":i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.pasta||""}</td><td>${i.cidade||""}</td><td>${i.n_fatura||""}</td><td>${i.fornecedor||""}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${fmtD(i.vencimento)}</td><td>${i.cond_pgto||"—"}</td><td><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td><td>${fmtD(i.dt_pgto)}</td><td>${i.banco||"—"}</td></tr>`;}).join("");
+  const rows=dados.map((i,idx)=>{const cor=i.status_pgto==="Pago Total"?"#16a34a":i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td>${i.pasta||""}</td><td>${i.cidade||""}</td><td>${i.n_fatura||""}</td><td>${i.fornecedor||""}</td><td>${i.moeda}</td><td>${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td>${i.taxa||"—"}</td><td>${fmtBRL(i.reais)}</td><td>${fmtD(i.vencimento)}</td><td>${i.cond_pgto||"—"}</td><td><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td><td>${fmtD(i.dt_pgto)}</td><td>${i.banco||"—"}</td><td style="font-size:9px;max-width:150px">${esc(i.obs||"—")}</td></tr>`;}).join("");
   const w=window.open("","_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pagamentos</title><style>${pdfStyles()}.banco-card{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
   <div class="hdr"><div><h1>💰 Relatório de Pagamentos — Câmbio Importação</h1><p>Exportado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</p></div><div><b>${dados.length}</b> registros</div></div>
@@ -4343,7 +4364,7 @@ function exportPDFPgto(){
   </div>
   ${resumoBancoHTML}
   ${pdfResumMoedas(dados,"Resumo por Moeda")}
-  <table><thead><tr><th>Pasta</th><th>Cidade</th><th>Nº Invoice</th><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Vencimento</th><th>Cond.</th><th>Status</th><th>Dt.Pgto</th><th>Banco</th></tr></thead><tbody>${rows}</tbody></table>
+  <table><thead><tr><th>Pasta</th><th>Cidade</th><th>Nº Invoice</th><th>Fornecedor</th><th>Moeda</th><th>Valor Moeda</th><th>Taxa</th><th>Valor R$</th><th>Vencimento</th><th>Cond.</th><th>Status</th><th>Dt.Pgto</th><th>Banco</th><th>Observações</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="tot"><b>Total R$:</b> ${fmtBRL(totR)} &nbsp;|&nbsp; <b>Pago:</b> <span style="color:#16a34a">${fmtBRL(totPgR)}</span></div>
   <div class="footer"><span>Sistema Controle de Invoices — Importação</span><span>Gerado em ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span></div>
   <script>window.print()<\/script></body></html>`);
