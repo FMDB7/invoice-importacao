@@ -4201,7 +4201,13 @@ function exportPDFComDados(filtradas, isSel) {
   const dtExp   = now.toLocaleDateString("pt-BR") + " às " + now.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
   const totR    = filtradas.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const totAbR  = filtradas.filter(i=>i.status_pgto==="Em Aberto").reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
-  const rows    = filtradas.map((i,idx)=>{
+  // Ordenar cronologicamente por vencimento (sem vencimento vai para o final)
+  const filtradasOrd = filtradas.slice().sort((a,b)=>{
+    const va = a.vencimento || "9999-12-31";
+    const vb = b.vencimento || "9999-12-31";
+    return va < vb ? -1 : va > vb ? 1 : 0;
+  });
+  const rows    = filtradasOrd.map((i,idx)=>{
     const cor = i.status_pgto==="Pago Total"||i.status_pgto==="Pago Câmbio Futuro"?"#16a34a":
                 i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";
     const td  = "padding:6px 10px;border-bottom:0.5px solid #e2e8f0;font-size:10px";
@@ -4404,7 +4410,7 @@ function csvResumMoedas(dados) {
 function pdfStyles(){ return `*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;background:#fff;color:#1e293b;padding:24px}.hdr{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:18px 24px;border-radius:10px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}.hdr h1{font-size:16px;margin-bottom:3px}.hdr p{font-size:11px;opacity:.8}.cards{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}.card{flex:1;min-width:110px;border-radius:8px;padding:10px 14px;border-left:4px solid}.cl{font-size:10px;color:#64748b;margin-bottom:2px;font-weight:700;text-transform:uppercase}.cv{font-size:15px;font-weight:700}table{width:100%;border-collapse:collapse;font-size:10.5px}thead tr{background:#1e3a5f;color:#fff}th{padding:7px 8px;text-align:left;font-weight:700;white-space:nowrap}td{padding:5px 8px;border-bottom:1px solid #f1f5f9;vertical-align:middle}.tot{background:#f8fafc;border-radius:8px;padding:10px 14px;margin-top:12px;display:flex;gap:20px;flex-wrap:wrap;font-size:11px}.footer{margin-top:14px;display:flex;justify-content:space-between;border-top:2px solid #e2e8f0;padding-top:10px;font-size:10px;color:#94a3b8}@media print{.hdr,.cards,thead tr{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`; }
 
 function exportPDF(){
-  const filtradas=getInvFiltradas();
+  const filtradas=getInvFiltradas().slice().sort((a,b)=>{const va=a.vencimento||"9999-12-31",vb=b.vencimento||"9999-12-31";return va<vb?-1:va>vb?1:0;});
   const totR=filtradas.reduce((s,i)=>s+(parseFloat(i.reais)||0),0);
   const rows=filtradas.map((i,idx)=>{const cor=i.status_pgto==="Pago Total"?"#16a34a":i.status_pgto==="Em Aberto"?"#dc2626":"#d97706";const td="padding:6px 12px";return`<tr style="background:${idx%2===0?"#fff":"#f8fafc"}"><td style="${td}">${i.pasta||""}</td><td style="${td}">${i.cidade||""}</td><td style="${td}"><b>${i.fornecedor||""}</b></td><td style="${td}">${i.n_fatura||""}</td><td style="${td}">${fmtD(i.emissao_fatura)}</td><td style="${td}">${fmtD(i.vencimento)}</td><td style="${td}">${i.moeda}</td><td style="${td}">${fmtM(parseCurrency(i.valor_moeda),i.moeda)}</td><td style="${td}">${i.taxa||"—"}</td><td style="${td}">${fmtBRL(i.reais)}</td><td style="${td}">${i.cond_pgto||""}</td><td style="${td}"><span style="color:${cor};font-weight:700">${i.status_pgto||""}</span></td><td style="${td};font-size:10px;max-width:160px">${esc(i.obs||"—")}</td></tr>`;}).join("");
   const w=window.open("","_blank");
