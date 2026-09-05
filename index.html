@@ -983,7 +983,7 @@ function buildStatusDropdown(ns) {
   const COR   = {["Em Aberto"]:"#dc2626",["Pago Parcial"]:"#d97706",["Pago Total"]:"#16a34a",["Pago Câmbio Futuro Parcial"]:"#2563eb",["Pago Câmbio Futuro"]:"#1d4ed8",["Baixa Câmbio Futuro Total"]:"#7c3aed",["Baixa Câmbio Futuro Parcial"]:"#a855f7"};
   const BG    = {["Em Aberto"]:"#fee2e2",["Pago Parcial"]:"#fef3c7",["Pago Total"]:"#dcfce7",["Pago Câmbio Futuro Parcial"]:"#dbeafe",["Pago Câmbio Futuro"]:"#bfdbfe",["Baixa Câmbio Futuro Total"]:"#ede9fe",["Baixa Câmbio Futuro Parcial"]:"#f3e8ff"};
   const IC    = {["Em Aberto"]:"⏳",["Pago Parcial"]:"⚠️",["Pago Total"]:"✅",["Pago Câmbio Futuro Parcial"]:"🔷",["Pago Câmbio Futuro"]:"💱",["Baixa Câmbio Futuro Total"]:"📥",["Baixa Câmbio Futuro Parcial"]:"📤"};
-  const statusList = ns==="pgto" ? (currentTab==="Câmbio Futuro" ? STATUS_BAIXA : STATUS_PGTO_PGTO) : STATUS_PGTO;
+  const statusList = ns==="pgto" ? (currentTab==="Câmbio Futuro" ? ["Pago Câmbio Futuro","Pago Câmbio Futuro Parcial","Baixa Câmbio Futuro Total","Baixa Câmbio Futuro Parcial"] : ["Pago Parcial","Pago Total"]) : STATUS_PGTO;
   const rows  = statusList.map(s => {
     const isSel = sel.includes(s);
     return `<div id="status-row-${ns}-${s.replace(/ /g,"_")}"
@@ -3243,7 +3243,7 @@ function renderPagamentos(modo) {
   const ehCF = modo === "cf";
   const f = filtros.pgto;
   const TAB_NOME = ehCF ? "Câmbio Futuro" : "Pagamentos";
-  const STATUS_BASE = ehCF ? ["Baixa Câmbio Futuro Total","Baixa Câmbio Futuro Parcial"] : ["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"];
+  const STATUS_BASE = ehCF ? ["Baixa Câmbio Futuro Total","Baixa Câmbio Futuro Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"] : ["Pago Total","Pago Parcial"];
   const todosForns = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
   const bancosDisponiveis = getBancosDisponiveis();
   const selBancos = filtros.pgto._bancos;
@@ -3456,7 +3456,7 @@ function renderPagamentos(modo) {
     <button class="btn btn-primary" onclick="exportPDFPgto()">🖨️ PDF</button>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px">
-    ${(ehCF ? [["Baixa Câmbio Futuro Total","#7c3aed","#ede9fe","📥"],["Baixa Câmbio Futuro Parcial","#a855f7","#f3e8ff","📤"]] : [["Pago Parcial","#d97706","#fef3c7","⚠️"],["Pago Total","#16a34a","#dcfce7","✅"],["Pago Câmbio Futuro","#7c3aed","#ede9fe","💱"],["Pago Câmbio Futuro Parcial","#2563eb","#dbeafe","🔷"]]).map(([s,cor,bg,ic])=>{
+    ${(ehCF ? [["Pago Câmbio Futuro","#1d4ed8","#dbeafe","💱"],["Pago Câmbio Futuro Parcial","#2563eb","#dbeafe","🔷"],["Baixa Câmbio Futuro Total","#7c3aed","#ede9fe","📥"],["Baixa Câmbio Futuro Parcial","#a855f7","#f3e8ff","📤"]] : [["Pago Parcial","#d97706","#fef3c7","⚠️"],["Pago Total","#16a34a","#dcfce7","✅"]]).map(([s,cor,bg,ic])=>{
       const invs = dadosPainel.filter(i=>i.status_pgto===s);
       const tot  = invs.reduce((s2,i)=>s2+(parseFloat(i.reais)||0),0);
       return `<div class="stat" style="background:${bg};border-left:4px solid ${cor};min-width:0">
@@ -4291,7 +4291,7 @@ function exportCSV(){
 function exportCSVPgto(){
   const f=filtros.pgto;
   const ehCF = currentTab === "Câmbio Futuro";
-  const BASE = ehCF ? ["Baixa Câmbio Futuro Total","Baixa Câmbio Futuro Parcial"] : ["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"];
+  const BASE = ehCF ? ["Baixa Câmbio Futuro Total","Baixa Câmbio Futuro Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"] : ["Pago Total","Pago Parcial"];
   let dados=invoices.filter(i=>BASE.includes(i.status_pgto));
   if(f.fornecedores&&f.fornecedores.length>0)dados=dados.filter(i=>f.fornecedores.includes(i.fornecedor));
   if(f.statuses&&f.statuses.length>0)dados=dados.filter(i=>f.statuses.includes(i.status_pgto));
@@ -4428,7 +4428,7 @@ function exportPDF(){
 function exportPDFPgto(){
   const f=filtros.pgto;
   const ehCF = currentTab === "Câmbio Futuro";
-  const PAGOS_LIST = ehCF ? ["Baixa Câmbio Futuro Total","Baixa Câmbio Futuro Parcial"] : ["Pago Total","Pago Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"];
+  const PAGOS_LIST = ehCF ? ["Baixa Câmbio Futuro Total","Baixa Câmbio Futuro Parcial","Pago Câmbio Futuro","Pago Câmbio Futuro Parcial"] : ["Pago Total","Pago Parcial"];
   // Start with only paid records — ensures ALL panels use same base
   let dados=invoices.filter(i=>PAGOS_LIST.includes(i.status_pgto));
   if(f.fornecedores&&f.fornecedores.length>0)dados=dados.filter(i=>f.fornecedores.includes(i.fornecedor));
