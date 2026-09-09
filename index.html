@@ -374,6 +374,7 @@ const CONFIG = {
 // ════════════════════════════════════════════════════════
 const MOEDAS       = ["USD","EUR","CHF","GBP"];
 const CIDADES      = ["MANAUS","MACAPÁ","GUAJARÁ","EXTREMA"];
+const BANCOS       = ["BRADESCO","ITAU"];
 const MESES_NOMES  = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const SIMBOLO      = {USD:"US$",EUR:"€",CHF:"Fr",GBP:"£"};
 const MOEDA_COR    = {USD:"#1d4ed8",EUR:"#7c3aed",CHF:"#dc2626",GBP:"#065f46"};
@@ -2111,7 +2112,7 @@ function renderFormFields() {
     <div>${flabel("Valor em R$ (calculado)")}<input id="inp_reais" value="${reaisFmt}" readonly style="background:#f0fdf4;font-weight:700;color:#16a34a;border-color:#bbf7d0"></div>
     <div>${flabel("Status Câmbio")}<select onchange="updateForm('status_cambio',this.value)">${STATUS_CAM.map(s=>`<option${f.status_cambio===s?" selected":""}>${s}</option>`).join("")}</select></div>
     <div>${flabel("Status Pagamento")}<select onchange="updateForm('status_pgto',this.value)">${STATUS_PGTO.map(s=>`<option${f.status_pgto===s?" selected":""}>${s}</option>`).join("")}</select></div>
-    <div>${flabel("Banco")}<input value="${f.banco||""}" onchange="updateForm('banco',this.value)"></div>
+    <div>${flabel("Banco")}<select onchange="updateForm('banco',this.value)" style="min-width:130px"><option value="">Selecione...</option>${BANCOS.map(bc=>`<option value="${bc}"${f.banco===bc?" selected":""}>${bc}</option>`).join("")}</select></div>
     <div>${flabel("Data Pagamento")}<input type="date" value="${f.dt_pgto||""}" onchange="updateForm('dt_pgto',this.value)"></div>
     <div style="grid-column:1/-1">
       <div style="border:1.5px solid #bfdbfe;border-radius:12px;padding:14px;background:#f8fbff;margin-top:4px">
@@ -2262,7 +2263,7 @@ function abrirPgto(id) {
   document.getElementById("pgtoInfo").innerHTML = `<b>${esc(i.n_fatura)}</b> — ${esc(i.fornecedor)} &nbsp;|&nbsp; <span style="color:${MOEDA_COR[i.moeda]};font-weight:700">${i.moeda} ${fmtM(vm,i.moeda)}</span>`;
   document.getElementById("pgtoFields").innerHTML = `
     <div>${flabel("Data Pagamento")}<input id="p_dtPgto" type="date" value="${hoje()}"></div>
-    <div>${flabel("Banco")}<input id="p_banco" value="${i.banco||""}"></div>
+    <div>${flabel("Banco")}<select id="p_banco" style="min-width:130px"><option value="">Selecione...</option>${BANCOS.map(bc=>`<option value="${bc}"${i.banco===bc?" selected":""}>${bc}</option>`).join("")}</select></div>
     <div>${flabel("Taxa de Câmbio (R$)")}<input id="p_taxa" type="text" inputmode="numeric" value="${i.taxa?parseFloat(i.taxa).toLocaleString("pt-BR",{minimumFractionDigits:4,maximumFractionDigits:4}):""}" oninput="calcPgtoTaxa(this)"></div>
     <div>${flabel("Valor em R$ (calculado)")}<input id="p_reais" value="${i.reais?fmtBRL(i.reais):""}" readonly style="background:#f0fdf4;font-weight:700;color:#16a34a"></div>
     <div>${flabel("Status")}<select id="p_status">${STATUS_PGTO.map(s=>`<option${s==="Pago Total"?" selected":""}>${s}</option>`).join("")}</select></div>`;
