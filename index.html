@@ -3266,7 +3266,15 @@ function renderPagamentos(modo) {
   if (f.ano)   dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(0,4)===f.ano);
   if (f.mes)   dados = dados.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(5,7)===f.mes);
   if (filtros.pgto.bancos&&filtros.pgto.bancos.length>0) dados = dados.filter(i=>filtros.pgto.bancos.includes(i.banco));
-  dados = dados.slice().sort((a,b)=>{ const va=a.vencimento||"9999-12-31",vb=b.vencimento||"9999-12-31"; return va<vb?-1:va>vb?1:0; });
+  const _temBanco = filtros.pgto.bancos && filtros.pgto.bancos.length > 0;
+  dados = dados.slice().sort((a,b)=>{
+    if (_temBanco) {
+      // Ordena por data de pagamento, do maior para o menor
+      const pa = a.dt_pgto || "0000-00-00", pb = b.dt_pgto || "0000-00-00";
+      return pa < pb ? 1 : pa > pb ? -1 : 0;
+    }
+    const va=a.vencimento||"9999-12-31",vb=b.vencimento||"9999-12-31"; return va<vb?-1:va>vb?1:0;
+  });
   const pgPgto = paginar(dados, "pgto");
 
   const bancoDropdownHTML = `
@@ -3298,6 +3306,10 @@ function renderPagamentos(modo) {
   if (f.statuses && f.statuses.length > 0)         dadosPainel = dadosPainel.filter(i=>f.statuses.includes(i.status_pgto));
   if (f.moeda) dadosPainel = dadosPainel.filter(i=>i.moeda===f.moeda);
   if (f.cidade) dadosPainel = dadosPainel.filter(i=>(i.cidade||"").trim().toUpperCase()===f.cidade.trim().toUpperCase());
+  if (f.dtIni) dadosPainel = dadosPainel.filter(i=>i.dt_pgto&&i.dt_pgto>=f.dtIni);
+  if (f.dtFim) dadosPainel = dadosPainel.filter(i=>i.dt_pgto&&i.dt_pgto<=f.dtFim);
+  if (f.valorMin !== "" && f.valorMin !== undefined) dadosPainel = dadosPainel.filter(i=>(parseCurrency(i.valor_moeda)||0) >= parseFloat(f.valorMin));
+  if (f.valorMax !== "" && f.valorMax !== undefined) dadosPainel = dadosPainel.filter(i=>(parseCurrency(i.valor_moeda)||0) <= parseFloat(f.valorMax));
   if (f.ano)   dadosPainel = dadosPainel.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(0,4)===f.ano);
   if (f.mes)   dadosPainel = dadosPainel.filter(i=>i.dt_pgto&&i.dt_pgto&&(i.dt_pgto||"").substring(5,7)===f.mes);
   if (filtros.pgto.bancos&&filtros.pgto.bancos.length>0) dadosPainel = dadosPainel.filter(i=>filtros.pgto.bancos.includes(i.banco));
