@@ -186,7 +186,7 @@ tbody tr:nth-child(even) td{background:var(--surface-2)}
 
 <script>
 // ===== Gate de senha (hash SHA-256) =====
-const PW_HASH = "eeeab00122c28166d2f8314737e0e08f658033c55a203de5a4dc2efa8b153562";
+const PW_HASH = "437d8c5498e08624bbdc953dbd1f66bd5a44d995b4dc87c6e030a8563083348c";
 let APP_INICIADO = false;
 async function sha256(txt){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
