@@ -469,8 +469,8 @@ function render(A){
       <div class="card">
         <div class="card-h">Top 10 fornecedores por volume</div>
         <div class="card-sub">Representam ${BRL(A.topForn.reduce((s,f)=>s+f.vr,0))} — ${(A.totReais>0?A.topForn.reduce((s,f)=>s+f.vr,0)/A.totReais*100:0).toFixed(1)}% do total</div>
-        <div class="tbl-wrap"><table><thead><tr><th>Fornecedor</th><th class="r">Inv.</th><th class="r">Total R$</th></tr></thead>
-        <tbody>${A.topForn.map((f,i)=>`<tr><td><span class="rank">${i+1}</span>${f.n}</td><td class="r tnum">${f.qtd}</td><td class="r tnum">${BRL(f.vr)}</td></tr>`).join('')}</tbody></table></div>
+        <div class="tbl-wrap"><table><thead><tr><th>Fornecedor</th><th class="r">Inv.</th><th class="r">Total R$</th><th class="r">% total</th></tr></thead>
+        <tbody>${A.topForn.map((f,i)=>`<tr><td><span class="rank">${i+1}</span>${f.n}</td><td class="r tnum">${f.qtd}</td><td class="r tnum">${BRL(f.vr)}</td><td class="r tnum">${(A.totReais>0?f.vr/A.totReais*100:0).toFixed(1)}%</td></tr>`).join('')}</tbody></table></div>
       </div>
       <div class="card">
         <div class="card-h">Distribuição por cidade</div>
