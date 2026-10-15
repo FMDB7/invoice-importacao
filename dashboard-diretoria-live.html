@@ -124,9 +124,37 @@ tbody tr:nth-child(even) td{background:var(--surface-2)}
 .skel{color:var(--ink-3);font-size:13px;padding:40px;text-align:center}
 .spin{display:inline-block;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--brand-2);border-radius:50%;animation:rot .7s linear infinite;vertical-align:-3px;margin-right:8px}
 @keyframes rot{to{transform:rotate(360deg)}}
+/* ---- Tela de bloqueio ---- */
+#lock{position:fixed;inset:0;z-index:1000;background:var(--brand);display:flex;align-items:center;justify-content:center;padding:20px}
+#lock .box{background:var(--surface);border-radius:18px;padding:34px 30px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.35);text-align:center}
+#lock .ico{font-size:34px;margin-bottom:6px}
+#lock h2{font-size:18px;font-weight:800;color:var(--ink);letter-spacing:-.01em}
+#lock p{font-size:12.5px;color:var(--ink-2);margin:8px 0 22px;line-height:1.55}
+#lock input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;font-family:var(--font);background:var(--surface-2);color:var(--ink);text-align:center;letter-spacing:.02em;outline:none}
+#lock input:focus{border-color:var(--brand-2);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand-2) 22%,transparent)}
+#lock button{width:100%;margin-top:12px;padding:12px;border:none;border-radius:10px;background:var(--brand-2);color:#fff;font-size:14px;font-weight:700;font-family:var(--font);cursor:pointer}
+#lock button:hover{filter:brightness(1.08)}
+#lock .err{color:var(--crit);font-size:12.5px;font-weight:600;margin-top:12px;min-height:18px;opacity:0;transition:opacity .2s}
+#lock .err.show{opacity:1}
+#lock .ft{font-size:10.5px;color:var(--ink-3);margin-top:18px;line-height:1.5}
+.app-hidden{display:none!important}
+/* ---- Tooltip do gráfico mensal ---- */
+#tip-mensal{display:none;position:fixed;z-index:1100;pointer-events:none;background:#1e293b;color:#fff;border-radius:12px;padding:12px 15px;box-shadow:0 10px 36px rgba(0,0,0,.4);min-width:210px;font-family:var(--font);line-height:1.4}
 </style>
 </head>
 <body>
+<div id="lock">
+  <div class="box">
+    <div class="ico">🔐</div>
+    <h2>Balanço de Importações</h2>
+    <p>Acesso restrito à diretoria.<br>Informe a senha para visualizar os dados.</p>
+    <input type="password" id="pw" placeholder="Senha de acesso" autocomplete="off" autofocus>
+    <button id="enter">Acessar painel</button>
+    <div class="err" id="pw-err">Senha incorreta. Tente novamente.</div>
+    <div class="ft">Grupo Top Internacional Ltda · Controle Cambial</div>
+  </div>
+</div>
+<div id="dash" class="app-hidden">
 <header>
   <div class="hd-top">
     <div>
@@ -154,6 +182,41 @@ tbody tr:nth-child(even) td{background:var(--surface-2)}
 <div class="wrap" id="app">
   <div class="skel"><span class="spin"></span>Conectando à base e carregando invoices em tempo real…</div>
 </div>
+</div><!-- /#dash -->
+
+<script>
+// ===== Gate de senha (hash SHA-256) =====
+const PW_HASH = "eeeab00122c28166d2f8314737e0e08f658033c55a203de5a4dc2efa8b153562";
+let APP_INICIADO = false;
+async function sha256(txt){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function tentarEntrar(){
+  const inp = document.getElementById('pw');
+  const err = document.getElementById('pw-err');
+  const h = await sha256(inp.value);
+  if(h === PW_HASH){
+    document.getElementById('lock').remove();
+    document.getElementById('dash').classList.remove('app-hidden');
+    try{ sessionStorage.setItem('dash_ok','1'); }catch(_){}
+    if(!APP_INICIADO && window.__bootDashboard){ APP_INICIADO=true; window.__bootDashboard(); }
+  } else {
+    err.classList.add('show'); inp.value=''; inp.focus();
+    setTimeout(()=>err.classList.remove('show'), 2500);
+  }
+}
+document.getElementById('enter').addEventListener('click', tentarEntrar);
+document.getElementById('pw').addEventListener('keydown', e=>{ if(e.key==='Enter') tentarEntrar(); });
+// lembra a sessão (não pede senha de novo até fechar o navegador)
+try{
+  if(sessionStorage.getItem('dash_ok')==='1'){
+    const lk=document.getElementById('lock'); if(lk) lk.remove();
+    document.getElementById('dash').classList.remove('app-hidden');
+    APP_INICIADO=true; // o boot por sessão é feito no script principal
+  }
+}catch(_){}
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8/dist/umd/supabase.min.js"></script>
 <script>
@@ -465,14 +528,16 @@ function desenharDonut(condsOrd,tot){
   document.getElementById('donut-lg').innerHTML=Object.entries(bucket).map(([k,v])=>`<div class="dl-row"><i style="background:var(${cols[k]})"></i><span class="dn">${k}</span><span class="dp tnum">${tot>0?(v/tot*100).toFixed(1):0}%</span></div>`).join('');
 }
 
+const MOEDA_SIMB={USD:'US$',EUR:'€',CHF:'Fr',GBP:'£'};
+const MOEDA_COR_TIP={USD:'#60a5fa',EUR:'#a78bfa',CHF:'#f87171',GBP:'#22d3ee'};
 function desenharMensal(mesesOrd,mensal){
   const svg=document.getElementById('chart-mensal'); if(!svg||!mesesOrd.length)return;
   const W=760,H=320,padL=52,padR=46,padT=20,padB=46,cw=W-padL-padR,ch=H-padT-padB;
   const data=mesesOrd.map(ym=>({mes:MES_NOME[parseInt(ym.split('-')[1])-1]+'/'+ym.split('-')[0].substring(2),...mensal[ym]}));
   const maxR=Math.max(...data.map(d=>d.vr),1);
+  const totGeral=data.reduce((a,b)=>a+b.vr,0);
   const bw=cw/data.length,barW=Math.min(46,bw*0.56);
   const colU=CSS('--usd'),colE=CSS('--eur'),colC=CSS('--chf'),colL=CSS('--brand-2'),grid=CSS('--line'),ink3=CSS('--ink-3'),ink2=CSS('--ink-2'),surf=CSS('--surface');
-  // taxas aproximadas p/ compor barra por reais
   const TX={USD:5.12,EUR:5.91,CHF:6.39,GBP:7};
   let s='';
   for(let i=0;i<=4;i++){const val=maxR*i/4,y=padT+ch-(i/4)*ch;s+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="${grid}" stroke-width="1" ${i>0?'stroke-dasharray="4,4"':''}/><text x="${padL-8}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="10" fill="${ink3}" font-family="Inter">${(val/1e6).toFixed(1)}M</text>`;}
@@ -486,8 +551,48 @@ function desenharMensal(mesesOrd,mensal){
   const pts=data.map((d,i)=>[padL+i*bw+bw/2,padT+ch-(d.vr/maxR)*ch]);
   s+=`<path d="M ${pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' L ')}" fill="none" stroke="${colL}" stroke-width="2.5" stroke-linejoin="round"/>`;
   pts.forEach(p=>{s+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="${surf}" stroke="${colL}" stroke-width="2"/>`;});
+  // áreas de hover invisíveis por mês (tooltip)
+  data.forEach((d,i)=>{
+    const hx=padL+i*bw;
+    const tip={mes:d.mes,total:d.vr,pct:totGeral>0?(d.vr/totGeral*100):0,qtd:d.qtd,
+      moedas:['USD','EUR','CHF','GBP'].filter(m=>d[m]>0).map(m=>({m,vm:d[m],vr:d[m]*(TX[m]||1)}))};
+    s+=`<rect x="${hx.toFixed(1)}" y="${padT}" width="${bw.toFixed(1)}" height="${ch}" fill="transparent" style="cursor:crosshair" class="hovcol" data-tip='${JSON.stringify(tip).replace(/'/g,"&#39;")}'></rect>`;
+  });
   svg.innerHTML=s;
+  // liga eventos de tooltip
+  svg.querySelectorAll('.hovcol').forEach(r=>{
+    r.addEventListener('mousemove',e=>mostrarTipMensal(e,r.getAttribute('data-tip')));
+    r.addEventListener('mouseleave',esconderTipMensal);
+  });
 }
+
+function mostrarTipMensal(e,raw){
+  let tip=document.getElementById('tip-mensal');
+  if(!tip){tip=document.createElement('div');tip.id='tip-mensal';document.body.appendChild(tip);}
+  let d; try{d=JSON.parse(raw);}catch(_){return;}
+  const fmtBRL2=v=>'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const rows=d.moedas.map(mv=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:4px 0;border-top:1px solid rgba(255,255,255,.1)">
+      <span style="display:flex;align-items:center;gap:6px">
+        <span style="width:9px;height:9px;border-radius:3px;background:${MOEDA_COR_TIP[mv.m]||'#94a3b8'}"></span>
+        <span style="font-weight:700;color:${MOEDA_COR_TIP[mv.m]||'#cbd5e1'};font-size:11px">${mv.m}</span>
+      </span>
+      <span style="text-align:right">
+        <span style="font-size:11px;font-weight:700;color:#fff">${MOEDA_SIMB[mv.m]} ${mv.vm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+        <span style="font-size:10px;color:rgba(255,255,255,.55);display:block">${fmtBRL2(mv.vr)}</span>
+      </span>
+    </div>`).join('');
+  tip.innerHTML=`
+    <div style="font-weight:800;color:#fff;font-size:13px;margin-bottom:3px">📅 ${d.mes}</div>
+    <div style="font-weight:700;color:#4ade80;font-size:16px;margin-bottom:2px">${fmtBRL2(d.total)}</div>
+    <div style="font-size:10.5px;color:rgba(255,255,255,.6);margin-bottom:7px">${d.qtd} invoice(s) · ${d.pct.toFixed(1)}% do período</div>
+    ${rows||'<div style="font-size:11px;color:rgba(255,255,255,.5)">Sem detalhamento por moeda</div>'}`;
+  tip.style.display='block';
+  const x=e.clientX+16,y=e.clientY-10,vw=window.innerWidth,vh=window.innerHeight;
+  tip.style.left=(x+230>vw?e.clientX-240:x)+'px';
+  tip.style.top=(y+200>vh?Math.max(10,e.clientY-200):y)+'px';
+}
+function esconderTipMensal(){const t=document.getElementById('tip-mensal');if(t)t.style.display='none';}
 
 // ====== Navegação ======
 let abaAtual='resumo';
@@ -525,10 +630,13 @@ function assinarRealtime(){
   }catch(_){}
 }
 // polling de reforço a cada 60s (caso realtime não esteja habilitado)
-setInterval(atualizar,60000);
-
-// boot
-atualizar().then(assinarRealtime);
+// boot — só dispara após autenticação (chamado pelo gate de senha)
+window.__bootDashboard = function(){
+  setInterval(atualizar,60000);
+  atualizar().then(assinarRealtime);
+};
+// se a tela de login já foi liberada por sessão ativa, inicia agora
+try{ if(sessionStorage.getItem('dash_ok')==='1' && !window.__dashStarted){ window.__dashStarted=true; window.__bootDashboard(); } }catch(_){}
 </script>
 </body>
 </html>
