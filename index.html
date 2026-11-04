@@ -2963,10 +2963,10 @@ function renderInvoices() {
   <div class="card" style="display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;flex-wrap:wrap">
     ${pode("taxa") ? `<button class="btn" style="background:#fef3c7;color:#d97706;border:1px solid #fde68a;font-weight:700" onclick="abrirModalTaxa()">💱 Taxas de Câmbio</button>` : ""}
     <button class="btn" style="background:#f1f5f9;color:#1e3a5f;border:1px solid #e2e8f0" onclick="exportCSVInv()">
-      ${invSelIds && invSelIds.size>0 ? "⬇️ Excel Seleção ("+invSelIds.size+")" : "⬇️ Excel"}
+      ${exportaSelecaoInv() ? "⬇️ Excel Seleção ("+invSelIds.size+")" : (mesAtivo ? "⬇️ Excel Mês ("+filtradas.length+")" : "⬇️ Excel")}
     </button>
     <button class="btn btn-primary" onclick="exportPDFInv()">
-      ${invSelIds && invSelIds.size>0 ? "🖨️ PDF Seleção ("+invSelIds.size+")" : "🖨️ PDF"}
+      ${exportaSelecaoInv() ? "🖨️ PDF Seleção ("+invSelIds.size+")" : (mesAtivo ? "🖨️ PDF Mês ("+filtradas.length+")" : "🖨️ PDF")}
     </button>
     ${invoices.some(i=>STATUS_BAIXA.includes(i.status_pgto)) ? `<button class="btn" style="background:#ede9fe;color:#7c3aed;border:1px solid #ddd6fe;font-weight:700" onclick="exportPDFBaixas()">📥 Relatório Baixas Câmbio</button>` : ""}
     ${pode("nova") ? `<button class="btn btn-green" onclick="editIndex=null;abrirFormInvoice()">+ Nova Invoice</button>` : ""}
@@ -4180,7 +4180,14 @@ function exportPDFBaixas() {
   w.document.close();
 }
 
-function exportCSVInv() {  if (invSelIds && invSelIds.size > 0) {
+// Com um mês selecionado, exporta o mês inteiro (todas as páginas), sem precisar selecionar.
+// Sem mês, exporta só a seleção (se houver) ou todo o filtro atual.
+function exportaSelecaoInv() {
+  return !!(invSelIds && invSelIds.size > 0 && !filtros.inv.mesVcto);
+}
+
+function exportCSVInv() {
+  if (exportaSelecaoInv()) {
     const selecionadas = invoices.filter(i => invSelIds.has(i.id));
     exportCSVComDados(selecionadas, "invoices-selecao");
   } else {
@@ -4189,7 +4196,7 @@ function exportCSVInv() {  if (invSelIds && invSelIds.size > 0) {
 }
 
 function exportPDFInv() {
-  if (invSelIds && invSelIds.size > 0) {
+  if (exportaSelecaoInv()) {
     const selecionadas = invoices.filter(i => invSelIds.has(i.id));
     exportPDFComDados(selecionadas, true);
   } else {
