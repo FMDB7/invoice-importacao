@@ -2793,6 +2793,11 @@ function atualizarCardSel() {
 function renderInvoices() {
   const todosForns = [...new Set(invoices.map(i=>i.fornecedor).filter(Boolean))].sort();
   const filtradas  = getInvFiltradas();
+  // Seleção só vale para invoices visíveis no filtro atual (evita totais de itens fora da lista)
+  if (invSelIds.size > 0) {
+    const idsFiltrados = new Set(filtradas.map(i => i.id));
+    [...invSelIds].forEach(id => { if (!idsFiltrados.has(id)) invSelIds.delete(id); });
+  }
   const pgInv      = paginar(filtradas, "inv");
   const mesAtivo   = filtros.inv.mesVcto;
 
