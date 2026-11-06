@@ -1236,7 +1236,7 @@ function getInvFiltradas() {
     if (f.pasta  && !(i.pasta||"").toLowerCase().includes(f.pasta.toLowerCase())) return false;
     if (f.dtIni  && i.vencimento && i.vencimento < f.dtIni) return false;
     if (f.dtFim  && i.vencimento && i.vencimento > f.dtFim) return false;
-    if (f.mesVcto && i.vencimento && (i.vencimento||"").substring(0,7) !== f.mesVcto) return false;
+    if (f.mesVcto && (!i.vencimento || (i.vencimento||"").substring(0,7) !== f.mesVcto)) return false;
     if (f.valorMin !== "" && f.valorMin !== undefined) { const v = parseCurrency(i.valor_moeda)||0; if (v < parseFloat(f.valorMin)) return false; }
     if (f.valorMax !== "" && f.valorMax !== undefined) { const v = parseCurrency(i.valor_moeda)||0; if (v > parseFloat(f.valorMax)) return false; }
     return true;
@@ -2808,7 +2808,13 @@ function renderInvoices() {
   // Resumo do mês selecionado
   let resumoMesHTML = "";
   if (mesAtivo) {
-    const invMes = invoices.filter(i => i.status_pgto === "Em Aberto" && i.vencimento && (i.vencimento||"").substring(0,7) === mesAtivo);
+    const noMes = i => i.status_pgto === "Em Aberto" && i.vencimento && (i.vencimento||"").substring(0,7) === mesAtivo;
+    // Mesmos filtros da tabela e do PDF/Excel, para os totais fecharem
+    const invMes = filtradas.filter(noMes);
+    const qtdMesTodos = invoices.filter(noMes).length;
+    const avisoFiltro = invMes.length !== qtdMesTodos
+      ? `<div style="margin-top:12px;background:rgba(255,255,255,.15);border-radius:8px;padding:8px 12px;font-size:12px">⚠️ Filtros ativos: mostrando ${invMes.length} de ${qtdMesTodos} título(s) do mês. ${filtroAtivoTxt("inv").replace("✅ ","")}</div>`
+      : "";
     const totReais = invMes.reduce((s,i) => s+(parseFloat(i.reais)||0), 0);
     const [anoM, numM] = mesAtivo.split("-");
     const nomeMesLabel = (MESES_NOMES[parseInt(numM)-1]||"") + "/" + anoM;
@@ -2834,6 +2840,7 @@ function renderInvoices() {
         </div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">${kpisMoeda}</div>
+      ${avisoFiltro}
     </div>`;
   }
 
